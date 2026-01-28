@@ -18,8 +18,8 @@
     "leaflet": "^1.9.4",
     "next": "16.1.4",
     "prisma": "^6.19.2",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
     "react-leaflet": "^4.2.1",
     "web-push": "^3.6.7"
   },
