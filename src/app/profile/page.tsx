@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import BottomNav from '../components/BottomNav';
 import { useReward } from '../context/RewardContext';
@@ -79,7 +79,7 @@ interface FollowUser {
   isFollowing: boolean;
 }
 
-export default function ProfilePage() {
+function ProfilePageContent() {
   const [user, setUser] = useState<User | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1039,5 +1039,13 @@ export default function ProfilePage() {
 
       <BottomNav />
     </div>
+  );
+}
+
+export default function ProfilePage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen">読み込み中...</div>}>
+      <ProfilePageContent />
+    </Suspense>
   );
 }
