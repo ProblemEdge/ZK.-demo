@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import jwt from 'jsonwebtoken';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
 
 export async function POST(request: Request) {
   try {
@@ -52,15 +55,30 @@ export async function POST(request: Request) {
     const buffer = Buffer.from(bytes);
 
     const filename = `avatar-${decoded.userId}-${Date.now()}.${file.type.split('/')[1]}`;
-    const uploadDir = join(process.cwd(), 'public', 'uploads', 'avatars');
-    const filepath = join(uploadDir, filename);
+    let avatarUrl: string;
 
-    // フォルダが存在しない場合は作成
-    await mkdir(uploadDir, { recursive: true });
+    // Vercel環境かローカルか判定
+    if (process.env.VERCEL) {
+      // Vercel環境：Base64でデータベースに保存
+      const base64 = buffer.toString('base64');
+      avatarUrl = `data:${file.type};base64,${base64}`;
+    } else {
+      // ローカル環境：ファイルシステムに保存
+      const uploadDir = join(process.cwd(), 'public', 'uploads', 'avatars');
+      const filepath = join(uploadDir, filename);
 
-    await writeFile(filepath, buffer);
+      // フォルダが存在しない場合は作成
+      await mkdir(uploadDir, { recursive: true });
 
-    const avatarUrl = `/uploads/avatars/${filename}`;
+      await writeFile(filepath, buffer);
+      avatarUrl = `/uploads/avatars/${filename}`;
+    }
+
+    // ユーザーのアバターURLを更新
+    await prisma.user.update({
+      where: { id: decoded.userId },
+      data: { avatarUrl }
+    });
 
     return NextResponse.json({
       message: 'アップロード成功',
@@ -69,8 +87,9 @@ export async function POST(request: Request) {
 
   } catch (error) {
     console.error('Upload error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'アップロードに失敗しました';
     return NextResponse.json(
-      { error: 'アップロードに失敗しました' },
+      { error: errorMessage },
       { status: 500 }
     );
   }

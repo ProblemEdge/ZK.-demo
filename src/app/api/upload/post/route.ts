@@ -48,14 +48,24 @@ export async function POST(request: Request) {
     const buffer = Buffer.from(bytes);
 
     const filename = `post-${Date.now()}.${file.type.split('/')[1]}`;
-    const uploadDir = join(process.cwd(), 'public', 'uploads', 'posts');
-    
-    await mkdir(uploadDir, { recursive: true });
-    
-    const filepath = join(uploadDir, filename);
-    await writeFile(filepath, buffer);
+    let imageUrl: string;
 
-    const imageUrl = `/uploads/posts/${filename}`;
+    // Vercel環境かローカルか判定
+    if (process.env.VERCEL) {
+      // Vercel環境：Base64でDataURLとして返却
+      const base64 = buffer.toString('base64');
+      imageUrl = `data:${file.type};base64,${base64}`;
+    } else {
+      // ローカル環境：ファイルシステムに保存
+      const uploadDir = join(process.cwd(), 'public', 'uploads', 'posts');
+      
+      await mkdir(uploadDir, { recursive: true });
+      
+      const filepath = join(uploadDir, filename);
+      await writeFile(filepath, buffer);
+
+      imageUrl = `/uploads/posts/${filename}`;
+    }
 
     return NextResponse.json({
       message: 'アップロード成功',
@@ -64,8 +74,9 @@ export async function POST(request: Request) {
 
   } catch (error) {
     console.error('Upload error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'アップロードに失敗しました';
     return NextResponse.json(
-      { error: 'アップロードに失敗しました' },
+      { error: errorMessage },
       { status: 500 }
     );
   }
