@@ -23,11 +23,34 @@ export async function GET(request: Request) {
       userId: string;
     };
 
-    // 自分の投稿を取得（承認済みのみ）
+    // 自分の投稿を取得（承認済み + 却下済み）
     const posts = await prisma.post.findMany({
       where: {
         userId: decoded.userId,
-        isApproved: true
+        OR: [
+          { isApproved: true },
+          { rejectedAt: { not: null } }
+        ]
+      },
+      select: {
+        id: true,
+        imageUrl: true,
+        caption: true,
+        tags: true,
+        postedAt: true,
+        rejectedAt: true,
+        isApproved: true,
+        questId: true,
+        visibilityScope: true,
+        visibilityDurationMinutes: true,
+        quest: {
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            date: true
+          }
+        }
       },
       orderBy: {
         postedAt: 'desc'
@@ -35,7 +58,30 @@ export async function GET(request: Request) {
       take: 50 // 最新50件
     });
 
-    return NextResponse.json(posts);
+    const now = Date.now();
+    const filteredPosts = posts.filter((post) => {
+      // 却下済み投稿は表示期間内のみ表示
+      if (post.rejectedAt) {
+        const duration: number | null = (post as any).visibilityDurationMinutes;
+        if (duration == null) return false; // 期間なしなら非表示
+        const withinDuration = new Date(post.postedAt).getTime() >= (now - duration * 60 * 1000);
+        return withinDuration;
+      }
+
+      // 承認済み投稿は表示期間内のみ表示
+      if (post.isApproved) {
+        const duration: number | null = (post as any).visibilityDurationMinutes;
+        if (duration == null) return true; // 期間なしなら無制限表示
+        const withinDuration = new Date(post.postedAt).getTime() >= (now - duration * 60 * 1000);
+        return withinDuration;
+      }
+
+      return false;
+    });
+
+    return NextResponse.json(filteredPosts);
+
+    return NextResponse.json(filteredPosts);
 
   } catch (error) {
     console.error('Get my posts error:', error);

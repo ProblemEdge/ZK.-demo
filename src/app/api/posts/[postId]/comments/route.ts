@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import jwt from 'jsonwebtoken';
+import { sendNotificationToUser } from '../../../utils/notifications';
 
 const prisma = new PrismaClient();
 
@@ -103,6 +104,23 @@ export async function POST(
         }
       }
     });
+
+    // 投稿者に通知（自分の投稿へのコメントでない場合）
+    if (post.userId !== userId) {
+      // 投稿が承認済みの場合のみコメント者を表示、投票中は匿名化
+      const showCommentAuthor = post.isApproved;
+      
+      await sendNotificationToUser(
+        post.userId,
+        '💬 コメントが付きました',
+        showCommentAuthor 
+          ? `${comment.user.displayName || comment.user.username} がコメントしました`
+          : 'コメントが付きました',
+        `/feed`,
+        showCommentAuthor ? userId : undefined, // 承認済みのみコメント者を表示
+        'COMMENT_RECEIVED'
+      );
+    }
 
     return NextResponse.json(comment, { status: 201 });
   } catch (error) {

@@ -2,31 +2,183 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useEffect, useState } from 'react';
+
+interface User {
+  id: string;
+  username: string;
+  displayName: string | null;
+  avatarUrl: string | null;
+}
 
 export default function BottomNav() {
   const pathname = usePathname();
+  const [notificationCount, setNotificationCount] = useState(0);
+  const [user, setUser] = useState<User | null>(null);
+  const [isClient, setIsClient] = useState(false);
 
-  const navItems = [
-    { href: '/feed', label: 'フィード', icon: '📱' },
-    { href: '/vote', label: '投票', icon: '✅' },
-    { href: '/discover', label: 'ユーザー', icon: '🔍' },
-    { href: '/post', label: '投稿', icon: '📸' },
-    { href: '/profile', label: 'プロフィール', icon: '👤' }
+  const leftItems = [
+    { href: '/feed', label: 'ホーム', icon: '🏠' },
+    { href: '/vote', label: '投票', icon: '✅' }
   ];
 
+  const rightItems = [
+    { href: '/discover', label: 'ユーザー', icon: '🔍' },
+    { href: '/profile', label: '', icon: '👤' }
+  ];
+
+  useEffect(() => {
+    setIsClient(true);
+    const cached = localStorage.getItem('bottomNav_user');
+    if (cached) {
+      try {
+        setUser(JSON.parse(cached));
+      } catch {
+        // noop
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const res = await fetch('/api/auth/me');
+        if (res.ok) {
+          const data = await res.json();
+          setUser(data);
+          localStorage.setItem('bottomNav_user', JSON.stringify(data));
+        }
+      } catch {
+        // noop
+      }
+    };
+
+    // ローカルストレージから初期値を復元（瞬間的な絵文字表示を避ける）
+    const cachedUser = localStorage.getItem('bottomNav_user');
+    if (cachedUser) {
+      try {
+        setUser(JSON.parse(cachedUser));
+      } catch {
+        // noop
+      }
+    }
+
+    fetchUser();
+  }, []);
+
+  useEffect(() => {
+    let timer: ReturnType<typeof setInterval> | undefined;
+
+    const fetchCount = async () => {
+      try {
+        const res = await fetch('/api/notifications/unread-count');
+        if (!res.ok) return;
+        const data = await res.json();
+        setNotificationCount(data.count || 0);
+      } catch {
+        // noop
+      }
+    };
+
+    fetchCount();
+    timer = setInterval(fetchCount, 60000);
+
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, []);
+
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-gray-900 border-t border-gray-700 z-50 shadow-lg">
-      <div className="flex justify-around items-center h-16">
-        {navItems.map((item) => (
+    <nav className="fixed bottom-0 left-0 right-0 bg-gray-900 border-t border-gray-700 z-50 shadow-lg" style={{ paddingBottom: 'var(--safe-area-bottom)' }}>
+      <div className="flex justify-around items-center h-16 relative" style={{ paddingBottom: 'calc(0.25rem + var(--safe-area-bottom))' }}>
+        {/* 左側のアイテム */}
+        {leftItems.map((item) => (
           <Link
             key={item.href}
             href={item.href}
-            className={`flex flex-col items-center justify-center flex-1 h-full transition ${ 
-              pathname === item.href ? 'text-green-400' : 'text-gray-500 hover:text-gray-400'
-            }`}
+            className="flex flex-col items-center justify-center flex-1 h-full transition"
           >
-            <span className="text-2xl">{item.icon}</span>
-            <span className="text-xs mt-1">{item.label}</span>
+            {item.href === '/vote' ? (
+              <img
+                src="/icon_vote.png"
+                alt="投票"
+                className="w-16 h-16 object-contain transition"
+                style={pathname === item.href ? { filter: 'brightness(2) saturate(1.8) hue-rotate(15deg)', transform: 'scale(1.15)' } : {}}
+              />
+            ) : item.href === '/feed' ? (
+              <img
+                src="/icon_home.png"
+                alt="ホーム"
+                className="w-16 h-16 object-contain transition"
+                style={pathname === item.href ? { filter: 'brightness(2) saturate(1.8) hue-rotate(15deg)', transform: 'scale(1.15)' } : {}}
+              />
+            ) : item.href === '/discover' ? (
+              <img
+                src="/icon_people.png"
+                alt="ユーザー"
+                className="w-8 h-8 object-contain"
+              />
+            ) : (
+              <span className="text-3xl">{item.icon}</span>
+            )}
+          </Link>
+        ))}
+
+        {/* 中央の投稿ボタン */}
+        <Link
+          href="/post"
+          className="flex items-center justify-center flex-1 h-full transition"
+        >
+          <img
+            src="/icon_post.png"
+            alt="投稿"
+            className="object-contain transition"
+            style={pathname === '/post' ? { width: '96px', height: '96px', filter: 'brightness(2) saturate(1.8) hue-rotate(15deg)', transform: 'scale(1.15)' } : { width: '80px', height: '80px' }}
+          />
+        </Link>
+
+        {/* 右側のアイテム */}
+        {rightItems.map((item) => (
+          <Link
+            key={item.href}
+            href={item.href}
+            className="flex flex-col items-center justify-center flex-1 h-full transition"
+          >
+            <span className="text-3xl relative">
+              {item.href === '/vote' ? (
+                <img
+                  src="/icon_vote.png"
+                  alt="投票"
+                  className="w-8 h-8 object-contain transition"
+                  style={pathname === item.href ? { filter: 'brightness(2) saturate(1.8) hue-rotate(15deg)', transform: 'scale(1.15)' } : {}}
+                />
+              ) : item.href === '/discover' ? (
+                <img
+                  src="/icon_people.png"
+                  alt="ユーザー"
+                  className="w-16 h-16 object-contain transition"
+                  style={pathname === item.href ? { filter: 'brightness(2) saturate(1.8) hue-rotate(15deg)', transform: 'scale(1.15)' } : {}}
+                />
+              ) : item.href === '/profile' ? (
+                isClient && user?.avatarUrl ? (
+                  <img
+                    src={user.avatarUrl}
+                    alt={user.displayName || user.username}
+                    className="w-10 h-10 rounded-full object-cover border-2 transition"
+                    style={pathname === item.href ? { borderColor: '#22c55e', boxShadow: '0 0 12px rgba(34, 197, 94, 0.8)', transform: 'scale(1.1)' } : { borderColor: '#4b5563' }}
+                  />
+                ) : (
+                  <span className="inline-block w-10 h-10 rounded-full bg-gray-700 border-2 transition" style={pathname === item.href ? { borderColor: '#22c55e', boxShadow: '0 0 12px rgba(34, 197, 94, 0.8)', transform: 'scale(1.1)' } : { borderColor: '#4b5563' }} />
+                )
+              ) : (
+                item.icon
+              )}
+              {item.href === '/profile' && notificationCount > 0 && (
+                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold rounded-full px-1.5 py-0.5">
+                  {notificationCount > 99 ? '99+' : notificationCount}
+                </span>
+              )}
+            </span>
           </Link>
         ))}
       </div>

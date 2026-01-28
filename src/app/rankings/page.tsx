@@ -1,0 +1,259 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import BottomNav from '../components/BottomNav';
+
+interface RankingUser {
+  id: string;
+  username: string;
+  displayName: string | null;
+  avatarUrl: string | null;
+  level: number;
+  gems: number;
+  totalVotes?: number;
+  completedCount?: number;
+  avgCompletionTime?: number;
+}
+
+type RankingType = 'level' | 'gems' | 'votes' | 'quest-speed';
+type Period = 'today' | 'week' | 'month' | 'year' | 'all';
+type Mode = 'world' | 'following';
+
+export default function RankingsPage() {
+  const [ranking, setRanking] = useState<RankingUser[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [rankingType, setRankingType] = useState<RankingType>('level');
+  const [period, setPeriod] = useState<Period>('all');
+  const [mode, setMode] = useState<Mode>('world');
+  const router = useRouter();
+
+  useEffect(() => {
+    fetchRanking();
+  }, [rankingType, period, mode]);
+
+  const fetchRanking = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch(
+        `/api/rankings?type=${rankingType}&period=${period}&mode=${mode}`,
+        { cache: 'no-store' }
+      );
+
+      if (!res.ok) {
+        throw new Error('ランキング取得に失敗');
+      }
+
+      const data = await res.json();
+      setRanking(data.ranking);
+    } catch (err) {
+      console.error('Error fetching ranking:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getRankingTitle = () => {
+    switch (rankingType) {
+      case 'level':
+        return 'レベルランキング';
+      case 'gems':
+        return 'ジェムランキング';
+      case 'votes':
+        return '投票数ランキング';
+      case 'quest-speed':
+        return 'クエスト処理速度ランキング';
+    }
+  };
+
+  const getPeriodLabel = () => {
+    switch (period) {
+      case 'today':
+        return '今日';
+      case 'week':
+        return '今週';
+      case 'month':
+        return '今月';
+      case 'year':
+        return '今年';
+      case 'all':
+        return '全期間';
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-900 pb-24" style={{ paddingBottom: 'calc(6rem + var(--safe-area-bottom))' }}>
+      {/* ヘッダー */}
+      <header className="fixed left-0 right-0 z-40 bg-gray-900 border-b border-gray-800 p-3" style={{ top: 'calc(-1 * var(--safe-area-top))', paddingTop: 'calc(0.75rem + var(--safe-area-top))' }}>
+        <div className="flex items-center justify-between mb-3">
+          <h1 className="text-xl font-bold text-white">🏆 ランキング</h1>
+          <button
+            onClick={() => router.back()}
+            className="text-gray-400 hover:text-white transition"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* モード切り替え */}
+        <div className="flex gap-2 mb-3">
+          <button
+            onClick={() => setMode('world')}
+            className={`px-3 py-1 rounded-full text-xs font-semibold transition ${
+              mode === 'world'
+                ? 'bg-green-600 text-white shadow-lg shadow-green-600/50'
+                : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+            }`}
+          >
+            🌍 世界
+          </button>
+          <button
+            onClick={() => setMode('following')}
+            className={`px-3 py-1 rounded-full text-xs font-semibold transition ${
+              mode === 'following'
+                ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/50'
+                : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+            }`}
+          >
+            👥 身内
+          </button>
+        </div>
+
+        {/* 期間フィルター */}
+        <div className="flex gap-1 overflow-x-auto pb-1">
+          {(['today', 'week', 'month', 'year', 'all'] as Period[]).map(p => (
+            <button
+              key={p}
+              onClick={() => setPeriod(p)}
+              className={`px-2 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition ${
+                period === p
+                  ? 'bg-purple-600 text-white'
+                  : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+              }`}
+            >
+              {p === 'today' && '今日'}
+              {p === 'week' && '今週'}
+              {p === 'month' && '今月'}
+              {p === 'year' && '今年'}
+              {p === 'all' && '全部'}
+            </button>
+          ))}
+        </div>
+      </header>
+
+      {/* ランキングタイプ選択 */}
+      <div className="pt-36 px-3 pb-3">
+        <div className="grid grid-cols-2 gap-2">
+          {(
+            [
+              { type: 'level' as RankingType, label: 'LV', icon: '📈' },
+              { type: 'gems' as RankingType, label: 'ジェム', icon: '💎' },
+              { type: 'votes' as RankingType, label: '投票数', icon: '🗳️' },
+              { type: 'quest-speed' as RankingType, label: 'クエスト速度', icon: '⚡' }
+            ]
+          ).map(item => (
+            <button
+              key={item.type}
+              onClick={() => setRankingType(item.type)}
+              className={`p-3 rounded-lg font-semibold transition border ${
+                rankingType === item.type
+                  ? 'bg-gradient-to-br from-purple-600 to-purple-800 border-purple-400 text-white'
+                  : 'bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700'
+              }`}
+            >
+              <div className="text-2xl mb-1">{item.icon}</div>
+              <div className="text-sm">{item.label}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* ランキングリスト */}
+      <div className="px-3">
+        <h2 className="text-lg font-bold text-white mb-3">
+          {getRankingTitle()} ({getPeriodLabel()})
+        </h2>
+
+        {loading ? (
+          <div className="text-center text-gray-400 py-8">読み込み中...</div>
+        ) : ranking.length === 0 ? (
+          <div className="text-center text-gray-400 py-8">
+            ランキングデータがありません
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {ranking.map((user, index) => (
+              <div
+                key={user.id}
+                className="bg-gray-800 rounded-lg p-2 border border-gray-700 hover:border-green-500 transition cursor-pointer flex items-center gap-2"
+                onClick={() => router.push(`/user/${user.id}`)}
+              >
+                {/* ランク */}
+                <div className="w-7 h-7 flex items-center justify-center rounded-full bg-gray-700 font-bold text-white flex-shrink-0 text-sm">
+                  {index === 0 && '🥇'}
+                  {index === 1 && '🥈'}
+                  {index === 2 && '🥉'}
+                  {index >= 3 && `${index + 1}`}
+                </div>
+
+                {/* ユーザー情報 */}
+                <div className="w-9 h-9 bg-gray-700 rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center border border-gray-600">
+                  {user.avatarUrl ? (
+                    <img
+                      src={user.avatarUrl}
+                      alt={user.username}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <span className="text-xs font-bold text-gray-400">
+                      {user.username[0].toUpperCase()}
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-white truncate text-sm">
+                    {user.displayName || user.username}
+                  </p>
+                  <p className="text-xs text-gray-400 truncate">@{user.username}</p>
+                </div>
+
+                {/* スコア表示 */}
+                <div className="text-right flex-shrink-0">
+                  {rankingType === 'level' && (
+                    <div>
+                      <p className="text-base font-bold text-blue-400">LV {user.level}</p>
+                      <p className="text-xs text-gray-400">💎 {user.gems}</p>
+                    </div>
+                  )}
+                  {rankingType === 'gems' && (
+                    <p className="text-base font-bold text-yellow-400">💎 {user.gems}</p>
+                  )}
+                  {rankingType === 'votes' && (
+                    <p className="text-base font-bold text-green-400">
+                      {user.totalVotes ?? 0}票
+                    </p>
+                  )}
+                  {rankingType === 'quest-speed' && (
+                    <div>
+                      <p className="text-base font-bold text-purple-400">
+                        {user.completedCount ?? 0}
+                      </p>
+                      <p className="text-xs text-gray-400">
+                        {user.avgCompletionTime
+                          ? `${Math.floor(user.avgCompletionTime / 60000)}分`
+                          : '-'}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <BottomNav />
+    </div>
+  );
+}

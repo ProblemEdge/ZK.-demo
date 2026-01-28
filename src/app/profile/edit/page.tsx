@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useNotifications } from '../../hooks/useNotifications';
 
 interface User {
   id: string;
@@ -20,6 +21,7 @@ export default function EditProfilePage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
+  const { permission, isSupported, requestPermission } = useNotifications();
 
   useEffect(() => {
     fetchUserData();
@@ -219,6 +221,42 @@ export default function EditProfilePage() {
               disabled
               className="w-full px-3 py-2 border border-gray-700 rounded-md bg-gray-700 text-gray-400"
             />
+          </div>
+
+          {/* 通知設定 */}
+          <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
+            <label className="block text-sm font-medium text-white mb-2">
+              通知設定
+            </label>
+            <p className="text-xs text-gray-400 mb-3">
+              投稿の承認やいいねなどの通知を受け取れます
+              {!isSupported && ' (※このブラウザでは未対応)'}
+            </p>
+            {isSupported ? (
+              <button
+                type="button"
+                onClick={async () => {
+                  const granted = await requestPermission();
+                  if (granted) {
+                    alert('通知が有効になりました！');
+                  } else {
+                    alert('通知が許可されませんでした');
+                  }
+                }}
+                className={`w-full py-3 rounded-lg font-semibold transition border ${
+                  permission === 'granted'
+                    ? 'bg-green-600/20 text-green-300 border-green-600/50 cursor-default'
+                    : 'bg-blue-600 hover:bg-blue-500 text-white border-blue-500 shadow-lg shadow-blue-600/30'
+                }`}
+                disabled={permission === 'granted'}
+              >
+                {permission === 'granted' ? '✅ 通知オン' : '🔔 通知を有効化'}
+              </button>
+            ) : (
+              <div className="text-sm text-gray-400 p-3 bg-gray-700 rounded-lg border border-gray-600">
+                このブラウザは通知機能に対応していません。PWAとしてホーム画面に追加してください。
+              </div>
+            )}
           </div>
 
           <button

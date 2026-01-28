@@ -26,16 +26,24 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
     const tab = url.searchParams.get('tab') || 'all';
 
-    // 投票中の投稿の条件（5分以内かつ未承認）
-    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    // 公開範囲判定用: フォロー中のユーザー一覧
+    const followingListAll = await prisma.follow.findMany({
+      where: { followerId: decoded.userId },
+      select: { followingId: true }
+    });
+    const followingIdsAll = followingListAll.map((f: { followingId: string }) => f.followingId);
+    const allowedIdsAll = [decoded.userId, ...followingIdsAll];
 
     let approvedWhereClause: any = {
-      isApproved: true
+      isApproved: true,
+      OR: [
+        { visibilityScope: 'PUBLIC' },
+        { AND: [ { visibilityScope: 'FOLLOWERS' }, { userId: { in: allowedIdsAll } } ] }
+      ]
     };
 
     let votingWhereClause: any = {
-      isApproved: false,
-      postedAt: { gte: fiveMinutesAgo }
+      isApproved: false
     };
 
     if (tab === 'following') {
@@ -44,15 +52,12 @@ export async function GET(request: Request) {
         select: { followingId: true }
       });
 
-      const followingIds = followingList.map(f => f.followingId);
+      const followingIds = followingList.map((f: { followingId: string }) => f.followingId);
       
-      if (followingIds.length === 0) {
-        // フォロー中のユーザーがいない場合は空配列を返す
-        return NextResponse.json({ approved: [], voting: [] });
-      }
-
-      approvedWhereClause.userId = { in: followingIds };
-      votingWhereClause.userId = { in: followingIds };
+      // フォロー中タブでは自分+フォロー中のみ表示
+      const userIds = [decoded.userId, ...followingIds];
+      approvedWhereClause = { isApproved: true, userId: { in: userIds } };
+      votingWhereClause.userId = { in: userIds };
     }
 
     // 承認済み投稿を取得
@@ -65,6 +70,14 @@ export async function GET(request: Request) {
             username: true,
             displayName: true,
             avatarUrl: true
+          }
+        },
+        quest: {
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            date: true
           }
         },
         votes: {
@@ -97,6 +110,14 @@ export async function GET(request: Request) {
             avatarUrl: true
           }
         },
+        quest: {
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            date: true
+          }
+        },
         votes: {
           select: { voteType: true, voterId: true }
         },
@@ -116,27 +137,54 @@ export async function GET(request: Request) {
     });
 
     // 投票カウントを追加
-    const enrichedVotingPosts = votingPosts.map(post => {
-      const approveCount = post.votes.filter(v => v.voteType === 'approve').length;
-      const rejectCount = post.votes.filter(v => v.voteType === 'reject').length;
-      const hasVoted = post.votes.some(v => v.voterId === decoded.userId);
-      const hasLiked = post.likes.some(l => l.userId === decoded.userId);
-      return {
-        ...post,
-        approveCount,
-        rejectCount,
-        totalVotes: post.votes.length,
-        hasVoted,
-        likeCount: post.likes.length,
-        hasLiked,
-        commentCount: post._count.comments
-      };
-    });
+    // 投票中投稿: 公開範囲・公開期間を適用し、匿名化
+    const enrichedVotingPosts = votingPosts
+      .filter((post) => {
+        if ((post as any).visibilityScope === 'FOLLOWERS') {
+          return allowedIdsAll.includes((post as any).userId);
+        }
+        return true;
+      })
+      .map((post: typeof votingPosts[number]) => {
+        const approveCount = post.votes.filter((v: { voteType: string }) => v.voteType === 'approve').length;
+        const rejectCount = post.votes.filter((v: { voteType: string }) => v.voteType === 'reject').length;
+        const hasVoted = post.votes.some((v: { voterId: string }) => v.voterId === decoded.userId);
+        const hasLiked = post.likes.some((l: { userId: string }) => l.userId === decoded.userId);
+        const totalVotes = post.votes.length;
+        const duration: any = (post as any).visibilityDurationMinutes;
+        const withinDuration = duration == null || (new Date(post.postedAt).getTime() >= (Date.now() - duration * 60 * 1000));
+        if (!withinDuration) return null as any;
 
-    const enrichedApprovedPosts = approvedPosts.map(post => {
-      const approveCount = post.votes.filter(v => v.voteType === 'approve').length;
-      const rejectCount = post.votes.filter(v => v.voteType === 'reject').length;
-      const hasLiked = post.likes.some(l => l.userId === decoded.userId);
+        const isVotingClosed = totalVotes >= 10 || new Date(post.postedAt).getTime() < (Date.now() - 5 * 60 * 1000);
+        const base = {
+          ...post,
+          approveCount,
+          rejectCount,
+          totalVotes,
+          hasVoted,
+          likeCount: post.likes.length,
+          hasLiked,
+          commentCount: post._count.comments
+        } as any;
+
+        // 投票中は匿名、終了後は実ユーザーを表示
+        if (!isVotingClosed) {
+          base.user = { id: 'anonymous', username: 'anonymous', displayName: null, avatarUrl: null } as any;
+        }
+
+        return base;
+      })
+      .filter((p) => p);
+
+    const enrichedApprovedPosts = approvedPosts
+      .map((post: typeof approvedPosts[number]) => {
+        const duration: any = (post as any).visibilityDurationMinutes;
+        const withinDuration = duration == null || (new Date(post.postedAt).getTime() >= (Date.now() - duration * 60 * 1000));
+        if (!withinDuration) return null as any;
+
+      const approveCount = post.votes.filter((v: { voteType: string }) => v.voteType === 'approve').length;
+      const rejectCount = post.votes.filter((v: { voteType: string }) => v.voteType === 'reject').length;
+      const hasLiked = post.likes.some((l: { userId: string }) => l.userId === decoded.userId);
       return {
         ...post,
         approveCount,
@@ -146,8 +194,9 @@ export async function GET(request: Request) {
         likeCount: post.likes.length,
         hasLiked,
         commentCount: post._count.comments
-      };
-    });
+        };
+      })
+      .filter((p) => p);
 
     return NextResponse.json({ approved: enrichedApprovedPosts, voting: enrichedVotingPosts });
 

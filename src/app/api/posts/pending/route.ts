@@ -26,9 +26,16 @@ export async function GET(request: Request) {
     }
 
     // 承認待ちの投稿を取得（新しい順）
+    // 投票受付中（votingEndedAt が null or 未来）の投稿のみ表示
+    const now = new Date();
     const posts = await prisma.post.findMany({
       where: {
-        isApproved: false
+        isApproved: false,
+        rejectedAt: null, // 却下されていない
+        OR: [
+          { votingEndedAt: null }, // 投票受付中
+          { votingEndedAt: { gt: now } } // 投票受付時間が未来
+        ]
       },
       include: {
         user: {
@@ -44,6 +51,14 @@ export async function GET(request: Request) {
             voteType: true,
             voterId: true
           }
+        },
+        likes: {
+          select: { userId: true }
+        },
+        _count: {
+          select: {
+            comments: true
+          }
         }
       },
       orderBy: {
@@ -52,27 +67,71 @@ export async function GET(request: Request) {
       take: 50
     });
 
-    // 投票の割合を計算
-    const postsWithVoteCount = posts.map(post => {
-      const approveCount = post.votes.filter(v => v.voteType === 'approve').length;
-      const rejectCount = post.votes.filter(v => v.voteType === 'reject').length;
-      const totalVotes = approveCount + rejectCount;
-      
-      // 現在のユーザーが投票済みかチェック
-      const hasVoted = currentUserId ? post.votes.some(v => v.voterId === currentUserId) : false;
+    // 投票の割合を計算（5票未満のみ表示）
+    // フォロー限定の投稿は、フォロワー（または本人）のみ閲覧可能
+    let allowedIds: string[] = [];
+    if (currentUserId) {
+      const followingList = await prisma.follow.findMany({
+        where: { followerId: currentUserId },
+        select: { followingId: true }
+      });
+      allowedIds = followingList.map((f: { followingId: string }) => f.followingId);
+      allowedIds.push(currentUserId);
+    }
 
-      return {
-        ...post,
-        votes: undefined,
-        approveCount,
-        rejectCount,
-        totalVotes,
-        approvePercentage: totalVotes > 0 ? Math.round((approveCount / totalVotes) * 100) : 0,
-        hasVoted
-      };
-    });
+    const nowTs = Date.now();
 
-    return NextResponse.json(postsWithVoteCount);
+    const postsWithVoteCount = posts
+      .filter((post) => {
+        // 公開範囲フィルタ
+        if ((post as any).visibilityScope === 'FOLLOWERS') {
+          if (!currentUserId) return false;
+          return allowedIds.includes((post as any).userId);
+        }
+        return true;
+      })
+      .map(post => {
+        const approveCount = post.votes.filter((v: { voteType: string }) => v.voteType === 'approve').length;
+        const rejectCount = post.votes.filter((v: { voteType: string }) => v.voteType === 'reject').length;
+        const totalVotes = approveCount + rejectCount;
+        
+        // 現在のユーザーが投票済みかチェック
+        const hasVoted = currentUserId ? post.votes.some((v: { voterId: string }) => v.voterId === currentUserId) : false;
+        const hasLiked = currentUserId && post.likes ? post.likes.some((l: { userId: string }) => l.userId === currentUserId) : false;
+
+        // 投票期限は一律5分
+        const fiveMinutesAgo = nowTs - 5 * 60 * 1000;
+        const isWithinVotingPeriod = new Date(post.postedAt).getTime() >= fiveMinutesAgo;
+
+        const base = {
+          ...post,
+          votes: undefined,
+          approveCount,
+          rejectCount,
+          totalVotes,
+          approvePercentage: totalVotes > 0 ? Math.round((approveCount / totalVotes) * 100) : 0,
+          hasVoted,
+          likeCount: post.likes?.length || 0,
+          hasLiked,
+          commentCount: post._count.comments
+        };
+        return isWithinVotingPeriod ? base : null;
+      })
+      .filter((post) => post !== null)
+      .filter((post) => (post as any).totalVotes < 5) as any[];  // 5票未満のみ表示
+
+    // 投票中は匿名表示（ユーザー情報を伏せる）
+    const anonymized = postsWithVoteCount.map((p) => ({
+      ...p,
+      user: {
+        id: 'anonymous',
+        username: 'anonymous',
+        displayName: null,
+        avatarUrl: null
+      }
+    }));
+
+    return NextResponse.json(anonymized);
 
   } catch (error) {
     console.error('Get pending posts error:', error);

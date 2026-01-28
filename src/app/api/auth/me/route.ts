@@ -55,8 +55,11 @@ export async function GET(request: Request) {
       avatarUrl: user.avatarUrl,
       createdAt: user.createdAt,
       postCount: user._count.posts,
-      followerCount: user._count.followers,
-      followingCount: user._count.following
+      followerCount: user._count.following,
+      followingCount: user._count.followers,
+      level: user.level,
+      gems: user.gems,
+      experience: user.experience
     });
 
   } catch (error) {

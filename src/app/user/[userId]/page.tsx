@@ -11,6 +11,9 @@ interface UserProfile {
   avatarUrl: string | null;
   bio: string | null;
   createdAt: string;
+  level: number;
+  gems: number;
+  experience: number;
   _count: {
     posts: number;
     followers: number;
@@ -44,6 +47,8 @@ export default function UserProfilePage() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [isFollowing, setIsFollowing] = useState(false);
+  const [isRequestedByMe, setIsRequestedByMe] = useState(false);
+  const [isRequestingMe, setIsRequestingMe] = useState(false);
   const [showFollowersModal, setShowFollowersModal] = useState(false);
   const [showFollowingModal, setShowFollowingModal] = useState(false);
   const [followers, setFollowers] = useState<FollowUser[]>([]);
@@ -74,6 +79,8 @@ export default function UserProfilePage() {
       const data = await res.json();
       setUser(data.user);
       setIsFollowing(data.isFollowing);
+      setIsRequestedByMe(data.isRequestedByMe || false);
+      setIsRequestingMe(data.isRequestingMe || false);
     } catch (err) {
       console.error('Error fetching user:', err);
       router.push('/discover');
@@ -112,6 +119,7 @@ export default function UserProfilePage() {
       }
 
       setIsFollowing(true);
+      setIsRequestedByMe(true);
     } catch (err) {
       console.error('Follow error:', err);
       alert('フォローに失敗しました');
@@ -136,6 +144,49 @@ export default function UserProfilePage() {
     } catch (err) {
       console.error('Unfollow error:', err);
       alert('フォロー解除に失敗しました');
+    }
+  };
+
+  const handleApproveRequest = async () => {
+    try {
+      const res = await fetch('/api/follows/requests/approve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requesterId: userId })
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        alert(data.error || '承認に失敗しました');
+        return;
+      }
+
+      setIsRequestingMe(false);
+      setIsFollowing(true);
+    } catch (err) {
+      console.error('Approve request error:', err);
+      alert('承認に失敗しました');
+    }
+  };
+
+  const handleRejectRequest = async () => {
+    try {
+      const res = await fetch('/api/follows/requests/reject', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requesterId: userId })
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        alert(data.error || '拒否に失敗しました');
+        return;
+      }
+
+      setIsRequestingMe(false);
+    } catch (err) {
+      console.error('Reject request error:', err);
+      alert('拒否に失敗しました');
     }
   };
 
@@ -242,8 +293,8 @@ export default function UserProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 pb-20">
-      <header className="bg-gradient-to-r from-gray-900 to-gray-800 border-b border-gray-700 p-4 sticky top-0 z-40 shadow-md">
+    <div className="min-h-screen bg-gray-900 pb-24" style={{ paddingBottom: 'calc(6rem + var(--safe-area-bottom))' }}>
+      <header className="bg-gradient-to-r from-gray-900 to-gray-800 border-b border-gray-700 p-4 shadow-md" style={{ marginTop: 'calc(-1 * var(--safe-area-top))', paddingTop: 'calc(1rem + var(--safe-area-top))', position: 'sticky', top: 'calc(-1 * var(--safe-area-top))', zIndex: 40 }}>
         <button
           onClick={() => router.back()}
           className="text-green-400 hover:text-green-300 text-lg font-bold mb-4"
@@ -291,6 +342,28 @@ export default function UserProfilePage() {
                 >
                   フォロー中
                 </button>
+              ) : isRequestingMe ? (
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleApproveRequest}
+                    className="px-4 py-2 bg-green-600 text-white rounded-full font-semibold hover:bg-green-500 transition border border-green-500"
+                  >
+                    承認
+                  </button>
+                  <button
+                    onClick={handleRejectRequest}
+                    className="px-4 py-2 bg-red-600 text-white rounded-full font-semibold hover:bg-red-500 transition border border-red-500"
+                  >
+                    拒否
+                  </button>
+                </div>
+              ) : isRequestedByMe ? (
+                <button
+                  className="px-6 py-2 bg-gray-600 text-gray-200 rounded-full font-semibold border border-gray-500 cursor-not-allowed opacity-80"
+                  disabled
+                >
+                  リクエスト済み
+                </button>
               ) : (
                 <button
                   onClick={handleFollow}
@@ -299,6 +372,18 @@ export default function UserProfilePage() {
                   フォロー
                 </button>
               )}
+            </div>
+          </div>
+
+          {/* レベル・ジェム情報 */}
+          <div className="mt-4 pt-4 border-t border-gray-700 flex gap-4 justify-start">
+            <div className="text-center">
+              <p className="text-2xl font-bold text-blue-400">{user.level}</p>
+              <p className="text-xs text-gray-400 mt-1">LV</p>
+            </div>
+            <div className="text-center">
+              <p className="text-2xl font-bold text-yellow-400">{user.gems}</p>
+              <p className="text-xs text-gray-400 mt-1">💎 ジェム</p>
             </div>
           </div>
 

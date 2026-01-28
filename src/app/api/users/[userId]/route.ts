@@ -40,6 +40,9 @@ export async function GET(
         avatarUrl: true,
         bio: true,
         createdAt: true,
+        level: true,
+        gems: true,
+        experience: true,
         _count: {
           select: {
             posts: { where: { isApproved: true } },
@@ -59,21 +62,54 @@ export async function GET(
 
     // フォロー状態を確認
     let isFollowing = false;
+    let isRequestedByMe = false;
+    let isRequestingMe = false;
     if (currentUserId && currentUserId !== userId) {
-      const follow = await prisma.follow.findUnique({
-        where: {
-          followerId_followingId: {
-            followerId: currentUserId,
-            followingId: userId
+      const [follow, outgoingRequest, incomingRequest] = await Promise.all([
+        prisma.follow.findUnique({
+          where: {
+            followerId_followingId: {
+              followerId: currentUserId,
+              followingId: userId
+            }
           }
-        }
-      });
+        }),
+        prisma.followRequest.findUnique({
+          where: {
+            requesterId_targetId: {
+              requesterId: currentUserId,
+              targetId: userId
+            }
+          }
+        }),
+        prisma.followRequest.findUnique({
+          where: {
+            requesterId_targetId: {
+              requesterId: userId,
+              targetId: currentUserId
+            }
+          }
+        })
+      ]);
       isFollowing = !!follow;
+      isRequestedByMe = outgoingRequest?.status === 'PENDING';
+      isRequestingMe = incomingRequest?.status === 'PENDING';
     }
 
+    const userWithFixedCounts = {
+      ...user,
+      _count: {
+        posts: user._count.posts,
+        followers: user._count.following,
+        following: user._count.followers
+      }
+    };
+
     return NextResponse.json({
-      user,
-      isFollowing
+      user: userWithFixedCounts,
+      isFollowing,
+      isRequestedByMe,
+      isRequestingMe
     });
 
   } catch (error) {

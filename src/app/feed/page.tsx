@@ -1,8 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import BottomNav from '../components/BottomNav';
+import { useReward } from '../context/RewardContext';
+import type { MapPost } from '../components/FeedMap';
+
+const FeedMap = dynamic(() => import('../components/FeedMap'), { ssr: false });
 
 interface Post {
   id: string;
@@ -12,6 +17,14 @@ interface Post {
   tags: string;
   postedAt: string;
   isApproved: boolean;
+  rejectedAt: string | null;
+  questId?: string | null;
+  quest?: {
+    id: string;
+    title: string;
+    description: string;
+    date: string;
+  } | null;
   user: {
     id: string;
     username: string;
@@ -50,22 +63,50 @@ export default function FeedPage() {
   const [allPosts, setAllPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<'following' | 'all'>('following');
+  const [viewTab, setViewTab] = useState<'feed' | 'map'>('feed');
+  const [now, setNow] = useState(new Date());
+  const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
+  const [mapPosts, setMapPosts] = useState<MapPost[]>([]);
+  const [mapLoading, setMapLoading] = useState(false);
   const [expandedPostId, setExpandedPostId] = useState<string | null>(null);
   const [comments, setComments] = useState<{ [postId: string]: Comment[] }>({});
   const [loadingComments, setLoadingComments] = useState<{ [postId: string]: boolean }>({});
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
     checkAuth();
-    fetchPosts();
+    checkRewards(); // ページ読み込み時に報酬をチェック
+  }, []);
 
-    // 1分ごとに期限切れの投票を処理して削除
+  useEffect(() => {
+    if (viewTab === 'feed') {
+      fetchPosts();
+    }
+  }, [tab, viewTab]);
+
+  useEffect(() => {
+    if (viewTab === 'map') {
+      fetchMapPosts();
+    }
+  }, [viewTab]);
+
+  useEffect(() => {
+    if (viewTab !== 'feed') return;
     const interval = setInterval(() => {
-      processExpiredVotes();
-    }, 60000); // 60秒ごと
-
+      setNow(new Date());
+    }, 1000);
     return () => clearInterval(interval);
-  }, [tab]);
+  }, [viewTab]);
+
+  useEffect(() => {
+    if (viewTab !== 'feed') return;
+    const interval = setInterval(() => {
+      if (document.visibilityState !== 'visible') return;
+      processExpiredVotes();
+    }, 300000);
+    return () => clearInterval(interval);
+  }, [viewTab]);
 
   const processExpiredVotes = async () => {
     try {
@@ -75,14 +116,34 @@ export default function FeedPage() {
     }
   };
 
+  const { showReward } = useReward();
+
   const checkAuth = async () => {
     try {
       const res = await fetch('/api/auth/me');
       if (!res.ok) {
         router.push('/login');
+        return;
       }
+      const data = await res.json();
+      setCurrentUserId(data.id);
     } catch {
       router.push('/login');
+    }
+  };
+
+  // 報酬をチェックする関数
+  const checkRewards = async () => {
+    try {
+      const res = await fetch('/api/notifications/check-rewards');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.hasReward && data.reward) {
+          showReward(data.reward);
+        }
+      }
+    } catch (err) {
+      console.error('Reward check error:', err);
     }
   };
 
@@ -98,10 +159,8 @@ export default function FeedPage() {
       }
 
       const data: FeedResponse = await res.json();
-      // 承認済み投稿と投票中の投稿を合わせて、投票中を先に表示
       const combinedPosts = [...data.voting, ...data.approved];
       setAllPosts(combinedPosts);
-
     } catch (err) {
       console.error('Error fetching posts:', err);
     } finally {
@@ -109,35 +168,41 @@ export default function FeedPage() {
     }
   };
 
-  // 投稿から5分以上経っているかチェック
+  const fetchMapPosts = async () => {
+    try {
+      setMapLoading(true);
+      const res = await fetch('/api/feed/map', { cache: 'no-store' });
+      if (!res.ok) {
+        throw new Error('マップ投稿の取得に失敗しました');
+      }
+      const data = await res.json();
+      setMapPosts(data.posts || []);
+    } catch (err) {
+      console.error('Error fetching map posts:', err);
+      setMapPosts([]);
+    } finally {
+      setMapLoading(false);
+    }
+  };
+
   const isVotingClosed = (postedAt: string): boolean => {
     const postTime = new Date(postedAt).getTime();
     const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
     return postTime < fiveMinutesAgo;
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <p className="text-white">読み込み中...</p>
-      </div>
-    );
-  }
+  const getTimeRemaining = (postedAt: string): string => {
+    const postTime = new Date(postedAt).getTime();
+    const fiveMinutesAfter = postTime + 5 * 60 * 1000;
+    const timeLeft = fiveMinutesAfter - now.getTime();
 
-  if (allPosts.length === 0) {
-    return (
-      <div className="min-h-screen bg-black flex flex-col items-center justify-center pb-20">
-        <p className="text-white text-lg mb-4">投稿がありません</p>
-        <button
-          onClick={() => router.push('/post')}
-          className="px-6 py-2 bg-green-700 text-white rounded-full"
-        >
-          投稿を作成
-        </button>
-        <BottomNav />
-      </div>
-    );
-  }
+    if (timeLeft <= 0) return '投票終了';
+
+    const minutes = Math.floor(timeLeft / 60000);
+    const seconds = Math.floor((timeLeft % 60000) / 1000);
+
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  };
 
   const handleVote = async (postId: string, voteType: 'approve' | 'reject') => {
     try {
@@ -149,62 +214,68 @@ export default function FeedPage() {
 
       if (!res.ok) {
         const data = await res.json();
-        alert(data.error);
+        console.error('Vote error:', data.error);
         return;
       }
 
-      alert(voteType === 'approve' ? '承認に投票しました' : '却下に投票しました');
-      // データを更新
+      const data = await res.json();
+      
+      // 報酬通知を表示
+      if (data.reward) {
+        showReward({
+          ...data.reward,
+          message: '投票に参加しました！'
+        });
+      }
+      
       await fetchPosts();
     } catch (err) {
       console.error('Vote error:', err);
-      alert('投票に失敗しました');
     }
   };
 
   const handleLike = async (postId: string) => {
     try {
-      const post = allPosts.find(p => p.id === postId);
+      const post = allPosts.find((p) => p.id === postId);
       if (!post) return;
 
       if (post.hasLiked) {
-        // いいね削除
         const res = await fetch(`/api/posts/${postId}/likes`, {
           method: 'DELETE'
         });
 
         if (!res.ok) {
-          alert('いいね削除に失敗しました');
+          console.error('Like delete error');
           return;
         }
 
-        // UIを更新
-        setAllPosts(allPosts.map(p =>
-          p.id === postId
-            ? { ...p, hasLiked: false, likeCount: (p.likeCount || 0) - 1 }
-            : p
-        ));
+        setAllPosts(
+          allPosts.map((p) =>
+            p.id === postId
+              ? { ...p, hasLiked: false, likeCount: (p.likeCount || 0) - 1 }
+              : p
+          )
+        );
       } else {
-        // いいね追加
         const res = await fetch(`/api/posts/${postId}/likes`, {
           method: 'POST'
         });
 
         if (!res.ok) {
-          alert('いいねに失敗しました');
+          console.error('Like error');
           return;
         }
 
-        // UIを更新
-        setAllPosts(allPosts.map(p =>
-          p.id === postId
-            ? { ...p, hasLiked: true, likeCount: (p.likeCount || 0) + 1 }
-            : p
-        ));
+        setAllPosts(
+          allPosts.map((p) =>
+            p.id === postId
+              ? { ...p, hasLiked: true, likeCount: (p.likeCount || 0) + 1 }
+              : p
+          )
+        );
       }
     } catch (err) {
       console.error('Like error:', err);
-      alert('いいね処理に失敗しました');
     }
   };
 
@@ -217,22 +288,21 @@ export default function FeedPage() {
       });
 
       if (!res.ok) {
-        alert('コメント投稿に失敗しました');
+        console.error('Comment post error');
         return;
       }
 
-      // UIを更新
-      setAllPosts(allPosts.map(p =>
-        p.id === postId
-          ? { ...p, commentCount: (p.commentCount || 0) + 1 }
-          : p
-      ));
+      setAllPosts(
+        allPosts.map((p) =>
+          p.id === postId
+            ? { ...p, commentCount: (p.commentCount || 0) + 1 }
+            : p
+        )
+      );
 
-      // コメント一覧を再取得
       await fetchComments(postId);
     } catch (err) {
       console.error('Comment error:', err);
-      alert('コメント投稿に失敗しました');
     }
   };
 
@@ -241,7 +311,6 @@ export default function FeedPage() {
       setExpandedPostId(null);
     } else {
       setExpandedPostId(postId);
-      // コメントをまだ取得していない場合は取得
       if (!comments[postId]) {
         await fetchComments(postId);
       }
@@ -252,7 +321,7 @@ export default function FeedPage() {
     try {
       setLoadingComments({ ...loadingComments, [postId]: true });
       const res = await fetch(`/api/posts/${postId}/comments`);
-      
+
       if (res.ok) {
         const data = await res.json();
         setComments({ ...comments, [postId]: data });
@@ -273,40 +342,40 @@ export default function FeedPage() {
       });
 
       if (!res.ok) {
-        alert('コメント削除に失敗しました');
+        console.error('Delete comment error');
         return;
       }
 
-      // UIを更新
       setComments({
         ...comments,
-        [postId]: (comments[postId] || []).filter(c => c.id !== commentId)
+        [postId]: (comments[postId] || []).filter((c) => c.id !== commentId)
       });
 
-      setAllPosts(allPosts.map(p =>
-        p.id === postId
-          ? { ...p, commentCount: (p.commentCount || 1) - 1 }
-          : p
-      ));
+      setAllPosts(
+        allPosts.map((p) =>
+          p.id === postId
+            ? { ...p, commentCount: (p.commentCount || 1) - 1 }
+            : p
+        )
+      );
     } catch (err) {
       console.error('Delete comment error:', err);
-      alert('コメント削除に失敗しました');
     }
   };
 
   return (
-    <div className="min-h-screen bg-black pb-20">
-      {/* ヘッダー */}
-      <header className="fixed top-0 left-0 right-0 z-40 bg-black border-b border-gray-800 p-4">
-        <div className="flex justify-between items-center">
+    <div className="min-h-screen bg-black" style={{ paddingBottom: 'calc(6rem + var(--safe-area-bottom))' }}>
+      <header className="fixed left-0 right-0 z-40 bg-black border-b border-gray-800" style={{ top: '0', height: 'calc(5rem + var(--safe-area-top))', display: 'flex', alignItems: 'flex-end' }}>
+        <div className="w-full p-4 flex justify-between items-center" style={{ paddingTop: 'var(--safe-area-top)' }}>
           <h1 className="text-white text-2xl font-bold">ZK.</h1>
           <div className="flex gap-2">
             <button
               onClick={() => {
+                setViewTab('feed');
                 setTab('following');
               }}
-              className={`px-4 py-2 rounded-full text-sm font-semibold transition ${
-                tab === 'following'
+              className={`px-3 py-2 rounded-full text-xs font-semibold transition ${
+                viewTab === 'feed' && tab === 'following'
                   ? 'bg-green-600 text-white shadow-lg shadow-green-600/50'
                   : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
               }`}
@@ -315,268 +384,360 @@ export default function FeedPage() {
             </button>
             <button
               onClick={() => {
+                setViewTab('feed');
                 setTab('all');
               }}
-              className={`px-4 py-2 rounded-full text-sm font-semibold transition ${
-                tab === 'all'
+              className={`px-3 py-2 rounded-full text-xs font-semibold transition ${
+                viewTab === 'feed' && tab === 'all'
                   ? 'bg-green-600 text-white shadow-lg shadow-green-600/50'
                   : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
               }`}
             >
               すべて
             </button>
+            <button
+              onClick={() => setViewTab('map')}
+              className={`px-3 py-2 rounded-full text-xs font-semibold transition ${
+                viewTab === 'map'
+                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/50'
+                  : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+              }`}
+            >
+              🗺️ マップ
+            </button>
           </div>
         </div>
       </header>
 
-      {/* フィード */}
-      <div className="pt-20 space-y-4 px-4">
-        {allPosts.map((post) => (
-          <div
-            key={post.id}
-            className="bg-gray-800 rounded-lg overflow-hidden border border-gray-700 hover:border-green-500 transition"
-          >
-            {/* 投稿画像 */}
-            <div className="relative w-full aspect-square overflow-hidden bg-black">
-              <img
-                src={post.imageUrl}
-                alt={post.caption}
-                className="w-full h-full object-cover"
-              />
-              
-              {/* 左上ステータスバッジ */}
-              <div className="absolute top-3 left-3">
-                {post.isApproved ? (
-                  <div className="bg-green-600/90 text-white px-3 py-1 rounded-full text-sm font-bold border border-green-400">
-                    ✅ 承認済み {post.approveCount}✅ {post.rejectCount}❌
-                  </div>
-                ) : (
-                  <div className="bg-blue-600/90 text-white px-3 py-1 rounded-full text-sm font-bold border border-blue-400">
-                    🔄 投票受付中
-                  </div>
-                )}
-              </div>
+      <div className="px-4 pb-4 space-y-4" style={{ paddingTop: 'calc(5rem + var(--safe-area-top))' }}>
+        {viewTab === 'feed' ? (
+          loading ? (
+            <div className="min-h-[50vh] flex items-center justify-center">
+              <p className="text-white">読み込み中...</p>
             </div>
-
-            {/* 投稿者情報 */}
-            <div className="p-4 border-b border-gray-700">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-12 h-12 bg-gray-700 rounded-full overflow-hidden flex-shrink-0">
-                  {post.user.avatarUrl ? (
-                    <img
-                      src={post.user.avatarUrl}
-                      alt={post.user.username}
-                      className="w-full h-full object-cover cursor-pointer hover:opacity-80 transition"
-                      onClick={() => router.push(`/user/${post.userId}`)}
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-600 text-lg font-bold cursor-pointer hover:opacity-80 transition"
-                      onClick={() => router.push(`/user/${post.userId}`)}
-                    >
-                      {post.user.username[0].toUpperCase()}
-                    </div>
-                  )}
-                </div>
-                <div>
-                  <p className="font-bold text-white cursor-pointer hover:text-green-400 transition" onClick={() => router.push(`/user/${post.userId}`)}>
-                    {post.user.displayName || post.user.username}
-                  </p>
-                  <p className="text-xs text-gray-400">@{post.user.username}</p>
-                </div>
-              </div>
-
-              {/* キャプション */}
-              <p className="text-gray-100 mb-2">{post.caption}</p>
-
-              {/* タグ */}
-              {post.tags && (
-                <div className="flex flex-wrap gap-1">
-                  {post.tags.split(',').map((tag) => (
-                    <span
-                      key={tag}
-                      className="text-xs bg-green-600 text-white px-3 py-1 rounded-full font-semibold border border-green-400"
-                    >
-                      {tag.trim()}
-                    </span>
-                  ))}
-                </div>
-              )}
+          ) : allPosts.length === 0 ? (
+            <div className="min-h-[50vh] flex flex-col items-center justify-center space-y-4">
+              <p className="text-white text-lg">投稿がありません</p>
+              <button
+                onClick={() => router.push('/post')}
+                className="px-6 py-2 bg-green-700 text-white rounded-full"
+              >
+                投稿を作成
+              </button>
             </div>
+          ) : (
+            allPosts.map((post) => (
+              <div
+                key={post.id}
+                className={`bg-gray-800 rounded-lg overflow-hidden border border-gray-700 hover:border-green-500 transition ${
+                  post.rejectedAt ? 'opacity-60 bg-red-950/30' : ''
+                }`}
+              >
+                <div className="relative w-full aspect-square overflow-hidden bg-black">
+                  <img
+                    src={post.imageUrl}
+                    alt={post.caption}
+                    className="w-full h-full object-cover cursor-pointer hover:opacity-80 transition"
+                    onClick={() => setSelectedImageUrl(post.imageUrl)}
+                  />
 
-            {/* 投票情報（投票中の投稿のみ） */}
-            {!post.isApproved && post.totalVotes !== undefined && (
-              <div className="p-4 bg-gray-700/50 border-t border-gray-700">
-                <div className="flex justify-between items-center mb-3">
-                  <span className="text-sm font-medium text-white">
-                    投票: {post.totalVotes}/5
-                  </span>
-                </div>
-
-                {post.totalVotes > 0 ? (
-                  <>
-                    <div className="flex justify-between mb-2">
-                      <span className="text-xs font-semibold text-green-400">✅ {post.approveCount}票 / ❌ {post.rejectCount}票</span>
-                      <span className="text-xs text-gray-300 font-medium">{Math.round((post.approveCount! / post.totalVotes) * 100)}%</span>
-                    </div>
-                    <div className="w-full bg-gray-600 rounded-full h-6 overflow-hidden border border-gray-500 flex">
-                      <div
-                        className="bg-green-600 h-full transition-all shadow-lg shadow-green-600/50"
-                        style={{ width: `${Math.round((post.approveCount! / post.totalVotes) * 100)}%` }}
-                      />
-                      <div
-                        className="bg-red-600 h-full transition-all shadow-lg shadow-red-600/50"
-                        style={{ width: `${100 - Math.round((post.approveCount! / post.totalVotes) * 100)}%` }}
-                      />
-                    </div>
-                  </>
-                ) : (
-                  <div className="text-center text-xs text-gray-400 py-2 font-medium">
-                    投票なし
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* 投票ボタン（投票中で期限内の場合） */}
-            {!post.isApproved && !isVotingClosed(post.postedAt) && post.totalVotes !== undefined && post.totalVotes < 5 && (
-              <div className="p-4 border-t border-gray-700 flex gap-3">
-                <button
-                  onClick={() => handleVote(post.id, 'approve')}
-                  disabled={post.hasVoted}
-                  className={`flex-1 py-2 px-4 rounded-lg font-semibold transition border ${
-                    post.hasVoted
-                      ? 'bg-gray-600 text-gray-300 border-gray-500 cursor-not-allowed opacity-50'
-                      : 'bg-green-600 hover:bg-green-500 text-white border-green-500 shadow-lg shadow-green-600/30'
-                  }`}
-                >
-                  ✅ 松本関連
-                </button>
-                <button
-                  onClick={() => handleVote(post.id, 'reject')}
-                  disabled={post.hasVoted}
-                  className={`flex-1 py-2 px-4 rounded-lg font-semibold transition border ${
-                    post.hasVoted
-                      ? 'bg-gray-600 text-gray-300 border-gray-500 cursor-not-allowed opacity-50'
-                      : 'bg-red-600 hover:bg-red-500 text-white border-red-500 shadow-lg shadow-red-600/30'
-                  }`}
-                >
-                  ❌ 関連なし
-                </button>
-              </div>
-            )}
-
-            {/* 承認済みまたは投票終了のメッセージ */}
-            {post.isApproved && (
-              <div className="p-4 border-t border-gray-700 text-center text-sm text-green-400 font-semibold bg-gray-700/30">
-                ✅ 承認済み
-              </div>
-            )}
-
-            {!post.isApproved && isVotingClosed(post.postedAt) && (
-              <div className="p-4 border-t border-gray-700 text-center text-sm text-gray-400 font-semibold bg-gray-700/30">
-                投票終了
-              </div>
-            )}
-
-            {/* いいね・コメント欄 */}
-            <div className="p-4 border-t border-gray-700 space-y-3">
-              <div className="flex gap-6 text-sm">
-                <button
-                  onClick={() => handleLike(post.id)}
-                  className={`flex items-center gap-2 transition ${
-                    post.hasLiked
-                      ? 'text-red-500 hover:text-red-400'
-                      : 'text-gray-400 hover:text-red-500'
-                  }`}
-                >
-                  <span className="text-lg">{post.hasLiked ? '❤️' : '🤍'}</span>
-                  <span className="font-semibold">{post.likeCount || 0}</span>
-                </button>
-                <button
-                  onClick={() => handleToggleComments(post.id)}
-                  className="flex items-center gap-2 text-gray-400 hover:text-blue-500 transition"
-                >
-                  <span className="text-lg">💬</span>
-                  <span className="font-semibold">{post.commentCount || 0}</span>
-                </button>
-              </div>
-
-              {/* コメント一覧 */}
-              {expandedPostId === post.id && (
-                <div className="space-y-3 max-h-60 overflow-y-auto bg-gray-900 rounded-lg p-3 border border-gray-600">
-                  {loadingComments[post.id] ? (
-                    <div className="text-center text-gray-400 text-sm py-4">読み込み中...</div>
-                  ) : comments[post.id]?.length > 0 ? (
-                    comments[post.id].map((comment) => (
-                      <div key={comment.id} className="flex gap-2 items-start">
-                        <div className="w-8 h-8 bg-gray-700 rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center">
-                          {comment.user.avatarUrl ? (
-                            <img
-                              src={comment.user.avatarUrl}
-                              alt={comment.user.username}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <span className="text-xs font-bold text-gray-400">
-                              {comment.user.username[0].toUpperCase()}
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex-1 bg-gray-800 rounded-lg p-2 border border-gray-700">
-                          <div className="flex justify-between items-start mb-1">
-                            <p className="text-xs font-semibold text-white">
-                              {comment.user.displayName || comment.user.username}
-                            </p>
-                            <button
-                              onClick={() => handleDeleteComment(post.id, comment.id)}
-                              className="text-xs text-red-400 hover:text-red-300 transition"
-                            >
-                              削除
-                            </button>
-                          </div>
-                          <p className="text-sm text-gray-200">{comment.text}</p>
-                          <p className="text-xs text-gray-500 mt-1">
-                            {new Date(comment.createdAt).toLocaleString('ja-JP')}
-                          </p>
-                        </div>
+                  <div className="absolute top-3 left-3">
+                    {post.isApproved ? (
+                      <div className="bg-green-600/90 text-white px-3 py-1 rounded-full text-sm font-bold border border-green-400">
+                        ✅ OK
                       </div>
-                    ))
-                  ) : (
-                    <div className="text-center text-gray-400 text-sm py-4">コメントがありません</div>
+                    ) : !post.isApproved && (isVotingClosed(post.postedAt) || (post.totalVotes !== undefined && post.totalVotes >= 10)) ? (
+                      // 投票終了後は、OKがNGより多ければ承認、そうでなければ却下
+                      post.approveCount !== undefined && post.rejectCount !== undefined && post.approveCount > post.rejectCount ? (
+                        <div className="bg-green-600/90 text-white px-3 py-1 rounded-full text-sm font-bold border border-green-400">
+                          ✅
+                        </div>
+                      ) : (
+                        <div className="bg-red-600/90 text-white px-3 py-1 rounded-full text-sm font-bold border border-red-400">
+                          ❌
+                        </div>
+                      )
+                    ) : !post.isApproved ? (
+                      <div className="bg-blue-600/90 text-white px-3 py-1 rounded-full text-sm font-bold border border-blue-400">
+                        🔄
+                      </div>
+                    ) : null}
+                  </div>
+
+                  {post.questId && post.quest && (
+                    <div className="absolute top-3 right-3 bg-purple-600/90 text-white px-3 py-1 rounded-full text-sm font-bold border border-purple-300 shadow-lg shadow-purple-700/40 max-w-xs truncate">
+                      ✨ {post.quest.title}
+                    </div>
+                  )}
+
+                  {(post.isApproved || isVotingClosed(post.postedAt) || (post.totalVotes !== undefined && post.totalVotes >= 5)) && (
+                    <div className="absolute bottom-3 left-3">
+                      {post.totalVotes !== undefined && post.approveCount !== undefined && post.approveCount === post.totalVotes && post.totalVotes > 0 ? (
+                        <div className="bg-yellow-500/90 text-white px-3 py-1 rounded-full text-sm font-bold border border-yellow-300 shadow-lg shadow-yellow-500/40">
+                          🏅 パーフェクト!
+                        </div>
+                      ) : (
+                        <div className="bg-gray-900/80 text-white px-3 py-1 rounded-full text-sm font-semibold border border-gray-600">
+                          ✅ {post.approveCount} / ❌ {post.rejectCount}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {!post.isApproved && !isVotingClosed(post.postedAt) && (post.totalVotes === undefined || post.totalVotes < 5) && post.userId !== currentUserId && (
+                    <div className="absolute bottom-3 right-3 flex gap-2">
+                      <button
+                        onClick={() => handleVote(post.id, 'approve')}
+                        disabled={post.hasVoted}
+                        className={`px-4 py-2 rounded-full text-sm font-bold shadow-lg transition ${
+                          post.hasVoted
+                            ? 'bg-gray-600 text-gray-300 shadow-gray-700/40 cursor-not-allowed opacity-60'
+                            : 'bg-green-600 text-white hover:bg-green-500 shadow-green-700/40'
+                        }`}
+                      >
+                        {post.questId ? 'OK' : '松本関連'}
+                      </button>
+                      <button
+                        onClick={() => handleVote(post.id, 'reject')}
+                        disabled={post.hasVoted}
+                        className={`px-4 py-2 rounded-full text-sm font-bold shadow-lg transition ${
+                          post.hasVoted
+                            ? 'bg-gray-600 text-gray-300 shadow-gray-700/40 cursor-not-allowed opacity-60'
+                            : 'bg-red-600 text-white hover:bg-red-500 shadow-red-700/40'
+                        }`}
+                      >
+                        {post.questId ? 'NG' : '関連なし'}
+                      </button>
+                    </div>
                   )}
                 </div>
-              )}
 
-              {/* コメント入力欄 */}
-              <div className="flex gap-2 pt-2">
-                <input
-                  type="text"
-                  placeholder="コメントを入力..."
-                  className="flex-1 bg-gray-700 text-white px-3 py-2 rounded-lg text-sm border border-gray-600 focus:outline-none focus:border-green-500 transition"
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter' && (e.target as HTMLInputElement).value.trim()) {
-                      handleComment(post.id, (e.target as HTMLInputElement).value);
-                      (e.target as HTMLInputElement).value = '';
-                    }
-                  }}
-                />
-                <button
-                  onClick={(e) => {
-                    const input = (e.currentTarget.parentElement?.querySelector('input') as HTMLInputElement);
-                    if (input && input.value.trim()) {
-                      handleComment(post.id, input.value);
-                      input.value = '';
-                    }
-                  }}
-                  className="px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg font-semibold transition text-sm border border-green-500"
-                >
-                  送信
-                </button>
+                {!post.isApproved && !isVotingClosed(post.postedAt) && post.totalVotes !== undefined && post.totalVotes > 0 && (
+                  <div className="px-4 pt-3 pb-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-gray-400">投票割合:</span>
+                        <span className="text-xs font-semibold text-green-400">✓ {post.approveCount}</span>
+                        <span className="text-xs font-semibold text-red-400">✗ {post.rejectCount}</span>
+                        {post.hasVoted && <span className="text-xs font-bold text-yellow-400">✓ 投票済み</span>}
+                      </div>
+                      <span className="text-xs font-bold text-green-400">{getTimeRemaining(post.postedAt)}</span>
+                    </div>
+                    <div className="w-full bg-gray-700 rounded-full h-2 overflow-hidden flex">
+                      <div
+                        className="h-full bg-gradient-to-r from-green-600 to-green-400"
+                        style={{
+                          width: `${(post.approveCount! / post.totalVotes!) * 100}%`
+                        }}
+                      />
+                      <div
+                        className="h-full bg-gradient-to-r from-red-600 to-red-400"
+                        style={{
+                          width: `${(post.rejectCount! / post.totalVotes!) * 100}%`
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <div className="p-4 space-y-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs text-gray-400">
+                      {new Date(post.postedAt).toLocaleString('ja-JP', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                    {post.rejectedAt && (
+                      <span className="text-xs bg-red-600/40 text-red-300 px-2 py-1 rounded">却下</span>
+                    )}
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="w-12 h-12 bg-gray-700 rounded-full overflow-hidden flex-shrink-0 border border-gray-600 hover:border-green-500 transition cursor-pointer"
+                        onClick={() => router.push(`/user/${post.user.id}`)}
+                      >
+                        {post.user.avatarUrl ? (
+                          <img
+                            src={post.user.avatarUrl}
+                            alt={post.user.username}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <span className="text-lg font-bold text-gray-300">
+                            {post.user.username[0].toUpperCase()}
+                          </span>
+                        )}
+                      </div>
+
+                      <div>
+                        <p
+                          className="font-bold text-white cursor-pointer hover:text-green-400 transition"
+                          onClick={() => router.push(`/user/${post.user.id}`)}
+                        >
+                          {post.user.displayName || post.user.username}
+                        </p>
+                        <p className="text-sm text-gray-400">@{post.user.username}</p>
+                        <p className="text-xs text-gray-500">{new Date(post.postedAt).toLocaleString()}</p>
+                      </div>
+                    </div>
+
+                    <div className="text-right">
+                      <p className="text-sm text-gray-400">投票数</p>
+                      <p className="text-lg font-bold text-white">{post.totalVotes ?? 0}</p>
+                      {isVotingClosed(post.postedAt) && post.totalVotes !== undefined && post.totalVotes > 0 && (
+                        <p className="text-xs text-gray-500 mt-1">✓ {post.approveCount} / ✗ {post.rejectCount}</p>
+                      )}
+                    </div>
+                  </div>
+
+                  <p className="text-white text-sm whitespace-pre-wrap leading-relaxed">{post.caption}</p>
+
+                  {post.tags && (
+                    <div className="flex flex-wrap gap-2 text-xs text-green-300">
+                      {post.tags.split(',').map((tag) => (
+                        <span
+                          key={tag}
+                          className="px-2 py-1 bg-green-900/50 border border-green-700 rounded-full"
+                        >
+                          #{tag.trim()}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => handleLike(post.id)}
+                      className={`flex items-center gap-1 px-3 py-2 rounded-full text-sm font-semibold border transition ${
+                        post.hasLiked
+                          ? 'bg-pink-600 text-white border-pink-500'
+                          : 'bg-gray-700 text-gray-200 border-gray-600 hover:bg-gray-600'
+                      }`}
+                    >
+                      ❤️ {post.likeCount ?? 0}
+                    </button>
+
+                    <button
+                      onClick={() => handleToggleComments(post.id)}
+                      className="flex items-center gap-1 px-3 py-2 rounded-full text-sm font-semibold bg-gray-700 text-gray-200 border border-gray-600 hover:bg-gray-600"
+                    >
+                      💬 {post.commentCount ?? 0}
+                    </button>
+                  </div>
+
+                  {expandedPostId === post.id && (
+                    <div className="bg-gray-900 border border-gray-700 rounded-lg p-3 space-y-3">
+                      <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
+                        {loadingComments[post.id] ? (
+                          <p className="text-gray-400 text-sm">読み込み中...</p>
+                        ) : comments[post.id] && comments[post.id].length > 0 ? (
+                          comments[post.id].map((comment) => (
+                            <div key={comment.id} className="flex items-start gap-2">
+                              <div className="w-8 h-8 bg-gray-700 rounded-full overflow-hidden flex-shrink-0 border border-gray-600">
+                                {comment.user.avatarUrl ? (
+                                  <img
+                                    src={comment.user.avatarUrl}
+                                    alt={comment.user.username}
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <span className="text-xs font-bold text-gray-300">
+                                    {comment.user.username[0].toUpperCase()}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex-1">
+                                <p className="text-sm text-white font-semibold">
+                                  {comment.user.displayName || comment.user.username}
+                                </p>
+                                <p className="text-xs text-gray-300 whitespace-pre-wrap">{comment.text}</p>
+                                <p className="text-[10px] text-gray-500">{new Date(comment.createdAt).toLocaleString()}</p>
+                              </div>
+                              <button
+                                onClick={() => handleDeleteComment(post.id, comment.id)}
+                                className="text-xs text-red-400 hover:text-red-300"
+                              >
+                                削除
+                              </button>
+                            </div>
+                          ))
+                        ) : (
+                          <p className="text-gray-400 text-sm">コメントはまだありません</p>
+                        )}
+                      </div>
+
+                      <form
+                        className="flex items-center gap-2"
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          const form = e.target as HTMLFormElement;
+                          const input = form.elements.namedItem('comment') as HTMLInputElement;
+                          const text = input.value.trim();
+                          if (!text) return;
+                          handleComment(post.id, text);
+                          input.value = '';
+                        }}
+                      >
+                        <input
+                          name="comment"
+                          type="text"
+                          placeholder="コメントを入力..."
+                          className="flex-1 px-3 py-2 bg-gray-800 text-white rounded-lg border border-gray-700 focus:outline-none focus:border-green-500"
+                        />
+                        <button
+                          type="submit"
+                          className="px-3 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-500"
+                        >
+                          送信
+                        </button>
+                      </form>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          </div>
-        ))}
+            ))
+          )
+        ) : (
+          <>
+            {mapLoading ? (
+              <div className="min-h-[50vh] flex items-center justify-center">
+                <p className="text-white">マップを読み込み中...</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {mapPosts.length === 0 && (
+                  <p className="text-center text-sm text-gray-400">
+                    位置情報付きの承認済み投稿がまだありません
+                  </p>
+                )}
+                <FeedMap key="map-feed" posts={mapPosts} />
+              </div>
+            )}
+          </>
+        )}
       </div>
+
+      {/* 画像拡大表示モーダル */}
+      {selectedImageUrl && (
+        <div
+          className="fixed inset-0 bg-black/80 flex items-center justify-center z-50"
+          onClick={() => setSelectedImageUrl(null)}
+        >
+          <div className="relative max-w-2xl max-h-[90vh] w-full h-full flex items-center justify-center p-4">
+            <button
+              onClick={() => setSelectedImageUrl(null)}
+              className="absolute top-4 right-4 bg-red-600 hover:bg-red-700 text-white rounded-full w-10 h-10 flex items-center justify-center font-bold text-lg transition"
+            >
+              ✕
+            </button>
+            <img
+              src={selectedImageUrl}
+              alt="拡大表示"
+              className="max-w-full max-h-[90vh] object-contain"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
+        </div>
+      )}
 
       <BottomNav />
     </div>

@@ -10,7 +10,7 @@ export async function GET(request: Request) {
     const cookieHeader = request.headers.get('cookie');
     const token = cookieHeader
       ?.split('; ')
-      .find(row => row.startsWith('auth-token='))
+      .find((row: string) => row.startsWith('auth-token='))
       ?.split('=')[1];
 
     if (!token) {
@@ -46,8 +46,29 @@ export async function GET(request: Request) {
       }
     });
 
+    const [outgoingRequest, incomingRequest] = await Promise.all([
+      prisma.followRequest.findUnique({
+        where: {
+          requesterId_targetId: {
+            requesterId: decoded.userId,
+            targetId: targetUserId
+          }
+        }
+      }),
+      prisma.followRequest.findUnique({
+        where: {
+          requesterId_targetId: {
+            requesterId: targetUserId,
+            targetId: decoded.userId
+          }
+        }
+      })
+    ]);
+
     return NextResponse.json({
-      isFollowing: !!follow
+      isFollowing: !!follow,
+      isRequestedByMe: outgoingRequest?.status === 'PENDING',
+      isRequestingMe: incomingRequest?.status === 'PENDING'
     });
 
   } catch (error) {

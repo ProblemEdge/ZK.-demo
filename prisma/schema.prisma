@@ -1,0 +1,218 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ユーザー（アカウント情報）
+model User {
+  id            String   @id @default(uuid())
+  username      String   @unique
+  passwordHash  String
+  displayName   String?  // 表示名（追加）
+  bio           String?  // 自己紹介（追加）
+  avatarUrl     String?  // プロフィール画像URL（追加）
+  level         Int      @default(1)  // ユーザーレベル
+  gems          Int      @default(0)  // ジェム（通貨）
+  experience    Int      @default(0)  // 経験値
+  createdAt     DateTime @default(now())
+  
+  posts         Post[]
+  votes         Vote[]
+  likes         Like[]
+  comments      Comment[]
+  followers     Follow[] @relation("follower")
+  following     Follow[] @relation("following")
+  followRequestsSent     FollowRequest[] @relation("followRequestRequester")
+  followRequestsReceived FollowRequest[] @relation("followRequestTarget")
+  notifications          Notification[]
+  notificationsAsActor   Notification[] @relation("notificationActor")
+  reports       Report[]
+  questProgress UserQuestProgress[]
+  pushSubscriptions PushSubscription[]
+}
+
+// 投稿（写真とキャプション）
+model Post {
+  id            String   @id @default(uuid())
+  userId        String
+  imageUrl      String
+  caption       String
+  tags          String
+  postedAt      DateTime @default(now())
+  isApproved    Boolean  @default(false)
+  rejectedAt    DateTime? // 却下された時刻
+  approvalScore Int      @default(0)
+  votingEndedAt DateTime? // 投票受付終了時刻（5分後 or 10票時点）
+  latitude      Float?
+  longitude     Float?
+  locationName  String?
+  visibilityScope VisibilityScope @default(PUBLIC)
+  visibilityDurationMinutes Int?
+  questId       String?  // クエスト投稿の場合のクエストID
+  
+  user          User     @relation(fields: [userId], references: [id])
+  votes         Vote[]
+  likes         Like[]
+  comments      Comment[]
+  reports       Report[]
+  quest         DailyQuest? @relation(fields: [questId], references: [id])
+}
+
+enum VisibilityScope {
+  PUBLIC
+  FOLLOWERS
+}
+
+// 投票（承認/却下）
+model Vote {
+  id        String   @id @default(uuid())
+  postId    String
+  voterId   String
+  voteType  String
+  createdAt DateTime @default(now())
+  
+  post      Post     @relation(fields: [postId], references: [id])
+  voter     User     @relation(fields: [voterId], references: [id])
+  
+  @@unique([postId, voterId])
+}
+
+// フォロー関係
+model Follow {
+  followerId  String
+  followingId String
+  createdAt   DateTime @default(now())
+  
+  follower    User     @relation("follower", fields: [followerId], references: [id])
+  following   User     @relation("following", fields: [followingId], references: [id])
+  
+  @@id([followerId, followingId])
+}
+
+enum FollowRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model FollowRequest {
+  id          String              @id @default(uuid())
+  requesterId String
+  targetId    String
+  status      FollowRequestStatus @default(PENDING)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  requester   User @relation("followRequestRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  target      User @relation("followRequestTarget", fields: [targetId], references: [id], onDelete: Cascade)
+
+  @@unique([requesterId, targetId])
+}
+
+enum NotificationType {
+  FOLLOW_REQUEST
+  FOLLOW_ACCEPTED
+  FOLLOW_REJECTED
+  POST_APPROVED
+  POST_REJECTED
+  COMMENT_RECEIVED
+  POST_CREATED
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  actorId   String?
+  type      NotificationType
+  title     String
+  body      String?
+  link      String?
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  actor     User?  @relation("notificationActor", fields: [actorId], references: [id])
+}
+
+// 報告（不適切投稿の通報）
+model Report {
+  id        String   @id @default(uuid())
+  postId    String
+  reporterId String
+  reason    String
+  createdAt DateTime @default(now())
+  
+  post      Post     @relation(fields: [postId], references: [id])
+  reporter  User     @relation(fields: [reporterId], references: [id])
+}
+
+// いいね
+model Like {
+  id        String   @id @default(uuid())
+  postId    String
+  userId    String
+  createdAt DateTime @default(now())
+  
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([postId, userId])
+}
+
+// コメント
+model Comment {
+  id        String   @id @default(uuid())
+  postId    String
+  userId    String
+  text      String
+  createdAt DateTime @default(now())
+  
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// デイリークエスト（日毎のお題）
+model DailyQuest {
+  id          String   @id @default(uuid())
+  title       String   // クエスト名
+  description String   // 説明
+  date        DateTime // 対象日（0時基準）
+  order       Int      // 表示順（0-2）
+  createdAt   DateTime @default(now())
+  
+  posts       Post[]
+  progress    UserQuestProgress[]
+  
+  @@unique([date, order])
+}
+
+// ユーザーごとのクエスト進行状況
+model UserQuestProgress {
+  id          String   @id @default(uuid())
+  userId      String
+  questId     String
+  completed   Boolean  @default(false)
+  completedAt DateTime?
+  createdAt   DateTime @default(now())
+  
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quest       DailyQuest  @relation(fields: [questId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, questId])
+}
+
+// Push通知の購読情報
+model PushSubscription {
+  id          String   @id @default(uuid())
+  userId      String
+  endpoint    String   @unique
+  p256dh      String
+  auth        String
+  createdAt   DateTime @default(now())
+  
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}

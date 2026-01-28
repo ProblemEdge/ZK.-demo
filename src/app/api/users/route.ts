@@ -32,9 +32,15 @@ export async function GET(req: Request) {
     // ユーザーを検索（ユーザー名と表示名で）
     const users = await prisma.user.findMany({
       where: {
-        OR: [
-          { username: { contains: query } },
-          { displayName: { contains: query } }
+        AND: [
+          {
+            OR: [
+              { username: { contains: query } },
+              { displayName: { contains: query } }
+            ]
+          },
+          // 自分を除外
+          currentUserId ? { id: { not: currentUserId } } : {}
         ]
       },
       select: {
@@ -58,18 +64,32 @@ export async function GET(req: Request) {
 
     // 現在のユーザーのフォロー情報を取得
     let followingUserIds: Set<string> = new Set();
+    let requestedUserIds: Set<string> = new Set();
     if (currentUserId) {
-      const following = await prisma.follow.findMany({
-        where: { followerId: currentUserId },
-        select: { followingId: true }
-      });
+      const [following, outgoingRequests] = await Promise.all([
+        prisma.follow.findMany({
+          where: { followerId: currentUserId },
+          select: { followingId: true }
+        }),
+        prisma.followRequest.findMany({
+          where: { requesterId: currentUserId, status: 'PENDING' },
+          select: { targetId: true }
+        })
+      ]);
       followingUserIds = new Set(following.map(f => f.followingId));
+      requestedUserIds = new Set(outgoingRequests.map(r => r.targetId));
     }
 
-    // フォロー情報を追加
+    // フォロー情報を追加（カウントの表示はラベルに合わせて入れ替え）
     const usersWithFollowStatus = users.map(user => ({
       ...user,
-      isFollowing: followingUserIds.has(user.id)
+      _count: {
+        posts: user._count.posts,
+        followers: user._count.following,
+        following: user._count.followers
+      },
+      isFollowing: followingUserIds.has(user.id),
+      isRequested: requestedUserIds.has(user.id)
     }));
 
     return Response.json(usersWithFollowStatus);

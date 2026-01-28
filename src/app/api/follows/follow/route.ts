@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import jwt from 'jsonwebtoken';
+import { sendNotificationToUser } from '../../utils/notifications';
 
 const prisma = new PrismaClient();
 
@@ -10,7 +11,7 @@ export async function POST(request: Request) {
     const cookieHeader = request.headers.get('cookie');
     const token = cookieHeader
       ?.split('; ')
-      .find(row => row.startsWith('auth-token='))
+      .find((row: string) => row.startsWith('auth-token='))
       ?.split('=')[1];
 
     if (!token) {
@@ -25,7 +26,7 @@ export async function POST(request: Request) {
       userId: string;
     };
 
-    const { targetUserId } = await request.json();
+    const { targetUserId }: { targetUserId?: string } = await request.json();
 
     if (!targetUserId) {
       return NextResponse.json(
@@ -41,26 +42,68 @@ export async function POST(request: Request) {
       );
     }
 
-    // フォロー関係を作成
-    const follow = await prisma.follow.create({
-      data: {
-        followerId: decoded.userId,
-        followingId: targetUserId
+    // 既にフォロー済みか確認
+    const existingFollow = await prisma.follow.findUnique({
+      where: {
+        followerId_followingId: {
+          followerId: decoded.userId,
+          followingId: targetUserId
+        }
       }
     });
 
+    if (existingFollow) {
+      return NextResponse.json({
+        success: true,
+        isFollowing: true,
+        isRequested: false
+      });
+    }
+
+    // フォローリクエストを作成（リクエスト制）
+    const followRequest = await prisma.followRequest.upsert({
+      where: {
+        requesterId_targetId: {
+          requesterId: decoded.userId,
+          targetId: targetUserId
+        }
+      },
+      create: {
+        requesterId: decoded.userId,
+        targetId: targetUserId,
+        status: 'PENDING'
+      },
+      update: {
+        status: 'PENDING'
+      }
+    });
+
+    console.log('[Follow] Sending follow request notification to:', targetUserId);
+    
+    await sendNotificationToUser(
+      targetUserId,
+      'フォローリクエストが届きました',
+      'フォローを承認するか選択してください',
+      '/profile',
+      decoded.userId,
+      'FOLLOW_REQUEST'
+    );
+    
+    console.log('[Follow] Follow request notification sent successfully');
+
     return NextResponse.json({
       success: true,
-      isFollowing: true
+      isFollowing: false,
+      isRequested: followRequest.status === 'PENDING'
     });
 
   } catch (error: any) {
     console.error('Follow error:', error);
     
-    // 既にフォロー済みの場合
+    // 既にリクエスト済みの場合
     if (error.code === 'P2002') {
       return NextResponse.json(
-        { error: '既にフォロー中です' },
+        { error: '既にリクエスト済みです' },
         { status: 400 }
       );
     }
