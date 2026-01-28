@@ -90,7 +90,7 @@ export default function BottomNav() {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-gray-900 border-t border-gray-700 z-50 shadow-lg" style={{ paddingBottom: 'var(--safe-area-bottom)' }}>
-      <div className="flex justify-around items-center h-16 relative" style={{ paddingBottom: 'calc(0.25rem + var(--safe-area-bottom))' }}>
+      <div className="flex justify-around items-center h-12 relative" style={{ paddingBottom: 'calc(0.25rem + var(--safe-area-bottom))' }}>
         {/* 左側のアイテム */}
         {leftItems.map((item) => (
           <Link
@@ -102,14 +102,14 @@ export default function BottomNav() {
               <img
                 src="/icon_vote.png"
                 alt="投票"
-                className="w-16 h-16 object-contain transition"
+                className="w-10 h-10 object-contain transition"
                 style={pathname === item.href ? { filter: 'brightness(2) saturate(1.8) hue-rotate(15deg)', transform: 'scale(1.15)' } : {}}
               />
             ) : item.href === '/feed' ? (
               <img
                 src="/icon_home.png"
                 alt="ホーム"
-                className="w-16 h-16 object-contain transition"
+                className="w-10 h-10 object-contain transition"
                 style={pathname === item.href ? { filter: 'brightness(2) saturate(1.8) hue-rotate(15deg)', transform: 'scale(1.15)' } : {}}
               />
             ) : item.href === '/discover' ? (
@@ -133,7 +133,7 @@ export default function BottomNav() {
             src="/icon_post.png"
             alt="投稿"
             className="object-contain transition"
-            style={pathname === '/post' ? { width: '96px', height: '96px', filter: 'brightness(2) saturate(1.8) hue-rotate(15deg)', transform: 'scale(1.15)' } : { width: '80px', height: '80px' }}
+            style={pathname === '/post' ? { width: '64px', height: '64px', filter: 'brightness(2) saturate(1.8) hue-rotate(15deg)', transform: 'scale(1.15)' } : { width: '56px', height: '56px' }}
           />
         </Link>
 
@@ -156,7 +156,7 @@ export default function BottomNav() {
                 <img
                   src="/icon_people.png"
                   alt="ユーザー"
-                  className="w-16 h-16 object-contain transition"
+                  className="w-10 h-10 object-contain transition"
                   style={pathname === item.href ? { filter: 'brightness(2) saturate(1.8) hue-rotate(15deg)', transform: 'scale(1.15)' } : {}}
                 />
               ) : item.href === '/profile' ? (
