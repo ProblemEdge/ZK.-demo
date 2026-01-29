@@ -1,7 +1,5 @@
-import { PrismaClient } from '@prisma/client';
 import { REWARD_CONFIG, getExpForLevel } from './rewards';
-
-const prisma = new PrismaClient();
+import { prisma } from '@/lib/prisma';
 
 /**
  * ユーザーのレベルをチェックして更新

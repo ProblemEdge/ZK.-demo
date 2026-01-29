@@ -1,7 +1,6 @@
 import webpush from 'web-push';
-import { PrismaClient, NotificationType } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { NotificationType } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 
 // VAPID設定
 webpush.setVapidDetails(

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import BottomNav from '../components/BottomNav';
@@ -204,7 +204,7 @@ export default function FeedPage() {
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
-  const handleVote = async (postId: string, voteType: 'approve' | 'reject') => {
+  const handleVote = useCallback(async (postId: string, voteType: 'approve' | 'reject') => {
     try {
       const res = await fetch('/api/votes/create', {
         method: 'POST',
@@ -232,7 +232,7 @@ export default function FeedPage() {
     } catch (err) {
       console.error('Vote error:', err);
     }
-  };
+  }, [showReward]);
 
   const handleLike = async (postId: string) => {
     try {
@@ -306,16 +306,18 @@ export default function FeedPage() {
     }
   };
 
-  const handleToggleComments = async (postId: string) => {
-    if (expandedPostId === postId) {
-      setExpandedPostId(null);
-    } else {
-      setExpandedPostId(postId);
-      if (!comments[postId]) {
-        await fetchComments(postId);
+  const handleToggleComments = useCallback((postId: string) => {
+    setExpandedPostId(prevId => {
+      if (prevId === postId) {
+        return null;
+      } else {
+        if (!comments[postId]) {
+          fetchComments(postId);
+        }
+        return postId;
       }
-    }
-  };
+    });
+  }, [comments]);
 
   const fetchComments = async (postId: string) => {
     try {

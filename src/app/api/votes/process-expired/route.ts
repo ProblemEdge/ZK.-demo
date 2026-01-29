@@ -1,9 +1,7 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
 import { checkAndUpdateLevel } from '../../utils/level';
 import { REWARD_CONFIG } from '../../utils/rewards';
-
-const prisma = new PrismaClient();
+import { prisma } from '@/lib/prisma';
 
 export async function GET(request: Request) {
   try {

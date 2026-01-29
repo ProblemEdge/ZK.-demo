@@ -1,9 +1,7 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
 import jwt from 'jsonwebtoken';
 import { sendNotificationToUser } from '../../../utils/notifications';
-
-const prisma = new PrismaClient();
+import { prisma } from '@/lib/prisma';
 
 // コメント一覧を取得
 export async function GET(
