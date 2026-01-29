@@ -49,17 +49,7 @@ async function createQuestWave(today: Date, waveIndex: number): Promise<any[]> {
     const template = templates[index];
     const order = waveIndex * 1 + index; // シンプルにwaveIndexに基づく order
 
-    // 既存チェック
-    const existing = await prisma.dailyQuest.findUnique({
-      where: {
-        date_order: {
-          date: today,
-          order: order
-        }
-      }
-    });
-
-    if (!existing) {
+    try {
       const newQuest = await prisma.dailyQuest.create({
         data: {
           title: template.title,
@@ -69,8 +59,23 @@ async function createQuestWave(today: Date, waveIndex: number): Promise<any[]> {
         }
       });
       quests.push(newQuest);
-    } else {
-      quests.push(existing);
+    } catch (error: any) {
+      // ユニーク制約違反の場合、既存のレコードを取得
+      if (error.code === 'P2002') {
+        const existing = await prisma.dailyQuest.findUnique({
+          where: {
+            date_order: {
+              date: today,
+              order: order
+            }
+          }
+        });
+        if (existing) {
+          quests.push(existing);
+        }
+      } else {
+        throw error;
+      }
     }
   }
 
