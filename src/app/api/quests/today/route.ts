@@ -187,6 +187,17 @@ export async function GET(request: Request) {
     });
     const pendingQuestIds = new Set(pendingQuestPosts.map(p => p.questId));
 
+    // ユーザーの承認済みクエスト投稿（完了判定用）
+    const approvedQuestPosts = await prisma.post.findMany({
+      where: {
+        userId: decoded.userId,
+        isApproved: true,
+        questId: { in: allQuestIds }
+      },
+      select: { questId: true }
+    });
+    const approvedQuestIds = new Set(approvedQuestPosts.map(p => p.questId));
+
     // 新しいウェーブがリリースされたかを判定
     const WAVE_MESSAGES = [
       { title: '🌅 朝のデイリークエスト登場！', body: '新しいクエストが利用可能になりました' },
@@ -223,14 +234,17 @@ export async function GET(request: Request) {
     // 利用可能なクエストの情報を構築
     const availableQuestsWithProgress = quests.map(quest => {
       const userProgress = progress.find(p => p.questId === quest.id);
+      const hasPendingPost = pendingQuestIds.has(quest.id);
+      const hasApprovedPost = approvedQuestIds.has(quest.id);
+      
       return {
         id: quest.id,
         title: quest.title,
         description: quest.description,
         order: quest.order,
-        completed: userProgress?.completed || false,
+        completed: userProgress?.completed || hasApprovedPost,
         completedAt: userProgress?.completedAt || null,
-        inProgress: pendingQuestIds.has(quest.id),
+        inProgress: hasPendingPost && !hasApprovedPost,
         locked: false
       };
     });
@@ -238,14 +252,17 @@ export async function GET(request: Request) {
     // ロック中のクエストの情報を構築
     const lockedQuestsWithStatus = lockedQuests.map(quest => {
       const userProgress = progress.find(p => p.questId === quest.id);
+      const hasPendingPost = pendingQuestIds.has(quest.id);
+      const hasApprovedPost = approvedQuestIds.has(quest.id);
+      
       return {
         id: quest.id,
         title: quest.title,
         description: quest.description,
         order: quest.order,
-        completed: userProgress?.completed || false,
+        completed: userProgress?.completed || hasApprovedPost,
         completedAt: userProgress?.completedAt || null,
-        inProgress: pendingQuestIds.has(quest.id),
+        inProgress: hasPendingPost && !hasApprovedPost,
         locked: true
       };
     });

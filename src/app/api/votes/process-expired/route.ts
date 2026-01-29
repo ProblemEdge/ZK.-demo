@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { checkAndUpdateLevel } from '../../utils/level';
 import { REWARD_CONFIG } from '../../utils/rewards';
+import { sendNotificationToUser } from '../../utils/notifications';
 import { prisma } from '@/lib/prisma';
 
 export async function GET(request: Request) {
@@ -57,6 +58,17 @@ export async function GET(request: Request) {
             votingEndedAt: new Date()
           }
         });
+
+        // 却下通知を送信
+        await sendNotificationToUser(
+          post.userId,
+          '⚠️ 投稿の投票が成立しませんでした',
+          `投票数が不足したため、投稿は却下されました。`,
+          '/post',
+          undefined,
+          'POST_REJECTED'
+        );
+
         deletedCount++;
       } else {
         // 多数決を取る（同数の場合は承認）
@@ -80,6 +92,16 @@ export async function GET(request: Request) {
               experience: { increment: REWARD_CONFIG.postApproved.exp }
             }
           });
+
+          // 成功通知を送信
+          await sendNotificationToUser(
+            updatedPost.userId,
+            '✅ 投稿が承認されました！',
+            `投稿が投票に合格し、公開されました。${REWARD_CONFIG.postApproved.gems} 💎 と ${REWARD_CONFIG.postApproved.exp} ⭐ を獲得！`,
+            `/post/${updatedPost.id}`,
+            undefined,
+            'POST_APPROVED'
+          );
 
           // クエスト投稿の場合、進行状況を更新
           if ((post as any).questId) {
@@ -116,6 +138,17 @@ export async function GET(request: Request) {
 
           approvedCount++;
         } else {
+
+          // 失敗通知を送信
+          await sendNotificationToUser(
+            post.userId,
+            '❌ 投稿が却下されました',
+            `投稿が投票に不合格となりました。次の投稿に挑戦してください！`,
+            '/post',
+            undefined,
+            'POST_REJECTED'
+          );
+
           // 却下された投稿は削除せず、却下として終了
           await prisma.post.update({
             where: { id: post.id },
