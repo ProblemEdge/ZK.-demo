@@ -162,8 +162,8 @@ export default function PostPage() {
           visibilityScope,
           visibilityDuration,
           questId: isQuestMode ? selectedQuestId : null,
-          latitude: latitude ?? undefined,
-          longitude: longitude ?? undefined,
+          latitude: latitude,
+          longitude: longitude,
           locationName: locationName.trim() || null
         })
       });

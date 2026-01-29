@@ -101,9 +101,9 @@ export async function POST(request: Request) {
     }
 
     // 位置情報（任意）
-    const latitudeNum = typeof latitude === 'number' ? latitude : null;
-    const longitudeNum = typeof longitude === 'number' ? longitude : null;
-    const sanitizedLocationName = typeof locationName === 'string' ? locationName.slice(0, 100) : null;
+    const latitudeNum = latitude !== null && latitude !== undefined && typeof latitude === 'number' ? latitude : null;
+    const longitudeNum = longitude !== null && longitude !== undefined && typeof longitude === 'number' ? longitude : null;
+    const sanitizedLocationName = typeof locationName === 'string' && locationName.trim() ? locationName.trim().slice(0, 100) : null;
 
     // 緯度経度の範囲チェック
     if (latitudeNum !== null && (latitudeNum < -90 || latitudeNum > 90)) {
