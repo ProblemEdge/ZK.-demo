@@ -61,6 +61,11 @@ export async function GET(request: Request) {
             displayName: true,
             avatarUrl: true
           }
+        },
+        _count: {
+          select: {
+            likes: true
+          }
         }
       },
       orderBy: { postedAt: 'desc' },
