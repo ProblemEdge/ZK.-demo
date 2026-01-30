@@ -50,7 +50,7 @@ export async function GET(request: Request) {
       votingWhereClause.userId = { in: allowedIds };
     }
 
-    // 承認済み投稿を取得
+    // 承認済み投稿を取得（軽量化：votesとlikesは自分の分だけ）
     const approvedPosts = await prisma.post.findMany({
       where: approvedWhereClause,
       include: {
@@ -70,15 +70,21 @@ export async function GET(request: Request) {
             date: true
           }
         },
+        // 自分の投票のみ取得
         votes: {
-          select: { voteType: true, voterId: true }
+          where: { voterId: decoded.userId },
+          select: { voteType: true }
         },
+        // 自分のいいねのみ取得
         likes: {
-          select: { userId: true }
+          where: { userId: decoded.userId },
+          select: { id: true }
         },
         _count: {
           select: {
-            comments: true
+            comments: true,
+            likes: true, // いいね数をカウント
+            votes: true  // 投票数をカウント
           }
         }
       },
@@ -88,7 +94,7 @@ export async function GET(request: Request) {
       take: 5
     });
 
-    // 投票中の投稿を取得
+    // 投票中の投稿を取得（軽量化：votesとlikesは自分の分だけ）
     const votingPosts = await prisma.post.findMany({
       where: votingWhereClause,
       include: {
@@ -108,15 +114,21 @@ export async function GET(request: Request) {
             date: true
           }
         },
+        // 自分の投票のみ取得
         votes: {
-          select: { voteType: true, voterId: true }
+          where: { voterId: decoded.userId },
+          select: { voteType: true }
         },
+        // 自分のいいねのみ取得
         likes: {
-          select: { userId: true }
+          where: { userId: decoded.userId },
+          select: { id: true }
         },
         _count: {
           select: {
-            comments: true
+            comments: true,
+            likes: true,
+            votes: true
           }
         }
       },
@@ -124,6 +136,14 @@ export async function GET(request: Request) {
         postedAt: 'desc'
       },
       take: 5
+    });
+
+    // 投票中の投稿の承認/却下数を一括取得
+    const votingPostIds = votingPosts.map(p => p.id);
+    const voteStats = await prisma.vote.groupBy({
+      by: ['postId', 'voteType'],
+      where: { postId: { in: votingPostIds } },
+      _count: { id: true }
     });
 
     // 投票カウントを追加
@@ -136,11 +156,12 @@ export async function GET(request: Request) {
         return true;
       })
       .map((post: typeof votingPosts[number]) => {
-        const approveCount = post.votes.filter((v: { voteType: string }) => v.voteType === 'approve').length;
-        const rejectCount = post.votes.filter((v: { voteType: string }) => v.voteType === 'reject').length;
-        const hasVoted = post.votes.some((v: { voterId: string }) => v.voterId === decoded.userId);
-        const hasLiked = post.likes.some((l: { userId: string }) => l.userId === decoded.userId);
-        const totalVotes = post.votes.length;
+        // voteStatsから承認/却下数を取得
+        const approveCount = voteStats.find(v => v.postId === post.id && v.voteType === 'approve')?._count.id || 0;
+        const rejectCount = voteStats.find(v => v.postId === post.id && v.voteType === 'reject')?._count.id || 0;
+        const hasVoted = post.votes.length > 0;
+        const hasLiked = post.likes.length > 0;
+        const totalVotes = post._count.votes;
         const duration: any = (post as any).visibilityDurationMinutes;
         const withinDuration = duration == null || (new Date(post.postedAt).getTime() >= (Date.now() - duration * 60 * 1000));
         if (!withinDuration) return null as any;
@@ -152,7 +173,7 @@ export async function GET(request: Request) {
           rejectCount,
           totalVotes,
           hasVoted,
-          likeCount: post.likes.length,
+          likeCount: post._count.likes,
           hasLiked,
           commentCount: post._count.comments
         } as any;
@@ -162,9 +183,21 @@ export async function GET(request: Request) {
           base.user = { id: 'anonymous', username: 'anonymous', displayName: null, avatarUrl: null } as any;
         }
 
+        // votesとlikesの生データは削除（不要なデータを送らない）
+        delete base.votes;
+        delete base.likes;
+
         return base;
       })
       .filter((p) => p);
+
+    // 承認済み投稿の投票数を一括取得
+    const approvedPostIds = approvedPosts.map(p => p.id);
+    const approvedVoteStats = await prisma.vote.groupBy({
+      by: ['postId', 'voteType'],
+      where: { postId: { in: approvedPostIds } },
+      _count: { id: true }
+    });
 
     const enrichedApprovedPosts = approvedPosts
       .map((post: typeof approvedPosts[number]) => {
@@ -172,19 +205,25 @@ export async function GET(request: Request) {
         const withinDuration = duration == null || (new Date(post.postedAt).getTime() >= (Date.now() - duration * 60 * 1000));
         if (!withinDuration) return null as any;
 
-      const approveCount = post.votes.filter((v: { voteType: string }) => v.voteType === 'approve').length;
-      const rejectCount = post.votes.filter((v: { voteType: string }) => v.voteType === 'reject').length;
-      const hasLiked = post.likes.some((l: { userId: string }) => l.userId === decoded.userId);
-      return {
+      const approveCount = approvedVoteStats.find(v => v.postId === post.id && v.voteType === 'approve')?._count.id || 0;
+      const rejectCount = approvedVoteStats.find(v => v.postId === post.id && v.voteType === 'reject')?._count.id || 0;
+      const hasLiked = post.likes.length > 0;
+      
+      // votesとlikesの生データは削除（不要なデータを送らない）
+      const result = {
         ...post,
         approveCount,
         rejectCount,
-        totalVotes: post.votes.length,
+        totalVotes: post._count.votes,
         hasVoted: false,
-        likeCount: post.likes.length,
+        likeCount: post._count.likes,
         hasLiked,
         commentCount: post._count.comments
-        };
+      };
+      delete (result as any).votes;
+      delete (result as any).likes;
+      
+      return result;
       })
       .filter((p) => p);
 
