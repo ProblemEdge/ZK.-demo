@@ -15,6 +15,30 @@ const nextConfig: NextConfig = {
     unoptimized: false,
     formats: ['image/webp', 'image/avif'],
   },
+  // 静的アセットのキャッシュ（ファビコンなど）
+  async headers() {
+    return [
+      {
+        source: '/favicon.ico',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable' // 1年キャッシュ
+          }
+        ]
+      },
+      {
+        source: '/manifest.json',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=604800' // 1週間キャッシュ
+          }
+        ]
+      }
+    ];
+  }
 };
 
 export default nextConfig;
+

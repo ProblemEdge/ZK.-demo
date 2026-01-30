@@ -40,14 +40,15 @@ export default function BottomNav() {
       }
     };
 
-    fetchCount();
-    timer = setInterval(fetchCount, 300000);
-
+    // タブを表示したときのみ取得（初回ポーリング削除）
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') {
         fetchCount();
       }
     };
+
+    // ポーリング間隔を600秒（10分）に延長
+    timer = setInterval(fetchCount, 600000);
     document.addEventListener('visibilitychange', handleVisibility);
 
     return () => {
