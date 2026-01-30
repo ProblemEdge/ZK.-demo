@@ -47,12 +47,7 @@ export async function GET(request: Request) {
       );
     }
 
-    const response = NextResponse.json(user);
-    
-    // 30秒キャッシュ（ユーザー情報はあまり変わらない）
-    response.headers.set('Cache-Control', 'private, max-age=30, stale-while-revalidate=10');
-    
-    return response;
+    return NextResponse.json(user);
 
   } catch (error) {
     console.error('Get user error:', error);

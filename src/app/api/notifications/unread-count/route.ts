@@ -24,12 +24,7 @@ export async function GET(request: Request) {
       where: { userId: decoded.userId, isRead: false }
     });
 
-    const response = NextResponse.json({ count: unreadCount });
-    
-    // 10秒キャッシュ（スパイク軽減）
-    response.headers.set('Cache-Control', 'private, max-age=10, stale-while-revalidate=5');
-    
-    return response;
+    return NextResponse.json({ count: unreadCount });
   } catch (error) {
     console.error('Unread notifications count error:', error);
     return NextResponse.json(
