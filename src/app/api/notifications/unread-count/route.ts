@@ -19,16 +19,17 @@ export async function GET(request: Request) {
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { userId: string };
 
-    const [unreadCount, pendingRequests] = await Promise.all([
-      prisma.notification.count({
-        where: { userId: decoded.userId, isRead: false }
-      }),
-      prisma.followRequest.count({
-        where: { targetId: decoded.userId, status: 'PENDING' }
-      })
-    ]);
+    // 通知数のみ（フォローリクエストは別APIで取得）
+    const unreadCount = await prisma.notification.count({
+      where: { userId: decoded.userId, isRead: false }
+    });
 
-    return NextResponse.json({ count: unreadCount + pendingRequests });
+    const response = NextResponse.json({ count: unreadCount });
+    
+    // 10秒キャッシュ（スパイク軽減）
+    response.headers.set('Cache-Control', 'private, max-age=10, stale-while-revalidate=5');
+    
+    return response;
   } catch (error) {
     console.error('Unread notifications count error:', error);
     return NextResponse.json(

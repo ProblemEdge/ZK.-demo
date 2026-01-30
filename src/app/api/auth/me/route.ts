@@ -24,17 +24,19 @@ export async function GET(request: Request) {
       username: string;
     };
 
-    // ユーザー情報取得（投稿数も含む）
+    // ユーザー情報取得（カウントは除外して軽量化）
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
-      include: {
-        _count: {
-          select: {
-            posts: true,
-            followers: true,
-            following: true
-          }
-        }
+      select: {
+        id: true,
+        username: true,
+        displayName: true,
+        bio: true,
+        avatarUrl: true,
+        createdAt: true,
+        level: true,
+        gems: true,
+        experience: true
       }
     });
 
@@ -45,20 +47,12 @@ export async function GET(request: Request) {
       );
     }
 
-    return NextResponse.json({
-      id: user.id,
-      username: user.username,
-      displayName: user.displayName,
-      bio: user.bio,
-      avatarUrl: user.avatarUrl,
-      createdAt: user.createdAt,
-      postCount: user._count.posts,
-      followerCount: user._count.following,
-      followingCount: user._count.followers,
-      level: user.level,
-      gems: user.gems,
-      experience: user.experience
-    });
+    const response = NextResponse.json(user);
+    
+    // 30秒キャッシュ（ユーザー情報はあまり変わらない）
+    response.headers.set('Cache-Control', 'private, max-age=30, stale-while-revalidate=10');
+    
+    return response;
 
   } catch (error) {
     console.error('Get user error:', error);
