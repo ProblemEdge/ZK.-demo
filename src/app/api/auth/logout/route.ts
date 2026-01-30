@@ -6,7 +6,10 @@ export async function POST() {
   // Cookieを削除
   response.cookies.set('auth-token', '', {
     httpOnly: true,
-    expires: new Date(0)
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    expires: new Date(0),
+    path: '/'
   });
 
   return response;

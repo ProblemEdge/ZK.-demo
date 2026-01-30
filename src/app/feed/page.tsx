@@ -118,7 +118,7 @@ export default function FeedPage() {
 
   const processExpiredVotes = async () => {
     try {
-      await fetch('/api/votes/process-expired');
+      await fetch('/api/votes/process-expired', { credentials: 'include' });
     } catch (err) {
       console.error('Error processing expired votes:', err);
     }
@@ -133,7 +133,7 @@ export default function FeedPage() {
       if (Date.now() - lastChecked < 60000) return;
       localStorage.setItem('last_reward_check', Date.now().toString());
 
-      const res = await fetch('/api/notifications/check-rewards');
+      const res = await fetch('/api/notifications/check-rewards', { credentials: 'include' });
       if (res.ok) {
         const data = await res.json();
         if (data.hasReward && data.reward) {
@@ -150,7 +150,8 @@ export default function FeedPage() {
       if (status !== 'authenticated') return;
       setLoading(true);
       const res = await fetch(`/api/feed?tab=${tab}`, {
-        cache: 'no-store'
+        cache: 'no-store',
+        credentials: 'include'
       });
 
       if (!res.ok) {
@@ -171,7 +172,10 @@ export default function FeedPage() {
     try {
       if (status !== 'authenticated') return;
       setMapLoading(true);
-      const res = await fetch('/api/feed/map', { cache: 'no-store' });
+      const res = await fetch('/api/feed/map', { 
+        cache: 'no-store',
+        credentials: 'include'
+      });
       if (!res.ok) {
         throw new Error('マップ投稿の取得に失敗しました');
       }
@@ -209,7 +213,8 @@ export default function FeedPage() {
       const res = await fetch('/api/votes/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ postId, voteType })
+        body: JSON.stringify({ postId, voteType }),
+        credentials: 'include'
       });
 
       if (!res.ok) {
@@ -241,7 +246,8 @@ export default function FeedPage() {
 
       if (post.hasLiked) {
         const res = await fetch(`/api/posts/${postId}/likes`, {
-          method: 'DELETE'
+          method: 'DELETE',
+          credentials: 'include'
         });
 
         if (!res.ok) {
@@ -258,7 +264,8 @@ export default function FeedPage() {
         );
       } else {
         const res = await fetch(`/api/posts/${postId}/likes`, {
-          method: 'POST'
+          method: 'POST',
+          credentials: 'include'
         });
 
         if (!res.ok) {
@@ -284,7 +291,8 @@ export default function FeedPage() {
       const res = await fetch(`/api/posts/${postId}/comments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text })
+        body: JSON.stringify({ text }),
+        credentials: 'include'
       });
 
       if (!res.ok) {
@@ -322,7 +330,7 @@ export default function FeedPage() {
   const fetchComments = async (postId: string) => {
     try {
       setLoadingComments({ ...loadingComments, [postId]: true });
-      const res = await fetch(`/api/posts/${postId}/comments`);
+      const res = await fetch(`/api/posts/${postId}/comments`, { credentials: 'include' });
 
       if (res.ok) {
         const data = await res.json();
@@ -340,7 +348,8 @@ export default function FeedPage() {
 
     try {
       const res = await fetch(`/api/posts/${postId}/comments/${commentId}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        credentials: 'include'
       });
 
       if (!res.ok) {

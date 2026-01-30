@@ -114,7 +114,7 @@ export default function VotePage() {
 
   const processExpiredVotes = async () => {
     try {
-      await fetch('/api/votes/process-expired');
+      await fetch('/api/votes/process-expired', { credentials: 'include' });
     } catch (err) {
       console.error('Error processing expired votes:', err);
     }
@@ -122,7 +122,7 @@ export default function VotePage() {
 
   const fetchPendingPosts = async () => {
     try {
-      const res = await fetch('/api/posts/pending');
+      const res = await fetch('/api/posts/pending', { credentials: 'include' });
       if (res.ok) {
         const data = await res.json();
         setPosts(data);
@@ -137,7 +137,7 @@ export default function VotePage() {
 
   const fetchQuests = async () => {
     try {
-      const res = await fetch('/api/quests/today', { cache: 'no-store' });
+      const res = await fetch('/api/quests/today', { cache: 'no-store', credentials: 'include' });
       if (res.ok) {
         const data = await res.json();
         setQuests(data.quests || []);
@@ -156,7 +156,8 @@ export default function VotePage() {
     try {
       const res = await fetch('/api/quests/today/reset', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include'
       });
       if (res.ok) {
         fetchQuests();
@@ -173,7 +174,8 @@ export default function VotePage() {
       const res = await fetch('/api/votes/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ postId, voteType })
+        body: JSON.stringify({ postId, voteType }),
+        credentials: 'include'
       });
 
       if (!res.ok) {
@@ -233,7 +235,8 @@ export default function VotePage() {
 
       if (post.hasLiked) {
         const res = await fetch(`/api/posts/${postId}/likes`, {
-          method: 'DELETE'
+          method: 'DELETE',
+          credentials: 'include'
         });
 
         if (!res.ok) {
@@ -248,7 +251,8 @@ export default function VotePage() {
         ));
       } else {
         const res = await fetch(`/api/posts/${postId}/likes`, {
-          method: 'POST'
+          method: 'POST',
+          credentials: 'include'
         });
 
         if (!res.ok) {
@@ -272,7 +276,8 @@ export default function VotePage() {
       const res = await fetch(`/api/posts/${postId}/comments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text })
+        body: JSON.stringify({ text }),
+        credentials: 'include'
       });
 
       if (!res.ok) {
@@ -306,7 +311,7 @@ export default function VotePage() {
   const fetchComments = async (postId: string) => {
     try {
       setLoadingComments({ ...loadingComments, [postId]: true });
-      const res = await fetch(`/api/posts/${postId}/comments`);
+      const res = await fetch(`/api/posts/${postId}/comments`, { credentials: 'include' });
 
       if (res.ok) {
         const data = await res.json();
@@ -324,7 +329,8 @@ export default function VotePage() {
 
     try {
       const res = await fetch(`/api/posts/${postId}/comments/${commentId}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        credentials: 'include'
       });
 
       if (!res.ok) {
