@@ -46,12 +46,11 @@ export async function GET(req: Request) {
         username: true,
         displayName: true,
         avatarUrl: true,
-        bio: true,
+        // bioは検索結果一覧では不要なので削除
         _count: {
           select: {
-            posts: { where: { isApproved: true } },
-            followers: true,
-            following: true
+            // 検索結果ではフォロワー数のみ表示（投稿数やフォロー数は不要）
+            followers: true
           }
         }
       },
@@ -78,14 +77,9 @@ export async function GET(req: Request) {
       requestedUserIds = new Set(outgoingRequests.map(r => r.targetId));
     }
 
-    // フォロー情報を追加（カウントの表示はラベルに合わせて入れ替え）
+    // フォロー情報を追加
     const usersWithFollowStatus = users.map(user => ({
       ...user,
-      _count: {
-        posts: user._count.posts,
-        followers: user._count.following,
-        following: user._count.followers
-      },
       isFollowing: followingUserIds.has(user.id),
       isRequested: requestedUserIds.has(user.id)
     }));

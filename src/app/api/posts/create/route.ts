@@ -185,22 +185,27 @@ export async function POST(request: Request) {
     }
 
     // フォロワーに通知を送信（全世界でもフォロワー限定でも）
+    // 非同期で並列実行して高速化
     const followers = await prisma.follow.findMany({
       where: { followingId: decoded.userId },
       select: { followerId: true }
     });
 
-    for (const follow of followers) {
-      await sendNotificationToUser(
-        follow.followerId,
-        `📸 新しい投稿があります`,
-        `投票に参加してあげよう！`,
-        `/feed`,
-        undefined, // 投稿者を匿名化（誰の投稿かわからないようにする）
-        'POST_CREATED'
-      );
-    }
+    // Promise.allで並列実行（レスポンスを待たずに通知を送る）
+    Promise.all(
+      followers.map(follow =>
+        sendNotificationToUser(
+          follow.followerId,
+          `📸 新しい投稿があります`,
+          `投票に参加してあげよう！`,
+          `/feed`,
+          undefined,
+          'POST_CREATED'
+        ).catch(err => console.error('通知送信エラー:', err))
+      )
+    ).catch(err => console.error('通知一括送信エラー:', err));
 
+    // 通知完了を待たずにレスポンスを返す
     return NextResponse.json({
       message: '投稿しました！投票で承認されるまでお待ちください。',
       post: {

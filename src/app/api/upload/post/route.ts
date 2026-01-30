@@ -30,6 +30,7 @@ export async function POST(request: Request) {
       );
     }
 
+    // 型チェックとサイズチェックのみ（検証を最小限に）
     if (!file.type.startsWith('image/')) {
       return NextResponse.json(
         { error: '画像ファイルのみアップロード可能です' },
@@ -37,9 +38,10 @@ export async function POST(request: Request) {
       );
     }
 
-    if (file.size > 10 * 1024 * 1024) {
+    // サイズ制限を5MBに引き下げ（圧縮前提）
+    if (file.size > 5 * 1024 * 1024) {
       return NextResponse.json(
-        { error: 'ファイルサイズは10MB以下にしてください' },
+        { error: 'ファイルサイズは5MB以下にしてください（アップロード前に圧縮してください）' },
         { status: 400 }
       );
     }
