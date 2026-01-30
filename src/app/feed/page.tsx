@@ -129,6 +129,10 @@ export default function FeedPage() {
   // 報酬をチェックする関数
   const checkRewards = async () => {
     try {
+      const lastChecked = Number(localStorage.getItem('last_reward_check') || '0');
+      if (Date.now() - lastChecked < 60000) return;
+      localStorage.setItem('last_reward_check', Date.now().toString());
+
       const res = await fetch('/api/notifications/check-rewards');
       if (res.ok) {
         const data = await res.json();

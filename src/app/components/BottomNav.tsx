@@ -30,6 +30,7 @@ export default function BottomNav() {
 
     const fetchCount = async () => {
       try {
+        if (document.visibilityState !== 'visible') return;
         const res = await fetch('/api/notifications/unread-count');
         if (!res.ok) return;
         const data = await res.json();
@@ -40,10 +41,18 @@ export default function BottomNav() {
     };
 
     fetchCount();
-    timer = setInterval(fetchCount, 60000);
+    timer = setInterval(fetchCount, 300000);
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        fetchCount();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
 
     return () => {
       if (timer) clearInterval(timer);
+      document.removeEventListener('visibilitychange', handleVisibility);
     };
   }, []);
 
