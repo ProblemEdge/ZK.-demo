@@ -76,7 +76,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     void refresh();
-  }, [refresh]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // 初回のみ実行
 
   const value = useMemo(
     () => ({ user, status, refresh, setUser }),
