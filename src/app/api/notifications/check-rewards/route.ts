@@ -22,7 +22,7 @@ export async function GET(request: Request) {
       userId: string;
     };
 
-    // 未読の承認通知を取得
+    // 未読の承認通知を取得して一度にデータを取得
     const approvalNotifications = await prisma.notification.findMany({
       where: {
         userId: decoded.userId,
@@ -35,37 +35,34 @@ export async function GET(request: Request) {
       orderBy: {
         createdAt: 'desc'
       },
-      take: 1
+      take: 1,
+      include: {
+        user: {
+          select: {
+            level: true,
+            experience: true,
+            gems: true
+          }
+        }
+      }
     });
 
     if (approvalNotifications.length === 0) {
       return NextResponse.json({ hasReward: false });
     }
 
-    // 報酬情報を計算
-    const user = await prisma.user.findUnique({
-      where: { id: decoded.userId },
-      select: {
-        level: true,
-        experience: true,
-        gems: true
-      }
-    });
-
-    if (!user) {
-      return NextResponse.json({ hasReward: false });
-    }
+    const notification = approvalNotifications[0];
+    const user = notification.user;
 
     // 通知を既読にする
     await prisma.notification.update({
-      where: { id: approvalNotifications[0].id },
+      where: { id: notification.id },
       data: { isRead: true }
     });
 
     const expToNextLevel = getExpForLevel(user.level);
 
     // 承認報酬とクエストボーナスの合計を返す
-    // (通知のタイプで判断するのではなく、固定で承認報酬を返す)
     return NextResponse.json({
       hasReward: true,
       reward: {

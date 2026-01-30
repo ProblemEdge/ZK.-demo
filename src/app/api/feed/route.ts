@@ -50,125 +50,130 @@ export async function GET(request: Request) {
       votingWhereClause.userId = { in: allowedIds };
     }
 
-    // 承認済み投稿を取得（軽量化：votesとlikesは自分の分だけ）
-    const approvedPosts = await prisma.post.findMany({
-      where: approvedWhereClause,
-      select: {
-        id: true,
-        userId: true,
-        imageUrl: true, // CloudinaryのHTTPS URLなので軽量
-        caption: true,
-        tags: true,
-        postedAt: true,
-        approvalScore: true,
-        visibilityScope: true,
-        visibilityDurationMinutes: true,
-        latitude: true,
-        longitude: true,
-        locationName: true,
-        user: {
-          select: {
-            id: true,
-            username: true,
-            displayName: true,
-            avatarUrl: true
+    // 承認済み投稿と投票中の投稿を並列取得（高速化）
+    const [approvedPosts, votingPosts] = await Promise.all([
+      prisma.post.findMany({
+        where: approvedWhereClause,
+        select: {
+          id: true,
+          userId: true,
+          imageUrl: true,
+          caption: true,
+          tags: true,
+          postedAt: true,
+          approvalScore: true,
+          visibilityScope: true,
+          visibilityDurationMinutes: true,
+          latitude: true,
+          longitude: true,
+          locationName: true,
+          user: {
+            select: {
+              id: true,
+              username: true,
+              displayName: true,
+              avatarUrl: true
+            }
+          },
+          quest: {
+            select: {
+              id: true,
+              title: true,
+              description: true,
+              date: true
+            }
+          },
+          votes: {
+            where: { voterId: decoded.userId },
+            select: { voteType: true }
+          },
+          likes: {
+            where: { userId: decoded.userId },
+            select: { id: true }
+          },
+          _count: {
+            select: {
+              comments: true,
+              likes: true,
+              votes: true
+            }
           }
         },
-        quest: {
-          select: {
-            id: true,
-            title: true,
-            description: true,
-            date: true
+        orderBy: {
+          postedAt: 'desc'
+        },
+        take: 5
+      }),
+      prisma.post.findMany({
+        where: votingWhereClause,
+        select: {
+          id: true,
+          userId: true,
+          imageUrl: true,
+          caption: true,
+          tags: true,
+          postedAt: true,
+          approvalScore: true,
+          visibilityScope: true,
+          visibilityDurationMinutes: true,
+          latitude: true,
+          longitude: true,
+          locationName: true,
+          user: {
+            select: {
+              id: true,
+              username: true,
+              displayName: true,
+              avatarUrl: true
+            }
+          },
+          quest: {
+            select: {
+              id: true,
+              title: true,
+              description: true,
+              date: true
+            }
+          },
+          votes: {
+            where: { voterId: decoded.userId },
+            select: { voteType: true }
+          },
+          likes: {
+            where: { userId: decoded.userId },
+            select: { id: true }
+          },
+          _count: {
+            select: {
+              comments: true,
+              likes: true,
+              votes: true
+            }
           }
         },
-        // 自分の投票のみ取得
-        votes: {
-          where: { voterId: decoded.userId },
-          select: { voteType: true }
+        orderBy: {
+          postedAt: 'desc'
         },
-        // 自分のいいねのみ取得
-        likes: {
-          where: { userId: decoded.userId },
-          select: { id: true }
-        },
-        _count: {
-          select: {
-            comments: true,
-            likes: true,
-            votes: true
-          }
-        }
-      },
-      orderBy: {
-        postedAt: 'desc'
-      },
-      take: 5
-    });
+        take: 5
+      })
+    ]);
 
-    // 投票中の投稿を取得（軽量化：votesとlikesは自分の分だけ）
-    const votingPosts = await prisma.post.findMany({
-      where: votingWhereClause,
-      select: {
-        id: true,
-        userId: true,
-        imageUrl: true, // CloudinaryのHTTPS URLなので軽量
-        caption: true,
-        tags: true,
-        postedAt: true,
-        approvalScore: true,
-        visibilityScope: true,
-        visibilityDurationMinutes: true,
-        latitude: true,
-        longitude: true,
-        locationName: true,
-        user: {
-          select: {
-            id: true,
-            username: true,
-            displayName: true,
-            avatarUrl: true
-          }
-        },
-        quest: {
-          select: {
-            id: true,
-            title: true,
-            description: true,
-            date: true
-          }
-        },
-        // 自分の投票のみ取得
-        votes: {
-          where: { voterId: decoded.userId },
-          select: { voteType: true }
-        },
-        // 自分のいいねのみ取得
-        likes: {
-          where: { userId: decoded.userId },
-          select: { id: true }
-        },
-        _count: {
-          select: {
-            comments: true,
-            likes: true,
-            votes: true
-          }
-        }
-      },
-      orderBy: {
-        postedAt: 'desc'
-      },
-      take: 5
-    });
-
-    // 投票中の投稿の承認/却下数を一括取得
+    // 投票統計を並列取得
     const votingPostIds = votingPosts.map(p => p.id);
-    const voteStats = await prisma.vote.groupBy({
-      by: ['postId', 'voteType'],
-      where: { postId: { in: votingPostIds } },
-      _count: { id: true }
-    });
+    const approvedPostIds = approvedPosts.map(p => p.id);
+    
+    const [voteStats, approvedVoteStats] = await Promise.all([
+      votingPostIds.length > 0 ? prisma.vote.groupBy({
+        by: ['postId', 'voteType'],
+        where: { postId: { in: votingPostIds } },
+        _count: { id: true }
+      }) : Promise.resolve([]),
+      approvedPostIds.length > 0 ? prisma.vote.groupBy({
+        by: ['postId', 'voteType'],
+        where: { postId: { in: approvedPostIds } },
+        _count: { id: true }
+      }) : Promise.resolve([])
+    ]);
 
     // 投票カウントを追加
     // 投票中投稿: 公開範囲・公開期間を適用し、匿名化
@@ -214,14 +219,6 @@ export async function GET(request: Request) {
         return base;
       })
       .filter((p) => p);
-
-    // 承認済み投稿の投票数を一括取得
-    const approvedPostIds = approvedPosts.map(p => p.id);
-    const approvedVoteStats = await prisma.vote.groupBy({
-      by: ['postId', 'voteType'],
-      where: { postId: { in: approvedPostIds } },
-      _count: { id: true }
-    });
 
     const enrichedApprovedPosts = approvedPosts
       .map((post: typeof approvedPosts[number]) => {
