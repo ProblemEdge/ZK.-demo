@@ -3,11 +3,13 @@ import { prisma } from '@/lib/prisma';
 
 export async function GET(
   request: Request,
-  { params }: { params: { postId: string } }
+  { params }: { params: Promise<{ postId: string }> }
 ) {
   try {
+    const { postId } = await params;
+    
     const post = await prisma.post.findUnique({
-      where: { id: params.postId },
+      where: { id: postId },
       select: { imageUrl: true }
     });
 
