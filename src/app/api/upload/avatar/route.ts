@@ -1,8 +1,14 @@
 import { NextResponse } from 'next/server';
-import { writeFile, mkdir } from 'fs/promises';
-import { join } from 'path';
 import jwt from 'jsonwebtoken';
 import { prisma } from '@/lib/prisma';
+import { v2 as cloudinary } from 'cloudinary';
+
+// Cloudinary設定
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
 
 export async function POST(request: Request) {
   try {
@@ -48,29 +54,24 @@ export async function POST(request: Request) {
       );
     }
 
-    // ファイル保存
+    // Cloudinaryにアップロード
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
+    const base64Image = `data:${file.type};base64,${buffer.toString('base64')}`;
+    
+    const uploadResult = await cloudinary.uploader.upload(base64Image, {
+      folder: 'matsumoto-now/avatars',
+      public_id: `avatar-${decoded.userId}`,
+      resource_type: 'image',
+      overwrite: true, // 同じユーザーの古いアバターを上書き
+      transformation: [
+        { width: 400, height: 400, crop: 'fill', gravity: 'face' }, // 顔を中心に400x400で切り抜き
+        { quality: 'auto:good' },
+        { fetch_format: 'auto' }
+      ]
+    });
 
-    const filename = `avatar-${decoded.userId}-${Date.now()}.${file.type.split('/')[1]}`;
-    let avatarUrl: string;
-
-    // Vercel環境かローカルか判定
-    if (process.env.VERCEL) {
-      // Vercel環境：Base64でデータベースに保存
-      const base64 = buffer.toString('base64');
-      avatarUrl = `data:${file.type};base64,${base64}`;
-    } else {
-      // ローカル環境：ファイルシステムに保存
-      const uploadDir = join(process.cwd(), 'public', 'uploads', 'avatars');
-      const filepath = join(uploadDir, filename);
-
-      // フォルダが存在しない場合は作成
-      await mkdir(uploadDir, { recursive: true });
-
-      await writeFile(filepath, buffer);
-      avatarUrl = `/uploads/avatars/${filename}`;
-    }
+    const avatarUrl = uploadResult.secure_url;
 
     // ユーザーのアバターURLを更新
     await prisma.user.update({

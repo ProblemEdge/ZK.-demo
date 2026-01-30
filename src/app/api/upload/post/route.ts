@@ -1,7 +1,13 @@
 import { NextResponse } from 'next/server';
-import { writeFile, mkdir } from 'fs/promises';
-import { join } from 'path';
 import jwt from 'jsonwebtoken';
+import { v2 as cloudinary } from 'cloudinary';
+
+// Cloudinary設定
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
 
 export async function POST(request: Request) {
   try {
@@ -49,25 +55,20 @@ export async function POST(request: Request) {
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    const filename = `post-${Date.now()}.${file.type.split('/')[1]}`;
-    let imageUrl: string;
+    // Cloudinaryにアップロード
+    const base64Image = `data:${file.type};base64,${buffer.toString('base64')}`;
+    
+    const uploadResult = await cloudinary.uploader.upload(base64Image, {
+      folder: 'matsumoto-now/posts',
+      resource_type: 'image',
+      transformation: [
+        { width: 1080, height: 1080, crop: 'limit' }, // 最大1080x1080にリサイズ
+        { quality: 'auto:good' }, // 自動品質最適化
+        { fetch_format: 'auto' } // 自動フォーマット変換（WebP等）
+      ]
+    });
 
-    // Vercel環境かローカルか判定
-    if (process.env.VERCEL) {
-      // Vercel環境：Base64でDataURLとして返却
-      const base64 = buffer.toString('base64');
-      imageUrl = `data:${file.type};base64,${base64}`;
-    } else {
-      // ローカル環境：ファイルシステムに保存
-      const uploadDir = join(process.cwd(), 'public', 'uploads', 'posts');
-      
-      await mkdir(uploadDir, { recursive: true });
-      
-      const filepath = join(uploadDir, filename);
-      await writeFile(filepath, buffer);
-
-      imageUrl = `/uploads/posts/${filename}`;
-    }
+    const imageUrl = uploadResult.secure_url;
 
     return NextResponse.json({
       message: 'アップロード成功',

@@ -53,7 +53,19 @@ export async function GET(request: Request) {
     // 承認済み投稿を取得（軽量化：votesとlikesは自分の分だけ）
     const approvedPosts = await prisma.post.findMany({
       where: approvedWhereClause,
-      include: {
+      select: {
+        id: true,
+        userId: true,
+        imageUrl: true, // CloudinaryのHTTPS URLなので軽量
+        caption: true,
+        tags: true,
+        postedAt: true,
+        approvalScore: true,
+        visibilityScope: true,
+        visibilityDurationMinutes: true,
+        latitude: true,
+        longitude: true,
+        locationName: true,
         user: {
           select: {
             id: true,
@@ -83,8 +95,8 @@ export async function GET(request: Request) {
         _count: {
           select: {
             comments: true,
-            likes: true, // いいね数をカウント
-            votes: true  // 投票数をカウント
+            likes: true,
+            votes: true
           }
         }
       },
@@ -97,7 +109,19 @@ export async function GET(request: Request) {
     // 投票中の投稿を取得（軽量化：votesとlikesは自分の分だけ）
     const votingPosts = await prisma.post.findMany({
       where: votingWhereClause,
-      include: {
+      select: {
+        id: true,
+        userId: true,
+        imageUrl: true, // CloudinaryのHTTPS URLなので軽量
+        caption: true,
+        tags: true,
+        postedAt: true,
+        approvalScore: true,
+        visibilityScope: true,
+        visibilityDurationMinutes: true,
+        latitude: true,
+        longitude: true,
+        locationName: true,
         user: {
           select: {
             id: true,
