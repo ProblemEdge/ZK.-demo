@@ -2,28 +2,19 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from './context/AuthContext';
 
 export default function HomePage() {
   const router = useRouter();
+  const { status } = useAuth();
 
   useEffect(() => {
-    checkAuthAndRedirect();
-  }, []);
-
-  const checkAuthAndRedirect = async () => {
-    try {
-      const res = await fetch('/api/auth/me');
-      if (res.ok) {
-        // ログイン済み → /feed にリダイレクト
-        router.push('/feed');
-      } else {
-        // 未ログイン → /login にリダイレクト
-        router.push('/login');
-      }
-    } catch {
+    if (status === 'authenticated') {
+      router.push('/feed');
+    } else if (status === 'unauthenticated') {
       router.push('/login');
     }
-  };
+  }, [status, router]);
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">

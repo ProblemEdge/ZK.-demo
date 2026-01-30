@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useNotifications } from '../../hooks/useNotifications';
+import { useAuth } from '../../context/AuthContext';
 
 interface User {
   id: string;
@@ -22,27 +23,21 @@ export default function EditProfilePage() {
   const [error, setError] = useState('');
   const router = useRouter();
   const { permission, isSupported, requestPermission } = useNotifications();
+  const { user: authUser, status, refresh } = useAuth();
 
   useEffect(() => {
-    fetchUserData();
-  }, []);
-
-  const fetchUserData = async () => {
-    try {
-      const res = await fetch('/api/auth/me');
-      if (!res.ok) {
-        router.push('/login');
-        return;
-      }
-      const data = await res.json();
-      setUser(data);
-      setDisplayName(data.displayName || '');
-      setBio(data.bio || '');
-      setAvatarPreview(data.avatarUrl || '');
-    } catch (error) {
-      console.error('Error fetching user:', error);
+    if (status === 'unauthenticated') {
+      router.push('/login');
+      return;
     }
-  };
+
+    if (status === 'authenticated' && authUser) {
+      setUser(authUser);
+      setDisplayName(authUser.displayName || '');
+      setBio(authUser.bio || '');
+      setAvatarPreview(authUser.avatarUrl || '');
+    }
+  }, [status, authUser, router]);
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -100,6 +95,7 @@ export default function EditProfilePage() {
       }
 
       alert('プロフィールを更新しました');
+      await refresh();
       router.push('/profile?updated=' + Date.now()); // クエリパラメータで再取得をトリガー
 
     } catch (err: any) {

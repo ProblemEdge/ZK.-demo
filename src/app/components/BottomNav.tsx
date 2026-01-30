@@ -3,19 +3,13 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
-
-interface User {
-  id: string;
-  username: string;
-  displayName: string | null;
-  avatarUrl: string | null;
-}
+import { useAuth } from '../context/AuthContext';
 
 export default function BottomNav() {
   const pathname = usePathname();
   const [notificationCount, setNotificationCount] = useState(0);
-  const [user, setUser] = useState<User | null>(null);
   const [isClient, setIsClient] = useState(false);
+  const { user } = useAuth();
 
   const leftItems = [
     { href: '/feed', label: 'ホーム', icon: '🏠' },
@@ -29,41 +23,6 @@ export default function BottomNav() {
 
   useEffect(() => {
     setIsClient(true);
-    const cached = localStorage.getItem('bottomNav_user');
-    if (cached) {
-      try {
-        setUser(JSON.parse(cached));
-      } catch {
-        // noop
-      }
-    }
-  }, []);
-
-  useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const res = await fetch('/api/auth/me');
-        if (res.ok) {
-          const data = await res.json();
-          setUser(data);
-          localStorage.setItem('bottomNav_user', JSON.stringify(data));
-        }
-      } catch {
-        // noop
-      }
-    };
-
-    // ローカルストレージから初期値を復元（瞬間的な絵文字表示を避ける）
-    const cachedUser = localStorage.getItem('bottomNav_user');
-    if (cachedUser) {
-      try {
-        setUser(JSON.parse(cachedUser));
-      } catch {
-        // noop
-      }
-    }
-
-    fetchUser();
   }, []);
 
   useEffect(() => {

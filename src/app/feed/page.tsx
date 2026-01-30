@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import BottomNav from '../components/BottomNav';
 import { useReward } from '../context/RewardContext';
+import { useAuth } from '../context/AuthContext';
 import type { MapPost } from '../components/FeedMap';
 
 const FeedMap = dynamic(() => import('../components/FeedMap'), { ssr: false });
@@ -73,11 +74,18 @@ export default function FeedPage() {
   const [loadingComments, setLoadingComments] = useState<{ [postId: string]: boolean }>({});
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const router = useRouter();
+  const { status, user } = useAuth();
 
   useEffect(() => {
-    checkAuth();
-    checkRewards(); // ページ読み込み時に報酬をチェック
-  }, []);
+    if (status === 'unauthenticated') {
+      router.push('/login');
+      return;
+    }
+    if (status === 'authenticated') {
+      setCurrentUserId(user?.id ?? null);
+      checkRewards(); // ページ読み込み時に報酬をチェック
+    }
+  }, [status, user?.id, router]);
 
   useEffect(() => {
     if (viewTab === 'feed') {
@@ -118,20 +126,6 @@ export default function FeedPage() {
 
   const { showReward } = useReward();
 
-  const checkAuth = async () => {
-    try {
-      const res = await fetch('/api/auth/me');
-      if (!res.ok) {
-        router.push('/login');
-        return;
-      }
-      const data = await res.json();
-      setCurrentUserId(data.id);
-    } catch {
-      router.push('/login');
-    }
-  };
-
   // 報酬をチェックする関数
   const checkRewards = async () => {
     try {
@@ -149,6 +143,7 @@ export default function FeedPage() {
 
   const fetchPosts = async () => {
     try {
+      if (status !== 'authenticated') return;
       setLoading(true);
       const res = await fetch(`/api/feed?tab=${tab}`, {
         cache: 'no-store'
@@ -170,6 +165,7 @@ export default function FeedPage() {
 
   const fetchMapPosts = async () => {
     try {
+      if (status !== 'authenticated') return;
       setMapLoading(true);
       const res = await fetch('/api/feed/map', { cache: 'no-store' });
       if (!res.ok) {

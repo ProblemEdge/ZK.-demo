@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import BottomNav from '../components/BottomNav';
 import { useReward } from '../context/RewardContext';
+import { useAuth } from '../context/AuthContext';
 
 interface Post {
   id: string;
@@ -63,9 +64,11 @@ export default function VotePage() {
   const [comments, setComments] = useState<{ [postId: string]: Comment[] }>({});
   const [loadingComments, setLoadingComments] = useState<{ [postId: string]: boolean }>({});
   const router = useRouter();
+  const { status, user } = useAuth();
 
   useEffect(() => {
-    fetchCurrentUser();
+    if (status !== 'authenticated') return;
+
     fetchPendingPosts();
     fetchQuests();
 
@@ -75,21 +78,20 @@ export default function VotePage() {
     }, 1000);
 
     return () => clearInterval(timerInterval);
-  }, []);
-
-  const fetchCurrentUser = async () => {
-    try {
-      const res = await fetch('/api/auth/me');
-      if (res.ok) {
-        const data = await res.json();
-        setCurrentUserId(data.id);
-      }
-    } catch (err) {
-      console.error('Error fetching current user:', err);
-    }
-  };
+  }, [status]);
 
   useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/login');
+      return;
+    }
+    if (status === 'authenticated') {
+      setCurrentUserId(user?.id ?? null);
+    }
+  }, [status, user?.id, router]);
+
+  useEffect(() => {
+    if (status !== 'authenticated') return;
     // 1分ごとに最新の投稿を再取得
     const interval = setInterval(() => {
       if (document.visibilityState !== 'visible') return;
@@ -97,9 +99,10 @@ export default function VotePage() {
     }, 60000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [status]);
 
   useEffect(() => {
+    if (status !== 'authenticated') return;
     // 5分ごとに期限切れの投票を処理
     const interval = setInterval(() => {
       if (document.visibilityState !== 'visible') return;
@@ -107,7 +110,7 @@ export default function VotePage() {
     }, 300000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [status]);
 
   const processExpiredVotes = async () => {
     try {

@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import BottomNav from '../components/BottomNav';
 import { useReward } from '../context/RewardContext';
+import { useAuth } from '../context/AuthContext';
 
 interface User {
   id: string;
@@ -101,6 +102,7 @@ function ProfilePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { showReward } = useReward();
+  const { user: authUser, status, refresh } = useAuth();
 
   // 報酬をチェックする関数
   const checkRewards = async () => {
@@ -118,13 +120,27 @@ function ProfilePageContent() {
   };
 
   useEffect(() => {
-    fetchUserData();
-    fetchMyPosts();
-    fetchQuests();
-    fetchNotifications();
-    fetchFollowRequests();
-    checkRewards(); // 報酬チェックを追加
-  }, [searchParams]); // searchParamsが変わったら再取得
+    if (status === 'unauthenticated') {
+      router.push('/login');
+      return;
+    }
+
+    if (status === 'authenticated') {
+      if (authUser) {
+        setUser(authUser);
+      }
+      setLoading(false);
+      fetchMyPosts();
+      fetchQuests();
+      fetchNotifications();
+      fetchFollowRequests();
+      checkRewards(); // 報酬チェックを追加
+
+      if (searchParams?.get('updated')) {
+        void refresh();
+      }
+    }
+  }, [status, authUser, searchParams, refresh, router]); // searchParamsが変わったら再取得
 
   // ページが見えるようになったときにクエストを再フェッチ（投票完了時の更新を反映）
   useEffect(() => {
@@ -142,25 +158,6 @@ function ProfilePageContent() {
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, []);
-
-  const fetchUserData = async () => {
-    try {
-      const res = await fetch('/api/auth/me', {
-        cache: 'no-store' // キャッシュを無効化
-      });
-      if (!res.ok) {
-        router.push('/login');
-        return;
-      }
-      const data = await res.json();
-      setUser(data);
-    } catch (error) {
-      console.error('Error fetching user:', error);
-      router.push('/login');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const fetchMyPosts = async () => {
     try {
@@ -306,16 +303,11 @@ function ProfilePageContent() {
 
   const fetchFollowers = async () => {
     try {
-      const res = await fetch('/api/auth/me', {
-        cache: 'no-store'
-      });
-      
-      if (!res.ok) return;
-      
-      const userData = await res.json();
+      const targetUserId = user?.id;
+      if (!targetUserId) return;
       setFollowersLoading(true);
       
-      const followersRes = await fetch(`/api/users/${userData.id}/followers`, {
+      const followersRes = await fetch(`/api/users/${targetUserId}/followers`, {
         cache: 'no-store'
       });
 
@@ -334,16 +326,11 @@ function ProfilePageContent() {
 
   const fetchFollowing = async () => {
     try {
-      const res = await fetch('/api/auth/me', {
-        cache: 'no-store'
-      });
-      
-      if (!res.ok) return;
-      
-      const userData = await res.json();
+      const targetUserId = user?.id;
+      if (!targetUserId) return;
       setFollowingLoading(true);
       
-      const followingRes = await fetch(`/api/users/${userData.id}/following`, {
+      const followingRes = await fetch(`/api/users/${targetUserId}/following`, {
         cache: 'no-store'
       });
 
