@@ -93,7 +93,7 @@ export async function GET(request: Request) {
       orderBy: {
         postedAt: 'desc'
       },
-      take: 50
+      take: 5
     });
 
     // 投票中の投稿を取得
@@ -131,7 +131,7 @@ export async function GET(request: Request) {
       orderBy: {
         postedAt: 'desc'
       },
-      take: 50
+      take: 5
     });
 
     // 投票カウントを追加

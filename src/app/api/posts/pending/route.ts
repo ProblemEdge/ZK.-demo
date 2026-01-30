@@ -62,7 +62,7 @@ export async function GET(request: Request) {
       orderBy: {
         postedAt: 'desc'
       },
-      take: 50
+      take: 10
     });
 
     // 投票の割合を計算（5票未満のみ表示）

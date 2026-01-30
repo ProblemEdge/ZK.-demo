@@ -69,7 +69,7 @@ export async function GET(request: Request) {
         }
       },
       orderBy: { postedAt: 'desc' },
-      take: 200
+      take: 20
     });
 
     return NextResponse.json({ posts });
