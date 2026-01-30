@@ -24,19 +24,19 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
     const tab = url.searchParams.get('tab') || 'all';
 
-    // 公開範囲判定用: フォロー中のユーザー一覧
-    const followingListAll = await prisma.follow.findMany({
+    // フォロー中のユーザー一覧を一度だけ取得
+    const followingList = await prisma.follow.findMany({
       where: { followerId: decoded.userId },
       select: { followingId: true }
     });
-    const followingIdsAll = followingListAll.map((f: { followingId: string }) => f.followingId);
-    const allowedIdsAll = [decoded.userId, ...followingIdsAll];
+    const followingIds = followingList.map((f: { followingId: string }) => f.followingId);
+    const allowedIds = [decoded.userId, ...followingIds];
 
     let approvedWhereClause: any = {
       isApproved: true,
       OR: [
         { visibilityScope: 'PUBLIC' },
-        { AND: [ { visibilityScope: 'FOLLOWERS' }, { userId: { in: allowedIdsAll } } ] }
+        { AND: [ { visibilityScope: 'FOLLOWERS' }, { userId: { in: allowedIds } } ] }
       ]
     };
 
@@ -45,17 +45,9 @@ export async function GET(request: Request) {
     };
 
     if (tab === 'following') {
-      const followingList = await prisma.follow.findMany({
-        where: { followerId: decoded.userId },
-        select: { followingId: true }
-      });
-
-      const followingIds = followingList.map((f: { followingId: string }) => f.followingId);
-      
       // フォロー中タブでは自分+フォロー中のみ表示
-      const userIds = [decoded.userId, ...followingIds];
-      approvedWhereClause = { isApproved: true, userId: { in: userIds } };
-      votingWhereClause.userId = { in: userIds };
+      approvedWhereClause = { isApproved: true, userId: { in: allowedIds } };
+      votingWhereClause.userId = { in: allowedIds };
     }
 
     // 承認済み投稿を取得
@@ -139,7 +131,7 @@ export async function GET(request: Request) {
     const enrichedVotingPosts = votingPosts
       .filter((post) => {
         if ((post as any).visibilityScope === 'FOLLOWERS') {
-          return allowedIdsAll.includes((post as any).userId);
+          return allowedIds.includes((post as any).userId);
         }
         return true;
       })
