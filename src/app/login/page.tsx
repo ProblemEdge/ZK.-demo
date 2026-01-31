@@ -15,24 +15,19 @@ export default function LoginPage() {
     e.preventDefault();
     setError('');
     setLoading(true);
-
     try {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password })
       });
-
       const data = await res.json();
-
       if (!res.ok) {
         setError(data.error);
         return;
       }
-
       alert('ログイン成功！');
       router.push('/');
-
     } catch (err) {
       setError('ネットワークエラーが発生しました');
     } finally {
@@ -41,64 +36,65 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-900">
-      <div className="max-w-md w-full space-y-8 p-8 bg-gray-800 rounded-lg shadow-lg border border-gray-700">
-        <div>
-          <h2 className="text-3xl font-bold text-center text-white">
-            ログイン
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-400">
-            松本の"今"を切り取ろう
-          </p>
-        </div>
-        
-        <form onSubmit={handleSubmit} className="mt-8 space-y-6">
-          {error && (
-            <div className="bg-red-900/80 text-red-200 p-3 rounded-lg border border-red-700">
-              {error}
+    <div className="relative min-h-0 min-h-svh h-svh w-full bg-gradient-to-b from-[#0b0c0f] to-[#0f0f0f] flex flex-col items-center justify-center overflow-hidden">
+      {/* ロゴ */}
+      <div className="mb-4 flex items-center justify-center z-10">
+        <span className="text-white text-[64px] font-bold select-none">ZK.</span>
+      </div>
+      {/* パネル */}
+      <div className="w-full max-w-[352px] h-auto bg-gradient-to-b from-[rgba(20,22,26,0.2)] to-[rgba(102,105,110,0.2)] border-2 border-[#0e4b7f] rounded-[24px] shadow-[0px_8px_4px_0px_rgba(0,0,0,0.25)] flex items-center justify-center px-[21px] py-[25px] overflow-auto mx-auto">
+        <div className="w-full flex flex-col items-center gap-[24px]">
+          <div className="w-full flex flex-col items-center gap-[24px]">
+            {/* タイトル */}
+            <div className="w-[174px] flex flex-col items-center gap-[8px]">
+              <p className="text-[32px] text-white font-bold text-center">ログイン</p>
+              <p className="text-[16px] text-[#475467]">松本の”今”を切り取ろう</p>
             </div>
-          )}
-
-          <div>
-            <label className="block text-sm font-medium text-white">
-              ユーザー名
-            </label>
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="mt-1 block w-full px-3 py-2 border border-gray-700 rounded-md bg-gray-700 text-white placeholder-gray-500"
-              required
-            />
+            {/* 入力フォーム */}
+            <form onSubmit={handleSubmit} className="w-full flex flex-col gap-[32px] items-start">
+              <div className="w-full flex flex-col gap-[8px]">
+                <div className="w-full flex flex-col gap-[4px] h-[58px] items-center justify-center">
+                  <label className="text-[12px] text-white font-bold w-full">ユーザー名</label>
+                  <input
+                    type="text"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    className="bg-[#475467] h-[38px] rounded-[4px] w-full px-3 text-white outline-none"
+                    required
+                  />
+                </div>
+                <div className="w-full flex flex-col gap-[4px] h-[58px] items-center justify-center">
+                  <label className="text-[12px] text-white font-bold w-full">パスワード</label>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="bg-[#475467] h-[38px] rounded-[4px] w-full px-3 text-white outline-none"
+                    required
+                  />
+                </div>
+              </div>
+              {/* エラー表示 */}
+              {error && (
+                <div className="bg-red-900/80 text-red-200 p-3 rounded-lg border border-red-700 w-full text-center">
+                  {error}
+                </div>
+              )}
+              {/* ログインボタン */}
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full h-[38px] rounded-[4px] bg-gradient-to-b from-[#00a63e] to-[#13ac4c] text-white font-bold shadow-[0px_2px_4px_0px_rgba(32,192,67,0.25)] px-[118px] py-[9px] flex items-center justify-center disabled:opacity-50"
+              >
+                {loading ? 'ログイン中...' : 'ログイン'}
+              </button>
+            </form>
           </div>
-
-          <div>
-            <label className="block text-sm font-medium text-white">
-              パスワード
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 block w-full px-3 py-2 border border-gray-700 rounded-md bg-gray-700 text-white placeholder-gray-500"
-              required
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-2 px-4 bg-green-600 hover:bg-green-500 text-white rounded-md disabled:opacity-50 font-semibold transition border border-green-500 shadow-lg shadow-green-600/30"
-          >
-            {loading ? 'ログイン中...' : 'ログイン'}
-          </button>
-
-          <div className="text-center text-sm">
-            <Link href="/register" className="text-green-400 hover:text-green-300">
-              アカウントを作成
-            </Link>
-          </div>
-        </form>
+          {/* 新規アカウント作成リンク */}
+          <Link href="/register" className="text-[#00b54c] text-[12px] font-bold text-center w-full hover:underline mt-6 block">
+            新規アカウントを作成
+          </Link>
+        </div>
       </div>
     </div>
   );

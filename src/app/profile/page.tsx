@@ -139,12 +139,8 @@ function ProfilePageContent() {
       fetchNotifications();
       fetchFollowRequests();
       checkRewards(); // 報酬チェックを追加
-
-      if (searchParams?.get('updated')) {
-        void refresh();
-      }
     }
-  }, [status, authUser, searchParams, refresh, router]); // searchParamsが変わったら再取得
+  }, [status]);
 
   // ページが見えるようになったときにクエストを再フェッチ（投票完了時の更新を反映）
   useEffect(() => {
