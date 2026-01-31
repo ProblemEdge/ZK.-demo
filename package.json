@@ -22,6 +22,8 @@
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "react-leaflet": "^4.2.1",
+    "react-pull-to-refresh": "^2.0.1",
+    "swr": "^2.3.8",
     "web-push": "^3.6.7"
   },
   "devDependencies": {

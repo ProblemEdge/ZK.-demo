@@ -1,42 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 
-interface Quest {
-  id: string;
-  title: string;
-  description: string;
-  order: number;
-  completed: boolean;
-  completedAt: string | null;
-}
+import { useState } from 'react';
+import PullToRefresh from 'react-pull-to-refresh';
+import { useTodayQuests } from '../hooks/useTodayQuests';
 
-export default function QuestOverlay() {
+
+
   const [isOpen, setIsOpen] = useState(false);
-  const [quests, setQuests] = useState<Quest[]>([]);
-  const [loading, setLoading] = useState(false);
-
-  const fetchQuests = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch('/api/quests/today', { cache: 'no-store' });
-      if (res.ok) {
-        const data = await res.json();
-        setQuests(data.quests || []);
-      }
-    } catch (error) {
-      console.error('Error fetching quests:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (isOpen) {
-      fetchQuests();
-    }
-  }, [isOpen]);
-
+  const { quests, isLoading, mutate } = useTodayQuests();
   const completedCount = quests.filter(q => q.completed).length;
   const allCompleted = completedCount === quests.length && quests.length > 0;
 
@@ -101,82 +73,84 @@ export default function QuestOverlay() {
             </div>
 
             {/* クエストリスト */}
-            <div className="p-6 space-y-4">
-              {loading ? (
-                <p className="text-gray-400 text-center py-8">読み込み中...</p>
-              ) : quests.length === 0 ? (
-                <p className="text-gray-400 text-center py-8">クエストが見つかりません</p>
-              ) : (
-                <>
-                  {quests.map((quest, index) => (
-                    <div
-                      key={quest.id}
-                      className={`p-5 rounded-xl border-2 transition-all ${
-                        quest.completed
-                          ? 'bg-gradient-to-br from-green-900/40 to-green-800/20 border-green-600'
-                          : 'bg-gradient-to-br from-gray-800 to-gray-900 border-gray-700 hover:border-purple-600'
-                      }`}
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center mb-2">
-                            <span className="text-sm font-bold text-purple-400 mr-3">
-                              #{index + 1}
-                            </span>
-                            <h3 className="text-lg font-bold text-white">
-                              {quest.title}
-                            </h3>
+            <PullToRefresh onRefresh={mutate}>
+              <div className="p-6 space-y-4">
+                {isLoading ? (
+                  <p className="text-gray-400 text-center py-8">読み込み中...</p>
+                ) : quests.length === 0 ? (
+                  <p className="text-gray-400 text-center py-8">クエストが見つかりません</p>
+                ) : (
+                  <>
+                    {quests.map((quest, index) => (
+                      <div
+                        key={quest.id}
+                        className={`p-5 rounded-xl border-2 transition-all ${
+                          quest.completed
+                            ? 'bg-gradient-to-br from-green-900/40 to-green-800/20 border-green-600'
+                            : 'bg-gradient-to-br from-gray-800 to-gray-900 border-gray-700 hover:border-purple-600'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center mb-2">
+                              <span className="text-sm font-bold text-purple-400 mr-3">
+                                #{index + 1}
+                              </span>
+                              <h3 className="text-lg font-bold text-white">
+                                {quest.title}
+                              </h3>
+                            </div>
+                            <p className="text-gray-300 text-sm leading-relaxed">
+                              {quest.description}
+                            </p>
+                            {quest.completed && quest.completedAt && (
+                              <div className="mt-3 flex items-center text-green-400 text-sm">
+                                <span className="mr-2">✓</span>
+                                達成！{new Date(quest.completedAt).toLocaleTimeString('ja-JP', { 
+                                  hour: '2-digit', 
+                                  minute: '2-digit' 
+                                })}
+                              </div>
+                            )}
                           </div>
-                          <p className="text-gray-300 text-sm leading-relaxed">
-                            {quest.description}
-                          </p>
-                          {quest.completed && quest.completedAt && (
-                            <div className="mt-3 flex items-center text-green-400 text-sm">
-                              <span className="mr-2">✓</span>
-                              達成！{new Date(quest.completedAt).toLocaleTimeString('ja-JP', { 
-                                hour: '2-digit', 
-                                minute: '2-digit' 
-                              })}
-                            </div>
-                          )}
-                        </div>
-                        <div className="ml-4">
-                          {quest.completed ? (
-                            <div className="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center text-2xl">
-                              ✓
-                            </div>
-                          ) : (
-                            <div className="w-12 h-12 bg-gray-700 border-2 border-gray-600 rounded-full flex items-center justify-center text-gray-500">
-                              <div className="w-6 h-6 border-2 border-gray-600 rounded-full" />
-                            </div>
-                          )}
+                          <div className="ml-4">
+                            {quest.completed ? (
+                              <div className="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center text-2xl">
+                                ✓
+                              </div>
+                            ) : (
+                              <div className="w-12 h-12 bg-gray-700 border-2 border-gray-600 rounded-full flex items-center justify-center text-gray-500">
+                                <div className="w-6 h-6 border-2 border-gray-600 rounded-full" />
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
 
-                  {/* 完了メッセージ */}
-                  {allCompleted && (
-                    <div className="mt-6 p-6 bg-gradient-to-br from-yellow-900/40 to-yellow-800/20 border-2 border-yellow-600 rounded-xl text-center">
-                      <div className="text-5xl mb-3">🎉</div>
-                      <h3 className="text-xl font-bold text-yellow-400 mb-2">
-                        全クエスト達成！
-                      </h3>
-                      <p className="text-yellow-200 text-sm">
-                        今日のデイリーチャレンジを全てクリアしました！
+                    {/* 完了メッセージ */}
+                    {allCompleted && (
+                      <div className="mt-6 p-6 bg-gradient-to-br from-yellow-900/40 to-yellow-800/20 border-2 border-yellow-600 rounded-xl text-center">
+                        <div className="text-5xl mb-3">🎉</div>
+                        <h3 className="text-xl font-bold text-yellow-400 mb-2">
+                          全クエスト達成！
+                        </h3>
+                        <p className="text-yellow-200 text-sm">
+                          今日のデイリーチャレンジを全てクリアしました！
+                        </p>
+                      </div>
+                    )}
+
+                    {/* ヒント */}
+                    <div className="mt-6 p-4 bg-gray-800/50 border border-gray-700 rounded-lg">
+                      <p className="text-xs text-gray-400 leading-relaxed">
+                        💡 ヒント: 投稿ページで「✨ クエスト投稿」を選択し、クエストを選んで投稿すると達成できます。
                       </p>
                     </div>
-                  )}
-
-                  {/* ヒント */}
-                  <div className="mt-6 p-4 bg-gray-800/50 border border-gray-700 rounded-lg">
-                    <p className="text-xs text-gray-400 leading-relaxed">
-                      💡 ヒント: 投稿ページで「✨ クエスト投稿」を選択し、クエストを選んで投稿すると達成できます。
-                    </p>
-                  </div>
-                </>
-              )}
-            </div>
+                  </>
+                )}
+              </div>
+            </PullToRefresh>
           </div>
         </>
       )}

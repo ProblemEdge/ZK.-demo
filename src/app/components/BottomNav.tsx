@@ -26,8 +26,6 @@ export default function BottomNav() {
   }, []);
 
   useEffect(() => {
-    let timer: ReturnType<typeof setInterval> | undefined;
-
     const fetchCount = async () => {
       try {
         if (document.visibilityState !== 'visible') return;
@@ -40,19 +38,16 @@ export default function BottomNav() {
       }
     };
 
-    // タブを表示したときのみ取得（初回ポーリング削除）
+    // タブを表示したときのみ取得（ポーリング廃止）
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') {
         fetchCount();
       }
     };
 
-    // ポーリング間隔を600秒（10分）に延長
-    timer = setInterval(fetchCount, 600000);
     document.addEventListener('visibilitychange', handleVisibility);
 
     return () => {
-      if (timer) clearInterval(timer);
       document.removeEventListener('visibilitychange', handleVisibility);
     };
   }, []);
