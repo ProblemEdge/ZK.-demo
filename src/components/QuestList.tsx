@@ -8,7 +8,7 @@ export default function QuestList() {
     <PullToRefresh onRefresh={mutate}>
       <div>
         {isLoading && <div>読み込み中...</div>}
-        {quests.map(q => (
+        {quests.map((q: { id: string; title: string }) => (
           <div key={q.id}>{q.title}</div>
         ))}
       </div>
