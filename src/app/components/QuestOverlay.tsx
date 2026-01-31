@@ -3,13 +3,13 @@
 
 import { useState } from 'react';
 import PullToRefresh from 'react-pull-to-refresh';
-import { useTodayQuests } from '../hooks/useTodayQuests';
+import { useTodayQuests } from '../../hooks/useTodayQuests';
 
 
-
+function QuestOverlay() {
   const [isOpen, setIsOpen] = useState(false);
   const { quests, isLoading, mutate } = useTodayQuests();
-  const completedCount = quests.filter(q => q.completed).length;
+  const completedCount = quests.filter((q: { completed: boolean }) => q.completed).length;
   const allCompleted = completedCount === quests.length && quests.length > 0;
 
   return (
@@ -81,7 +81,7 @@ import { useTodayQuests } from '../hooks/useTodayQuests';
                   <p className="text-gray-400 text-center py-8">クエストが見つかりません</p>
                 ) : (
                   <>
-                    {quests.map((quest, index) => (
+                    {quests.map((quest: { id: string; title: string; description: string; completed: boolean; completedAt?: string }, index: number) => (
                       <div
                         key={quest.id}
                         className={`p-5 rounded-xl border-2 transition-all ${
@@ -154,6 +154,9 @@ import { useTodayQuests } from '../hooks/useTodayQuests';
           </div>
         </>
       )}
+
     </>
   );
 }
+
+export default QuestOverlay;
