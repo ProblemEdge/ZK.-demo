@@ -91,6 +91,11 @@ function ProfilePageContent() {
     }
   };
 
+  const handleLogout = () => {
+    document.cookie = 'auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+    router.push('/login');
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#0b0c0f] flex items-center justify-center">
@@ -192,6 +197,14 @@ function ProfilePageContent() {
           className="mt-4 w-full px-3 py-2 bg-[#333] hover:bg-[#444] text-xs text-gray-400 rounded-lg border border-gray-600 transition disabled:opacity-50"
         >
           {resetLoading ? '処理中...' : '投稿回数をリセット（デバッグ）'}
+        </button>
+
+        {/* Logout Button */}
+        <button
+          onClick={handleLogout}
+          className="mt-3 w-full px-3 py-2 bg-red-600/20 hover:bg-red-600/30 text-sm text-red-400 font-bold rounded-lg border border-red-600/50 transition"
+        >
+          ログアウト
         </button>
       </div>
 
