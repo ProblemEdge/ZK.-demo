@@ -128,7 +128,7 @@ export async function GET(request: Request) {
               where: { id: updatedPost.userId },
               data: {
                 gems: { increment: REWARD_CONFIG.questBonus.gems },
-                completedQuestsCount: { increment: 1 }
+                completedQuestsCount: { increment: 1 },
                 experience: { increment: REWARD_CONFIG.questBonus.exp }
               }
             });

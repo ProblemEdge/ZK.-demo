@@ -1,3 +1,4 @@
+"use client";
 import React, { useEffect, useState } from "react";
 import SimpleTag from "./SimpleTag";
 import { VoteOkButton, VoteNgButton } from "./VoteOkNgButton";
