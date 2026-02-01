@@ -36,18 +36,20 @@ export async function GET(request: Request) {
       );
     }
 
-    // フォロー関係を確認
-    const follow = await prisma.follow.findUnique({
+    const [firstId, secondId] = [decoded.userId, targetUserId].sort();
+
+    // フレンド関係を確認
+    const friend = await prisma.friend.findUnique({
       where: {
-        followerId_followingId: {
-          followerId: decoded.userId,
-          followingId: targetUserId
+        userId_friendId: {
+          userId: firstId,
+          friendId: secondId
         }
       }
     });
 
     const [outgoingRequest, incomingRequest] = await Promise.all([
-      prisma.followRequest.findUnique({
+      prisma.friendRequest.findUnique({
         where: {
           requesterId_targetId: {
             requesterId: decoded.userId,
@@ -55,7 +57,7 @@ export async function GET(request: Request) {
           }
         }
       }),
-      prisma.followRequest.findUnique({
+      prisma.friendRequest.findUnique({
         where: {
           requesterId_targetId: {
             requesterId: targetUserId,
@@ -66,15 +68,15 @@ export async function GET(request: Request) {
     ]);
 
     return NextResponse.json({
-      isFollowing: !!follow,
+      isFriend: !!friend,
       isRequestedByMe: outgoingRequest?.status === 'PENDING',
       isRequestingMe: incomingRequest?.status === 'PENDING'
     });
 
   } catch (error) {
-    console.error('Check follow error:', error);
+    console.error('Check friend error:', error);
     return NextResponse.json(
-      { error: 'フォロー状態の確認に失敗しました' },
+      { error: 'フレンド状態の確認に失敗しました' },
       { status: 500 }
     );
   }

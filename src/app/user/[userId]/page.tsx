@@ -16,8 +16,7 @@ interface UserProfile {
   experience: number;
   _count: {
     posts: number;
-    followers: number;
-    following: number;
+    friends: number;
   };
 }
 
@@ -36,25 +35,21 @@ interface FollowUser {
   bio: string | null;
   _count: {
     posts: number;
-    followers: number;
-    following: number;
+    friends: number;
   };
-  isFollowing: boolean;
+  isFriend: boolean;
 }
 
 export default function UserProfilePage() {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isFollowing, setIsFollowing] = useState(false);
+  const [isFriend, setIsFriend] = useState(false);
   const [isRequestedByMe, setIsRequestedByMe] = useState(false);
   const [isRequestingMe, setIsRequestingMe] = useState(false);
-  const [showFollowersModal, setShowFollowersModal] = useState(false);
-  const [showFollowingModal, setShowFollowingModal] = useState(false);
-  const [followers, setFollowers] = useState<FollowUser[]>([]);
-  const [following, setFollowing] = useState<FollowUser[]>([]);
-  const [followersLoading, setFollowersLoading] = useState(false);
-  const [followingLoading, setFollowingLoading] = useState(false);
+  const [showFriendsModal, setShowFriendsModal] = useState(false);
+  const [friends, setFriends] = useState<FollowUser[]>([]);
+  const [friendsLoading, setFriendsLoading] = useState(false);
   const router = useRouter();
   const params = useParams();
   const userId = params.userId as string;
@@ -78,7 +73,7 @@ export default function UserProfilePage() {
 
       const data = await res.json();
       setUser(data.user);
-      setIsFollowing(data.isFollowing);
+      setIsFriend(data.isFriend);
       setIsRequestedByMe(data.isRequestedByMe || false);
       setIsRequestingMe(data.isRequestingMe || false);
     } catch (err) {
@@ -104,7 +99,7 @@ export default function UserProfilePage() {
     }
   };
 
-  const handleFollow = async () => {
+  const handleFriendRequest = async () => {
     try {
       const res = await fetch('/api/follows/follow', {
         method: 'POST',
@@ -118,15 +113,15 @@ export default function UserProfilePage() {
         return;
       }
 
-      setIsFollowing(true);
+      setIsFriend(true);
       setIsRequestedByMe(true);
     } catch (err) {
-      console.error('Follow error:', err);
-      alert('フォローに失敗しました');
+      console.error('Friend request error:', err);
+      alert('フレンド申請に失敗しました');
     }
   };
 
-  const handleUnfollow = async () => {
+  const handleRemoveFriend = async () => {
     try {
       const res = await fetch('/api/follows/unfollow', {
         method: 'POST',
@@ -140,10 +135,10 @@ export default function UserProfilePage() {
         return;
       }
 
-      setIsFollowing(false);
+      setIsFriend(false);
     } catch (err) {
-      console.error('Unfollow error:', err);
-      alert('フォロー解除に失敗しました');
+      console.error('Remove friend error:', err);
+      alert('フレンド解除に失敗しました');
     }
   };
 
@@ -162,9 +157,9 @@ export default function UserProfilePage() {
       }
 
       setIsRequestingMe(false);
-      setIsFollowing(true);
+      setIsFriend(true);
     } catch (err) {
-      console.error('Approve request error:', err);
+      console.error('Approve friend request error:', err);
       alert('承認に失敗しました');
     }
   };
@@ -185,52 +180,32 @@ export default function UserProfilePage() {
 
       setIsRequestingMe(false);
     } catch (err) {
-      console.error('Reject request error:', err);
+      console.error('Reject friend request error:', err);
       alert('拒否に失敗しました');
     }
   };
 
-  const fetchFollowers = async () => {
+  const fetchFriends = async () => {
     try {
-      setFollowersLoading(true);
-      const res = await fetch(`/api/users/${userId}/following`, {
-        cache: 'no-store'
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        setFollowers(data);
-        setShowFollowersModal(true);
-      }
-    } catch (err) {
-      console.error('Error fetching followers:', err);
-      alert('フォロワー一覧の取得に失敗しました');
-    } finally {
-      setFollowersLoading(false);
-    }
-  };
-
-  const fetchFollowing = async () => {
-    try {
-      setFollowingLoading(true);
+      setFriendsLoading(true);
       const res = await fetch(`/api/users/${userId}/followers`, {
         cache: 'no-store'
       });
 
       if (res.ok) {
         const data = await res.json();
-        setFollowing(data);
-        setShowFollowingModal(true);
+        setFriends(data);
+        setShowFriendsModal(true);
       }
     } catch (err) {
-      console.error('Error fetching following:', err);
-      alert('フォロー中のユーザー一覧の取得に失敗しました');
+      console.error('Error fetching friends:', err);
+      alert('フレンド一覧の取得に失敗しました');
     } finally {
-      setFollowingLoading(false);
+      setFriendsLoading(false);
     }
   };
 
-  const handleFollowFromList = async (targetUserId: string) => {
+  const handleFriendRequestFromList = async (targetUserId: string) => {
     try {
       const res = await fetch('/api/follows/follow', {
         method: 'POST',
@@ -245,15 +220,14 @@ export default function UserProfilePage() {
       }
 
       // リストを更新
-      setFollowers(followers.map(f => f.id === targetUserId ? { ...f, isFollowing: true } : f));
-      setFollowing(following.map(f => f.id === targetUserId ? { ...f, isFollowing: true } : f));
+      setFriends(friends.map(f => f.id === targetUserId ? { ...f, isFriend: true } : f));
     } catch (err) {
-      console.error('Follow error:', err);
-      alert('フォローに失敗しました');
+      console.error('Friend request error:', err);
+      alert('フレンド申請に失敗しました');
     }
   };
 
-  const handleUnfollowFromList = async (targetUserId: string) => {
+  const handleRemoveFriendFromList = async (targetUserId: string) => {
     try {
       const res = await fetch('/api/follows/unfollow', {
         method: 'POST',
@@ -268,11 +242,10 @@ export default function UserProfilePage() {
       }
 
       // リストを更新
-      setFollowers(followers.map(f => f.id === targetUserId ? { ...f, isFollowing: false } : f));
-      setFollowing(following.map(f => f.id === targetUserId ? { ...f, isFollowing: false } : f));
+      setFriends(friends.filter(f => f.id !== targetUserId));
     } catch (err) {
-      console.error('Unfollow error:', err);
-      alert('フォロー解除に失敗しました');
+      console.error('Remove friend error:', err);
+      alert('フレンド解除に失敗しました');
     }
   };
 
@@ -334,13 +307,13 @@ export default function UserProfilePage() {
                 <p className="text-gray-300 mb-4">{user.bio}</p>
               )}
 
-              {/* フォローボタン */}
-              {isFollowing ? (
+              {/* フレンドボタン */}
+              {isFriend ? (
                 <button
-                  onClick={handleUnfollow}
+                  onClick={handleRemoveFriend}
                   className="px-6 py-2 bg-gray-700 text-white rounded-full font-semibold hover:bg-red-600 transition border border-gray-600 hover:border-red-500"
                 >
-                  フォロー中
+                  フレンド中
                 </button>
               ) : isRequestingMe ? (
                 <div className="flex gap-2">
@@ -362,14 +335,14 @@ export default function UserProfilePage() {
                   className="px-6 py-2 bg-gray-600 text-gray-200 rounded-full font-semibold border border-gray-500 cursor-not-allowed opacity-80"
                   disabled
                 >
-                  リクエスト済み
+                  申請中
                 </button>
               ) : (
                 <button
-                  onClick={handleFollow}
+                  onClick={handleFriendRequest}
                   className="px-6 py-2 bg-green-600 text-white rounded-full font-semibold hover:bg-green-500 transition border border-green-500"
                 >
-                  フォロー
+                  フレンド申請
                 </button>
               )}
             </div>
@@ -394,18 +367,11 @@ export default function UserProfilePage() {
               <span className="text-gray-400"> 投稿</span>
             </div>
             <button
-              onClick={fetchFollowers}
+              onClick={fetchFriends}
               className="hover:text-green-400 transition"
             >
-              <span className="font-bold text-white">{user._count.followers}</span>
-              <span className="text-gray-400"> フォロワー</span>
-            </button>
-            <button
-              onClick={fetchFollowing}
-              className="hover:text-green-400 transition"
-            >
-              <span className="font-bold text-white">{user._count.following}</span>
-              <span className="text-gray-400"> フォロー中</span>
+              <span className="font-bold text-white">{user._count.friends}</span>
+              <span className="text-gray-400"> 友達</span>
             </button>
           </div>
         </div>
@@ -438,14 +404,14 @@ export default function UserProfilePage() {
         </div>
       </div>
 
-      {/* フォロワーモーダル */}
-      {showFollowersModal && (
+      {/* フレンドモーダル */}
+      {showFriendsModal && (
         <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
           <div className="bg-gray-800 rounded-lg max-w-md w-full max-h-96 flex flex-col border border-gray-700">
             <div className="flex justify-between items-center p-4 border-b border-gray-700">
-              <h3 className="text-lg font-bold text-white">フォロワー</h3>
+              <h3 className="text-lg font-bold text-white">友達</h3>
               <button
-                onClick={() => setShowFollowersModal(false)}
+                onClick={() => setShowFriendsModal(false)}
                 className="text-gray-400 hover:text-white text-2xl"
               >
                 ✕
@@ -453,137 +419,56 @@ export default function UserProfilePage() {
             </div>
 
             <div className="overflow-y-auto flex-1">
-              {followersLoading ? (
+              {friendsLoading ? (
                 <div className="p-4 text-center text-gray-400">読み込み中...</div>
-              ) : followers.length === 0 ? (
-                <div className="p-4 text-center text-gray-400">フォロワーがいません</div>
+              ) : friends.length === 0 ? (
+                <div className="p-4 text-center text-gray-400">友達がいません</div>
               ) : (
                 <div className="space-y-3 p-4">
-                  {followers.map((follower) => (
+                  {friends.map((friend) => (
                     <div
-                      key={follower.id}
+                      key={friend.id}
                       className="flex items-center gap-3 hover:bg-gray-700 p-2 rounded-lg transition cursor-pointer"
                       onClick={() => {
-                        setShowFollowersModal(false);
-                        router.push(`/user/${follower.id}`);
+                        setShowFriendsModal(false);
+                        router.push(`/user/${friend.id}`);
                       }}
                     >
                       <div className="w-10 h-10 bg-gray-700 rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center border border-gray-600">
-                        {follower.avatarUrl ? (
+                        {friend.avatarUrl ? (
                           <img
-                            src={follower.avatarUrl}
-                            alt={follower.username}
+                            src={friend.avatarUrl}
+                            alt={friend.username}
                             className="w-full h-full object-cover"
                           />
                         ) : (
                           <span className="text-sm font-bold text-gray-400">
-                            {follower.username[0].toUpperCase()}
+                            {friend.username[0].toUpperCase()}
                           </span>
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-semibold text-white truncate">
-                          {follower.displayName || follower.username}
+                          {friend.displayName || friend.username}
                         </p>
-                        <p className="text-xs text-gray-400 truncate">@{follower.username}</p>
+                        <p className="text-xs text-gray-400 truncate">@{friend.username}</p>
                       </div>
                       <div>
-                        {follower.isFollowing ? (
+                        {friend.isFriend ? (
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleUnfollowFromList(follower.id);
+                              handleRemoveFriendFromList(friend.id);
                             }}
                             className="px-3 py-1 bg-gray-700 text-white rounded-full text-xs font-semibold hover:bg-red-600 transition border border-gray-600 hover:border-red-500"
                           >
-                            フォロー中
+                            フレンド中
                           </button>
                         ) : (
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleFollowFromList(follower.id);
-                            }}
-                            className="px-3 py-1 bg-green-600 text-white rounded-full text-xs font-semibold hover:bg-green-500 transition border border-green-500"
-                          >
-                            +
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* フォロー中モーダル */}
-      {showFollowingModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
-          <div className="bg-gray-800 rounded-lg max-w-md w-full max-h-96 flex flex-col border border-gray-700">
-            <div className="flex justify-between items-center p-4 border-b border-gray-700">
-              <h3 className="text-lg font-bold text-white">フォロー中</h3>
-              <button
-                onClick={() => setShowFollowingModal(false)}
-                className="text-gray-400 hover:text-white text-2xl"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="overflow-y-auto flex-1">
-              {followingLoading ? (
-                <div className="p-4 text-center text-gray-400">読み込み中...</div>
-              ) : following.length === 0 ? (
-                <div className="p-4 text-center text-gray-400">フォロー中のユーザーがいません</div>
-              ) : (
-                <div className="space-y-3 p-4">
-                  {following.map((user) => (
-                    <div
-                      key={user.id}
-                      className="flex items-center gap-3 hover:bg-gray-700 p-2 rounded-lg transition cursor-pointer"
-                      onClick={() => {
-                        setShowFollowingModal(false);
-                        router.push(`/user/${user.id}`);
-                      }}
-                    >
-                      <div className="w-10 h-10 bg-gray-700 rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center border border-gray-600">
-                        {user.avatarUrl ? (
-                          <img
-                            src={user.avatarUrl}
-                            alt={user.username}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <span className="text-sm font-bold text-gray-400">
-                            {user.username[0].toUpperCase()}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-white truncate">
-                          {user.displayName || user.username}
-                        </p>
-                        <p className="text-xs text-gray-400 truncate">@{user.username}</p>
-                      </div>
-                      <div>
-                        {user.isFollowing ? (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleUnfollowFromList(user.id);
-                            }}
-                            className="px-3 py-1 bg-gray-700 text-white rounded-full text-xs font-semibold hover:bg-red-600 transition border border-gray-600 hover:border-red-500"
-                          >
-                            フォロー中
-                          </button>
-                        ) : (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleFollowFromList(user.id);
+                              handleFriendRequestFromList(friend.id);
                             }}
                             className="px-3 py-1 bg-green-600 text-white rounded-full text-xs font-semibold hover:bg-green-500 transition border border-green-500"
                           >

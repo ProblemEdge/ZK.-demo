@@ -28,11 +28,13 @@ export async function GET(
       }
     }
 
-    // フォロー中のユーザー一覧を取得（このユーザーがフォローしている人）
-    const following = await prisma.follow.findMany({
-      where: { followerId: userId },
+    // フレンド一覧を取得
+    const friends = await prisma.friend.findMany({
+      where: {
+        OR: [{ userId }, { friendId: userId }]
+      },
       include: {
-        following: {
+        user: {
           select: {
             id: true,
             username: true,
@@ -42,8 +44,24 @@ export async function GET(
             _count: {
               select: {
                 posts: { where: { isApproved: true } },
-                followers: true,
-                following: true
+                friendsAsUser: true,
+                friendsAsFriend: true
+              }
+            }
+          }
+        },
+        friend: {
+          select: {
+            id: true,
+            username: true,
+            displayName: true,
+            avatarUrl: true,
+            bio: true,
+            _count: {
+              select: {
+                posts: { where: { isApproved: true } },
+                friendsAsUser: true,
+                friendsAsFriend: true
               }
             }
           }
@@ -51,32 +69,40 @@ export async function GET(
       }
     });
 
-    // フォロー状態を確認
-    let followingSet: Set<string> = new Set();
+    let friendSet: Set<string> = new Set();
     if (currentUserId) {
-      const currentUserFollowing = await prisma.follow.findMany({
-        where: { followerId: currentUserId },
-        select: { followingId: true }
+      const currentFriends = await prisma.friend.findMany({
+        where: { OR: [{ userId: currentUserId }, { friendId: currentUserId }] },
+        select: { userId: true, friendId: true }
       });
-      followingSet = new Set(currentUserFollowing.map(f => f.followingId));
+      friendSet = new Set(
+        currentFriends.map(f => (f.userId === currentUserId ? f.friendId : f.userId))
+      );
     }
 
-    const result = following.map(f => ({
-      id: f.following.id,
-      username: f.following.username,
-      displayName: f.following.displayName,
-      avatarUrl: f.following.avatarUrl,
-      bio: f.following.bio,
-      _count: f.following._count,
-      isFollowing: followingSet.has(f.following.id)
-    }));
+    const result = friends.map(f => {
+      const friendUser = f.userId === userId ? f.friend : f.user;
+      const friendCount = friendUser._count.friendsAsUser + friendUser._count.friendsAsFriend;
+      return {
+        id: friendUser.id,
+        username: friendUser.username,
+        displayName: friendUser.displayName,
+        avatarUrl: friendUser.avatarUrl,
+        bio: friendUser.bio,
+        _count: {
+          posts: friendUser._count.posts,
+          friends: friendCount
+        },
+        isFriend: currentUserId ? friendSet.has(friendUser.id) : false
+      };
+    });
 
     return NextResponse.json(result);
 
   } catch (error) {
-    console.error('Get following error:', error);
+    console.error('Get friends error:', error);
     return NextResponse.json(
-      { error: 'フォロー中のユーザー一覧の取得に失敗しました' },
+      { error: 'フレンド一覧の取得に失敗しました' },
       { status: 500 }
     );
   }

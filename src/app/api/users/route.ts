@@ -46,11 +46,14 @@ export async function GET(req: Request) {
         username: true,
         displayName: true,
         avatarUrl: true,
+        level: true,
+        gems: true,
         // bioは検索結果一覧では不要なので削除
         _count: {
           select: {
-            // 検索結果ではフォロワー数のみ表示（投稿数やフォロー数は不要）
-            followers: true
+            posts: true,
+            friendsAsUser: true,
+            friendsAsFriend: true
           }
         }
       },
@@ -59,32 +62,38 @@ export async function GET(req: Request) {
       orderBy: { createdAt: 'desc' }
     });
 
-    // 現在のユーザーのフォロー情報を取得
-    let followingUserIds: Set<string> = new Set();
+    // 現在のユーザーのフレンド情報を取得
+    let friendUserIds: Set<string> = new Set();
     let requestedUserIds: Set<string> = new Set();
     if (currentUserId) {
-      const [following, outgoingRequests] = await Promise.all([
-        prisma.follow.findMany({
-          where: { followerId: currentUserId },
-          select: { followingId: true }
+      const [friends, outgoingRequests] = await Promise.all([
+        prisma.friend.findMany({
+          where: { OR: [{ userId: currentUserId }, { friendId: currentUserId }] },
+          select: { userId: true, friendId: true }
         }),
-        prisma.followRequest.findMany({
+        prisma.friendRequest.findMany({
           where: { requesterId: currentUserId, status: 'PENDING' },
           select: { targetId: true }
         })
       ]);
-      followingUserIds = new Set(following.map(f => f.followingId));
+      friendUserIds = new Set(
+        friends.map(f => (f.userId === currentUserId ? f.friendId : f.userId))
+      );
       requestedUserIds = new Set(outgoingRequests.map(r => r.targetId));
     }
 
-    // フォロー情報を追加
-    const usersWithFollowStatus = users.map(user => ({
-      ...user,
-      isFollowing: followingUserIds.has(user.id),
-      isRequested: requestedUserIds.has(user.id)
-    }));
+    // フレンド情報を追加
+    const usersWithFriendStatus = users.map(user => {
+      const friendCount = user._count.friendsAsUser + user._count.friendsAsFriend;
+      return {
+        ...user,
+        _count: { posts: user._count.posts, friends: friendCount },
+        isFriend: friendUserIds.has(user.id),
+        isRequested: requestedUserIds.has(user.id)
+      };
+    });
 
-    return Response.json(usersWithFollowStatus);
+    return Response.json(usersWithFriendStatus);
   } catch (error) {
     console.error('User search error:', error);
     return Response.json({ error: 'ユーザー検索に失敗しました' }, { status: 500 });

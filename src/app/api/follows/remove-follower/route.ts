@@ -30,28 +30,30 @@ export async function POST(request: Request) {
       );
     }
 
-    await prisma.follow.delete({
+    const [firstId, secondId] = [decoded.userId, targetUserId].sort();
+
+    await prisma.friend.delete({
       where: {
-        followerId_followingId: {
-          followerId: targetUserId,
-          followingId: decoded.userId
+        userId_friendId: {
+          userId: firstId,
+          friendId: secondId
         }
       }
     });
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
-    console.error('Remove follower error:', error);
+    console.error('Remove friend error:', error);
 
     if (error.code === 'P2025') {
       return NextResponse.json(
-        { error: 'フォロー関係が見つかりません' },
+        { error: 'フレンド関係が見つかりません' },
         { status: 400 }
       );
     }
 
     return NextResponse.json(
-      { error: 'フォロワー削除に失敗しました' },
+      { error: 'フレンド削除に失敗しました' },
       { status: 500 }
     );
   }

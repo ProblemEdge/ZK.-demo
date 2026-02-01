@@ -22,7 +22,7 @@ export async function GET(request: Request) {
     const type = searchParams.get('type') || 'incoming';
 
     if (type === 'outgoing') {
-      const requests = await prisma.followRequest.findMany({
+      const requests = await prisma.friendRequest.findMany({
         where: { requesterId: decoded.userId, status: 'PENDING' },
         include: {
           target: {
@@ -34,7 +34,7 @@ export async function GET(request: Request) {
       return NextResponse.json(requests);
     }
 
-    const requests = await prisma.followRequest.findMany({
+    const requests = await prisma.friendRequest.findMany({
       where: { targetId: decoded.userId, status: 'PENDING' },
       include: {
         requester: {
@@ -46,9 +46,9 @@ export async function GET(request: Request) {
 
     return NextResponse.json(requests);
   } catch (error) {
-    console.error('Get follow requests error:', error);
+    console.error('Get friend requests error:', error);
     return NextResponse.json(
-      { error: 'フォローリクエストの取得に失敗しました' },
+      { error: 'フレンドリクエストの取得に失敗しました' },
       { status: 500 }
     );
   }

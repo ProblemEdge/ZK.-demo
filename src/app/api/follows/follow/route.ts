@@ -42,26 +42,67 @@ export async function POST(request: Request) {
       );
     }
 
-    // 既にフォロー済みか確認
-    const existingFollow = await prisma.follow.findUnique({
+    const [firstId, secondId] = [decoded.userId, targetUserId].sort();
+
+    // 既にフレンドか確認
+    const existingFriend = await prisma.friend.findUnique({
       where: {
-        followerId_followingId: {
-          followerId: decoded.userId,
-          followingId: targetUserId
+        userId_friendId: {
+          userId: firstId,
+          friendId: secondId
         }
       }
     });
 
-    if (existingFollow) {
+    if (existingFriend) {
       return NextResponse.json({
         success: true,
-        isFollowing: true,
+        isFriend: true,
         isRequested: false
       });
     }
 
-    // フォローリクエストを作成（リクエスト制）
-    const followRequest = await prisma.followRequest.upsert({
+    // 相手からのリクエストがある場合は承認
+    const incomingRequest = await prisma.friendRequest.findUnique({
+      where: {
+        requesterId_targetId: {
+          requesterId: targetUserId,
+          targetId: decoded.userId
+        }
+      }
+    });
+
+    if (incomingRequest?.status === 'PENDING') {
+      await prisma.friend.create({
+        data: {
+          userId: firstId,
+          friendId: secondId
+        }
+      });
+
+      await prisma.friendRequest.update({
+        where: { id: incomingRequest.id },
+        data: { status: 'APPROVED' }
+      });
+
+      await sendNotificationToUser(
+        targetUserId,
+        'フレンド申請が承認されました',
+        'フレンドになりました',
+        `/user/${decoded.userId}`,
+        decoded.userId,
+        'FRIEND_ACCEPTED'
+      );
+
+      return NextResponse.json({
+        success: true,
+        isFriend: true,
+        isRequested: false
+      });
+    }
+
+    // フレンドリクエストを作成
+    const friendRequest = await prisma.friendRequest.upsert({
       where: {
         requesterId_targetId: {
           requesterId: decoded.userId,
@@ -82,23 +123,23 @@ export async function POST(request: Request) {
     
     await sendNotificationToUser(
       targetUserId,
-      'フォローリクエストが届きました',
-      'フォローを承認するか選択してください',
+      'フレンドリクエストが届きました',
+      'フレンド申請を承認するか選択してください',
       '/profile',
       decoded.userId,
-      'FOLLOW_REQUEST'
+      'FRIEND_REQUEST'
     );
     
     console.log('[Follow] Follow request notification sent successfully');
 
     return NextResponse.json({
       success: true,
-      isFollowing: false,
-      isRequested: followRequest.status === 'PENDING'
+      isFriend: false,
+      isRequested: friendRequest.status === 'PENDING'
     });
 
   } catch (error: any) {
-    console.error('Follow error:', error);
+    console.error('Friend request error:', error);
     
     // 既にリクエスト済みの場合
     if (error.code === 'P2002') {
@@ -109,7 +150,7 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json(
-      { error: 'フォローに失敗しました' },
+      { error: 'フレンド申請に失敗しました' },
       { status: 500 }
     );
   }

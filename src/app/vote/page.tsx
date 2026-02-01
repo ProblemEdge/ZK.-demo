@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import BottomNav from '../components/BottomNav';
+import VoteHeader from '../components/VoteHeader';
 import { useReward } from '../context/RewardContext';
 import { useAuth } from '../context/AuthContext';
 
@@ -55,14 +56,21 @@ export default function VotePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [tab, setTab] = useState<'all' | 'normal' | 'quest'>('all');
-  const [voteStatusTab, setVoteStatusTab] = useState<'unvoted' | 'voted'>('unvoted');
-  const [quests, setQuests] = useState<any[]>([]);
-  const [selectedQuestId, setSelectedQuestId] = useState<string | null>(null);
   const [now, setNow] = useState(new Date()); // タイマー用
   const [expandedPostId, setExpandedPostId] = useState<string | null>(null);
   const [comments, setComments] = useState<{ [postId: string]: Comment[] }>({});
   const [loadingComments, setLoadingComments] = useState<{ [postId: string]: boolean }>({});
+  const [dragX, setDragX] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartXRef = useRef(0);
+  const [showResult, setShowResult] = useState(false);
+  const [resultCounts, setResultCounts] = useState<{ approve: number; reject: number } | null>(null);
+  const [resultMeta, setResultMeta] = useState<{ title: string; subtitle: string } | null>(null);
+  const [resultAnimationPhase, setResultAnimationPhase] = useState(0);
+  const [isImageExpanded, setIsImageExpanded] = useState(false);
+  const resultTimeoutRef = useRef<number | null>(null);
+  const votedPostIdsRef = useRef<Set<string>>(new Set());
+  const votedPostTimeoutRef = useRef<number | null>(null);
   const router = useRouter();
   const { status, user } = useAuth();
 
@@ -70,8 +78,6 @@ export default function VotePage() {
     if (status !== 'authenticated') return;
 
     fetchPendingPosts();
-    fetchQuests();
-
     // 1秒ごとに時刻を更新してタイマーを動作させる
     const timerInterval = setInterval(() => {
       setNow(new Date());
@@ -112,6 +118,17 @@ export default function VotePage() {
     return () => clearInterval(interval);
   }, [status]);
 
+  useEffect(() => {
+    return () => {
+      if (resultTimeoutRef.current !== null) {
+        window.clearTimeout(resultTimeoutRef.current);
+      }
+      if (votedPostTimeoutRef.current !== null) {
+        window.clearTimeout(votedPostTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const processExpiredVotes = async () => {
     try {
       await fetch('/api/votes/process-expired', { credentials: 'include' });
@@ -125,7 +142,9 @@ export default function VotePage() {
       const res = await fetch('/api/posts/pending', { credentials: 'include' });
       if (res.ok) {
         const data = await res.json();
-        setPosts(data);
+        // 投票済みIDをフィルタリングして除外
+        const filtered = data.filter((p: Post) => !votedPostIdsRef.current.has(p.id));
+        setPosts(filtered);
       }
     } catch (err) {
       console.error('Error fetching posts:', err);
@@ -135,42 +154,59 @@ export default function VotePage() {
     }
   };
 
-  const fetchQuests = async () => {
-    try {
-      const res = await fetch('/api/quests/today', { cache: 'no-store', credentials: 'include' });
-      if (res.ok) {
-        const data = await res.json();
-        setQuests(data.quests || []);
-        // 初期選択: 最初の未達成クエスト
-        const firstIncomplete = data.quests?.find((q: any) => !q.completed);
-        if (firstIncomplete) {
-          setSelectedQuestId(firstIncomplete.id);
-        }
-      }
-    } catch (e) {
-      console.error('Error fetching quests:', e);
-    }
-  };
-
-  const resetQuests = async () => {
-    try {
-      const res = await fetch('/api/quests/today/reset', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include'
-      });
-      if (res.ok) {
-        fetchQuests();
-      }
-    } catch (e) {
-      console.error('Error resetting quests:', e);
-    }
-  };
-
   const { showReward } = useReward();
 
   const handleVote = async (postId: string, voteType: 'approve' | 'reject') => {
+    // アニメーション表示中は投票を受け付けない
+    if (showResult) return;
+
     try {
+      const votedPost = posts.find(p => p.id === postId);
+      if (votedPost) {
+        const approve = votedPost.approveCount + (voteType === 'approve' ? 1 : 0);
+        const reject = votedPost.rejectCount + (voteType === 'reject' ? 1 : 0);
+        setResultCounts({ approve, reject });
+        setResultMeta({
+          title: votedPost.questId ? (votedPost.quest?.title || 'これは松本？') : 'これは松本？',
+          subtitle: votedPost.questId ? (votedPost.quest?.description || '') : '松本に関係あると思う？'
+        });
+        setShowResult(true);
+        setResultAnimationPhase(0);
+        
+        if (resultTimeoutRef.current !== null) {
+          window.clearTimeout(resultTimeoutRef.current);
+        }
+
+        // アニメーション：第1段階（バーアニメーション）
+        resultTimeoutRef.current = window.setTimeout(() => {
+          setResultAnimationPhase(1);
+        }, 200);
+
+        // アニメーション：第2段階（比率表示）
+        resultTimeoutRef.current = window.setTimeout(() => {
+          setResultAnimationPhase(2);
+        }, 600);
+
+        // アニメーション：終了
+        resultTimeoutRef.current = window.setTimeout(() => {
+          setShowResult(false);
+          setResultCounts(null);
+          setResultMeta(null);
+          setResultAnimationPhase(0);
+        }, 1500);
+      }
+
+      // 投票済みIDを記録（すぐに再表示されないようにする）
+      votedPostIdsRef.current.add(postId);
+
+      // 30秒後にキャッシュをクリア（バックエンドの同期完了を想定）
+      if (votedPostTimeoutRef.current !== null) {
+        window.clearTimeout(votedPostTimeoutRef.current);
+      }
+      votedPostTimeoutRef.current = window.setTimeout(() => {
+        votedPostIdsRef.current.delete(postId);
+      }, 30000);
+
       const res = await fetch('/api/votes/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -194,17 +230,51 @@ export default function VotePage() {
         });
       }
 
-      // 5票に達したら投稿を一覧から削除
-      if (data.isComplete) {
-        setPosts(posts.filter(p => p.id !== postId));
-      } else {
-        // 投票二二作次立て、最新データを再取得してUI更新
-        await fetchPendingPosts(); // 最新データを取得
+      // 投票した投稿を一覧から削除（同じ投稿が表示されないように）
+      setPosts(prev => prev.filter(p => p.id !== postId));
+
+      if (!data.isComplete) {
+        await fetchPendingPosts();
       }
 
     } catch (err) {
       console.error('Vote error:', err);
     }
+  };
+
+  const handleSkip = (postId: string) => {
+    // アニメーション表示中はスキップを受け付けない
+    if (showResult) return;
+    
+    setPosts(prev => prev.filter(p => p.id !== postId));
+    setDragX(0);
+    setIsDragging(false);
+  };
+
+  const handleDragStart = (clientX: number) => {
+    // アニメーション表示中はドラッグを受け付けない
+    if (showResult) return;
+    
+    setIsDragging(true);
+    dragStartXRef.current = clientX;
+  };
+
+  const handleDragMove = (clientX: number) => {
+    if (!isDragging) return;
+    const delta = clientX - dragStartXRef.current;
+    setDragX(delta);
+  };
+
+  const handleDragEnd = (postId: string) => {
+    if (!isDragging) return;
+    setIsDragging(false);
+    const threshold = 120;
+    if (dragX <= -threshold) {
+      void handleVote(postId, 'approve');
+    } else if (dragX >= threshold) {
+      void handleVote(postId, 'reject');
+    }
+    setDragX(0);
   };
 
   // 投票期限は5分固定
@@ -353,374 +423,204 @@ export default function VotePage() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center pb-20">
-        <p className="text-gray-300">読み込み中...</p>
-      </div>
-    );
-  }
-
-  // タブに応じて投稿をフィルタリング
-  const filteredPosts = posts
-    .filter(p => {
-      if (tab === 'all') return true;
-      if (tab === 'quest') {
-        if (selectedQuestId === 'all') return !!p.questId;
-        return p.questId === selectedQuestId;
-      }
-      return !p.questId;
-    })
-    .filter(p => voteStatusTab === 'voted' ? p.hasVoted : !p.hasVoted);
-
-  const selectedQuest = quests.find(q => q.id === selectedQuestId);
+  const votablePosts = posts.filter(
+    p => !isVotingClosed(p.postedAt) && !p.hasVoted && p.userId !== currentUserId
+  );
+  const currentPost = votablePosts[0];
+  
+  // スワイプ方向に応じてボタンサイズを計算
+  // 左方向（承認側）：承認ボタン大きく、否定ボタン小さく
+  // 右方向（否定側）：否定ボタン大きく、承認ボタン小さく
+  const approveScale = dragX < 0 
+    ? 1 + Math.min(Math.max(-dragX / 200, 0), 1) * 0.35
+    : Math.max(0.65, 1 - (dragX / 200) * 0.35);
+  const rejectScale = dragX > 0 
+    ? 1 + Math.min(Math.max(dragX / 200, 0), 1) * 0.35
+    : Math.max(0.65, 1 - (-dragX / 200) * 0.35);
 
   return (
-    <div className="min-h-screen bg-gray-900" style={{ paddingBottom: 'calc(6rem + var(--safe-area-bottom))' }}>
-      <header className="bg-gradient-to-r from-gray-900 to-gray-800 border-b border-gray-700 sticky z-40 shadow-md" style={{ top: '0' }}>
-        <div style={{ paddingTop: 'var(--safe-area-top)', padding: '1rem' }}>
-          <h1 className="text-2xl font-bold text-white">投票</h1>
-          <p className="text-sm text-gray-300 mt-1">現在承認されていない投稿に投票して、松本関連かを判定しよう</p>
-        </div>
-      </header>
-
-      {/* メインタブ（通常/クエスト） */}
-      <div className="flex gap-2 p-4 border-b border-gray-700 bg-gradient-to-b from-gray-800/50 to-gray-900/50">
-        <button
-          onClick={() => setTab('all')}
-          className={`px-3 py-2 rounded-full text-xs font-semibold transition flex-1 ${
-            tab === 'all'
-              ? 'bg-gray-600 text-white shadow-lg shadow-gray-600/50'
-              : 'bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-700'
-          }`}
-        >
-          📋 すべて
-        </button>
-        <button
-          onClick={() => setTab('normal')}
-          className={`px-3 py-2 rounded-full text-xs font-semibold transition flex-1 ${
-            tab === 'normal'
-              ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/50'
-              : 'bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-700'
-          }`}
-        >
-          📸 通常
-        </button>
-        <button
-          onClick={() => setTab('quest')}
-          className={`px-3 py-2 rounded-full text-xs font-semibold transition flex-1 ${
-            tab === 'quest'
-              ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/50'
-              : 'bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-700'
-          }`}
-        >
-          ✨ クエスト
-        </button>
+    <div className="min-h-screen bg-gradient-to-b from-[#0b0c0f] to-[#0f0f0f]" style={{ paddingBottom: 'calc(6rem + var(--safe-area-bottom))' }}>
+      <div className="fixed left-0 right-0 top-0 z-40" style={{ paddingTop: 'var(--safe-area-top)' }}>
+        <VoteHeader />
       </div>
 
-      {/* クエスト選択UI */}
-      {tab === 'quest' && (
-        <div className="p-4 bg-gray-800/50 border-b border-gray-700">
-          <div className="max-w-2xl mx-auto">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-medium text-gray-300">今日のクエスト</h3>
-              <button
-                onClick={resetQuests}
-                className="text-xs px-3 py-1 rounded-lg bg-red-600/20 text-red-300 hover:bg-red-600/40 border border-red-600/50 transition font-medium"
-              >
-                🔄 リセット
-              </button>
+      <div className="relative" style={{ paddingTop: 'calc(6rem + var(--safe-area-top))' }}>
+        <div className="relative z-10 px-4 pb-24 max-w-2xl mx-auto">
+          {loading ? (
+            <div className="min-h-[50vh] flex items-center justify-center">
+              <p className="text-white">読み込み中...</p>
             </div>
-            <div className="flex gap-2 flex-wrap">
-              <button
-                onClick={() => setSelectedQuestId('all')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-                  selectedQuestId === 'all'
-                    ? 'bg-purple-600 text-white shadow-lg'
-                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600 border border-gray-600'
-                }`}
-              >
-                すべて
-              </button>
-              {quests.map((quest) => (
-                <button
-                  key={quest.id}
-                  onClick={() => setSelectedQuestId(quest.id)}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-                    selectedQuestId === quest.id
-                      ? 'bg-purple-600 text-white shadow-lg'
-                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600 border border-gray-600'
-                  }`}
-                >
-                  {quest.title} {quest.completed && '✓'}
-                </button>
-              ))}
-            </div>
-            {selectedQuest && (
-              <p className="mt-3 text-sm text-gray-400">{selectedQuest.description}</p>
-            )}
-          </div>
-        </div>
-      )}
+          ) : showResult && resultCounts && resultMeta ? (
+            <div className="fixed inset-0 z-50 flex flex-col items-center justify-center" style={{ paddingTop: 'var(--safe-area-top)', paddingBottom: 'var(--safe-area-bottom)' }}>
+              {/* 背景分割（割合で色分け） */}
+              <div className="absolute inset-0 flex overflow-hidden">
+                <div 
+                  className="transition-all duration-500"
+                  style={{
+                    width: `${(resultCounts.approve / (resultCounts.approve + resultCounts.reject)) * 100}%`,
+                    backgroundColor: '#00e676'
+                  }}
+                />
+                <div 
+                  className="flex-1 transition-all duration-500"
+                  style={{
+                    backgroundColor: '#FF1744'
+                  }}
+                />
+              </div>
 
-      {/* サブタブ（未投票/投票済み） */}
-      <div className="flex gap-2 p-4 border-b border-gray-700 bg-gradient-to-b from-gray-800/50 to-gray-900/50">
-        <button
-          onClick={() => setVoteStatusTab('unvoted')}
-          className={`px-6 py-2 rounded-full text-sm font-semibold transition ${
-            voteStatusTab === 'unvoted'
-              ? 'bg-green-600 text-white shadow-lg shadow-green-600/50'
-              : 'bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-700'
-          }`}
-        >
-          未投票 ({posts.filter(p => {
-            if (tab === 'all') return true;
-            if (tab === 'quest') {
-              if (selectedQuestId === 'all') return !!p.questId;
-              return p.questId === selectedQuestId;
-            }
-            return !p.questId;
-          }).filter(p => !p.hasVoted).length})
-        </button>
-        <button
-          onClick={() => setVoteStatusTab('voted')}
-          className={`px-6 py-2 rounded-full text-sm font-semibold transition ${
-            voteStatusTab === 'voted'
-              ? 'bg-green-600 text-white shadow-lg shadow-green-600/50'
-              : 'bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-700'
-          }`}
-        >
-          投票済み ({posts.filter(p => {
-            if (tab === 'all') return true;
-            if (tab === 'quest') {
-              if (selectedQuestId === 'all') return !!p.questId;
-              return p.questId === selectedQuestId;
-            }
-            return !p.questId;
-          }).filter(p => p.hasVoted).length})
-        </button>
-      </div>
-
-      <div className="p-4 max-w-2xl mx-auto">
-        {error && (
-          <div className="bg-red-900/80 text-red-200 p-3 rounded-lg mb-4 border border-red-700">
-            {error}
-          </div>
-        )}
-
-        {filteredPosts.length === 0 ? (
-          <div className="bg-gray-800 rounded-lg p-8 text-center border border-gray-700">
-            <p className="text-gray-300 text-lg">
-              {voteStatusTab === 'voted' ? '投票済みの投稿がありません' : '現在投票中の投稿がありません'}
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {filteredPosts.map((post) => (
-              <div
-                key={post.id}
-                className="bg-gray-800 rounded-lg overflow-hidden shadow-lg border border-gray-700"
-              >
-                {/* 投稿者情報 */}
-                <div className="p-4 border-b border-gray-700 flex items-center">
-                  <div className="w-10 h-10 bg-gray-600 rounded-full overflow-hidden flex-shrink-0">
-                    {post.user.avatarUrl ? (
-                      <img
-                        src={post.user.avatarUrl}
-                        alt={post.user.username}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-gray-400 font-semibold">
-                        {post.user.username[0].toUpperCase()}
-                      </div>
-                    )}
-                  </div>
-                  <div className="ml-3">
-                    <p className="font-semibold text-white">
-                      {post.user.displayName || post.user.username}
-                    </p>
-                    <p className="text-xs text-gray-400">
-                      @{post.user.username}
-                    </p>
+              {/* コンテンツ */}
+              <div className="relative z-10 flex flex-col items-center justify-center h-full text-center">
+                <p className="text-white text-[24px] font-bold mb-4">{resultMeta.title}</p>
+                <p className="text-white text-[14px] font-bold mb-8">{resultMeta.subtitle}</p>
+                
+                {/* 比率表示 */}
+                <div className={`transition-all duration-300 ${
+                  resultAnimationPhase >= 2 ? 'opacity-100 scale-100' : 'opacity-0 scale-75'
+                }`}>
+                  <div className="flex items-center justify-center gap-2">
+                    <div className="text-[88px] font-bold leading-none text-white drop-shadow-lg">
+                      {resultCounts.approve}
+                    </div>
+                    <div className="text-[64px] font-bold leading-none text-white drop-shadow-lg">
+                      -
+                    </div>
+                    <div className="text-[88px] font-bold leading-none text-white drop-shadow-lg">
+                      {resultCounts.reject}
+                    </div>
                   </div>
                 </div>
 
-                {/* 投稿画像 */}
-                <img
-                  src={post.imageUrl}
-                  alt={post.caption}
-                  className="w-full h-64 object-cover"
-                />
+                {/* チェックマーク */}
+                {resultAnimationPhase >= 2 && (
+                  <div className="mt-12 flex justify-center animate-pulse">
+                    <div className="w-16 h-16 rounded-full border-4 border-white flex items-center justify-center">
+                      <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : !currentPost ? (
+            <div className="text-center py-16">
+              <p className="text-white text-[28px] font-bold">投票できる投稿がないよ</p>
+              {error && (
+                <div className="bg-red-900/80 text-red-200 p-3 rounded-lg mt-4 border border-red-700">
+                  {error}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center">
+              <div className="text-center mt-0">
+                <p className="text-white text-[22px] font-bold">{currentPost.questId ? (currentPost.quest?.title || 'これは松本？') : 'これは松本？'}</p>
+                <p className="text-[#00ad59] text-[16px] font-bold mt-1">
+                  {currentPost.questId ? (currentPost.quest?.description || '') : '松本に関係あると思う？'}
+                </p>
+              </div>
 
-                {/* キャプションとタグ */}
-                <div className="p-4">
-                  <p className="text-gray-100 mb-2 leading-relaxed">{post.caption}</p>
-                  {post.tags && (
-                    <div className="flex flex-wrap gap-2">
-                      {post.tags.split(',').map((tag) => (
-                        <span
+              <div
+                className="mt-3 w-full max-w-[280px]"
+                onTouchStart={(e) => handleDragStart(e.touches[0].clientX)}
+                onTouchMove={(e) => handleDragMove(e.touches[0].clientX)}
+                onTouchEnd={() => handleDragEnd(currentPost.id)}
+                onMouseDown={(e) => handleDragStart(e.clientX)}
+                onMouseMove={(e) => handleDragMove(e.clientX)}
+                onMouseUp={() => handleDragEnd(currentPost.id)}
+                onMouseLeave={() => handleDragEnd(currentPost.id)}
+              >
+                <div
+                  className="rounded-[20px] overflow-hidden border-4 border-white bg-[#14161a]"
+                  style={{ transform: `translateX(${dragX}px)`, transition: isDragging ? 'none' : 'transform 200ms ease' }}
+                >
+                  <div className="h-[240px] w-full overflow-hidden rounded-t-[16px] cursor-pointer" onClick={() => setIsImageExpanded(true)}>
+                    <img src={currentPost.imageUrl} alt={currentPost.caption} className="w-full h-full object-cover" />
+                  </div>
+                  <div className="bg-[#1a1d22] border-t-4 border-white px-3 py-2">
+                    <p className="text-white text-[18px] font-bold text-center">{currentPost.quest?.title || 'タイトル'}</p>
+                    <p className="text-white text-[10px] text-center whitespace-pre-wrap mt-1">
+                      {currentPost.caption || ''}
+                    </p>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {currentPost.tags?.split(',').filter(Boolean).map((tag) => (
+                        <div
                           key={tag}
-                          className="text-xs bg-gray-700 text-gray-200 px-3 py-1 rounded-full border border-gray-600 font-semibold"
+                          className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full border border-[#4144ff] bg-[#87b4ff]"
                         >
-                          {tag.trim()}
-                        </span>
+                          <img src="/icon/hashtag.svg" alt="#" className="w-2 h-2" />
+                          <span className="text-[#4144ff] text-[8px] font-semibold">{tag.trim()}</span>
+                        </div>
                       ))}
                     </div>
-                  )}
-                </div>
-
-                {/* 投票の割合表示 */}
-                <div className="p-4 bg-gray-700/50 border-t border-gray-700">
-                  <div className="flex justify-between items-center mb-3">
-                    <span className="text-sm font-medium text-white">
-                      投票: {post.totalVotes}/10
-                    </span>
-                    <span className="text-sm font-bold text-green-400">
-                      {getTimeRemaining(post.postedAt)}
-                    </span>
-                  </div>
-
-                  {post.totalVotes > 0 ? (
-                    <div>
-                      <div className="flex justify-between mb-2">
-                        <span className="text-xs font-semibold text-green-400">✅ {post.approveCount}票 / ❌ {post.rejectCount}票</span>
-                        <span className="text-xs text-gray-300 font-medium">{post.approvePercentage}%</span>
+                    <div className="flex gap-1 mt-1">
+                      <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-full border border-[#ff73c7] bg-[#ffcffc]">
+                        <span className="text-white text-xs">❤</span>
+                        <span className="text-[#ff73c7] text-[10px] font-bold">{currentPost.likeCount || 0}</span>
                       </div>
-                      <div className="w-full bg-gray-600 rounded-full h-6 overflow-hidden border border-gray-500 flex">
-                        <div
-                          className="bg-green-600 h-full transition-all shadow-lg shadow-green-600/50"
-                          style={{ width: `${post.approvePercentage}%` }}
-                        />
-                        <div
-                          className="bg-red-600 h-full transition-all shadow-lg shadow-red-600/50"
-                          style={{ width: `${100 - post.approvePercentage}%` }}
-                        />
+                      <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-full border border-[#868686] bg-white">
+                        <img src="/icon/Message square.svg" alt="コメント" className="w-3 h-3" />
+                        <span className="text-[#868686] text-[10px] font-bold">{currentPost.commentCount || 0}</span>
                       </div>
                     </div>
-                  ) : (
-                    <div className="text-center text-xs text-gray-400 py-2 font-medium">
-                      投票なし
-                    </div>
-                  )}
-                </div>
-
-                {/* 投票ボタン */}
-                <div className="p-4 border-t border-gray-700 flex gap-3">
-                  <button
-                    onClick={() => handleVote(post.id, 'approve')}
-                    disabled={post.hasVoted || isVotingClosed(post.postedAt) || post.totalVotes >= 5 || post.userId === currentUserId}
-                    className="flex-1 py-3 px-4 bg-green-600 hover:bg-green-500 text-white rounded-lg font-semibold transition disabled:opacity-40 disabled:cursor-not-allowed disabled:bg-gray-600 border border-green-500 shadow-lg shadow-green-600/30"
-                  >
-                    {post.questId ? '✅ OK' : '✅ 松本関連'}
-                  </button>
-                  <button
-                    onClick={() => handleVote(post.id, 'reject')}
-                    disabled={post.hasVoted || isVotingClosed(post.postedAt) || post.totalVotes >= 5 || post.userId === currentUserId}
-                    className="flex-1 py-3 px-4 bg-red-600 hover:bg-red-500 text-white rounded-lg font-semibold transition disabled:opacity-40 disabled:cursor-not-allowed disabled:bg-gray-600 border border-red-500 shadow-lg shadow-red-600/30"
-                  >
-                    {post.questId ? '❌ なし' : '❌ 関連なし'}
-                  </button>
-                </div>
-
-                {/* いいね・コメント欄 */}
-                <div className="p-4 border-t border-gray-700 space-y-3">
-                  <div className="flex gap-6 text-sm">
-                    <button
-                      onClick={() => handleLike(post.id)}
-                      className={`flex items-center gap-2 transition ${
-                        post.hasLiked
-                          ? 'text-red-500 hover:text-red-400'
-                          : 'text-gray-400 hover:text-red-500'
-                      }`}
-                    >
-                      <span className="text-lg">{post.hasLiked ? '❤️' : '🤍'}</span>
-                      <span className="font-semibold">{post.likeCount || 0}</span>
-                    </button>
-                    <button
-                      onClick={() => handleToggleComments(post.id)}
-                      className="flex items-center gap-2 text-gray-400 hover:text-blue-500 transition"
-                    >
-                      <span className="text-lg">💬</span>
-                      <span className="font-semibold">{post.commentCount || 0}</span>
-                    </button>
-                  </div>
-
-                  {/* コメント一覧 */}
-                  {expandedPostId === post.id && (
-                    <div className="space-y-3 max-h-60 overflow-y-auto bg-gray-900 rounded-lg p-3 border border-gray-600">
-                      {loadingComments[post.id] ? (
-                        <div className="text-center text-gray-400 text-sm py-4">読み込み中...</div>
-                      ) : comments[post.id]?.length > 0 ? (
-                        comments[post.id].map((comment) => (
-                          <div key={comment.id} className="flex gap-2 items-start">
-                            <div className="w-8 h-8 bg-gray-700 rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center">
-                              {comment.user.avatarUrl ? (
-                                <img
-                                  src={comment.user.avatarUrl}
-                                  alt={comment.user.username}
-                                  className="w-full h-full object-cover"
-                                />
-                              ) : (
-                                <span className="text-xs font-bold text-gray-400">
-                                  {comment.user.username[0].toUpperCase()}
-                                </span>
-                              )}
-                            </div>
-                            <div className="flex-1 bg-gray-800 rounded-lg p-2 border border-gray-700">
-                              <div className="flex justify-between items-start mb-1">
-                                <p className="text-xs font-semibold text-white">
-                                  {comment.user.displayName || comment.user.username}
-                                </p>
-                                <button
-                                  onClick={() => handleDeleteComment(post.id, comment.id)}
-                                  className="text-xs text-red-400 hover:text-red-300 transition"
-                                >
-                                  削除
-                                </button>
-                              </div>
-                              <p className="text-sm text-gray-200">{comment.text}</p>
-                              <p className="text-xs text-gray-500 mt-1">
-                                {new Date(comment.createdAt).toLocaleString('ja-JP')}
-                              </p>
-                            </div>
-                          </div>
-                        ))
-                      ) : (
-                        <div className="text-center text-gray-400 text-sm py-4">コメントがありません</div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* コメント入力欄 */}
-                  <div className="flex gap-2 pt-2">
-                    <input
-                      type="text"
-                      placeholder="コメントを入力..."
-                      className="flex-1 bg-gray-700 text-white px-3 py-2 rounded-lg text-sm border border-gray-600 focus:outline-none focus:border-green-500 transition"
-                      onKeyPress={(e) => {
-                        if (e.key === 'Enter' && (e.target as HTMLInputElement).value.trim()) {
-                          handleComment(post.id, (e.target as HTMLInputElement).value);
-                          (e.target as HTMLInputElement).value = '';
-                        }
-                      }}
-                    />
-                    <button
-                      onClick={(e) => {
-                        const input = (e.currentTarget.parentElement?.querySelector('input') as HTMLInputElement);
-                        if (input && input.value.trim()) {
-                          handleComment(post.id, input.value);
-                          input.value = '';
-                        }
-                      }}
-                      className="px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg font-semibold transition text-sm border border-green-500"
-                    >
-                      送信
-                    </button>
                   </div>
                 </div>
               </div>
-            ))}
+
+              {!showResult && (
+              <div className="fixed left-0 right-0 bottom-0 pb-20">
+                <div className="relative mx-auto max-w-2xl">
+                  <button
+                    type="button"
+                    onClick={() => handleVote(currentPost.id, 'approve')}
+                    className="absolute -left-10 -bottom-4 w-[192px] h-[192px] flex items-center justify-center bg-transparent transition-transform"
+                    style={{ transform: `scale(${approveScale})` }}
+                  >
+                    <img src="/icon/allow_button.svg" alt="承認" className="w-20 h-20" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleVote(currentPost.id, 'reject')}
+                    className="absolute -right-10 -bottom-4 w-[192px] h-[192px] flex items-center justify-center bg-transparent transition-transform"
+                    style={{ transform: `scale(${rejectScale})` }}
+                  >
+                    <img src="/icon/no_allow_button.svg" alt="拒否" className="w-20 h-20" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSkip(currentPost.id)}
+                    className="absolute left-1/2 -translate-x-1/2 bottom-14 px-6 py-2 rounded-full border-2 border-white text-white font-bold bg-black/40"
+                  >
+                    スキップ
+                  </button>
+                </div>
+              </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* 画像拡大モーダル */}
+        {isImageExpanded && currentPost && (
+          <div 
+            className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
+            onClick={() => setIsImageExpanded(false)}
+            style={{ paddingTop: 'var(--safe-area-top)', paddingBottom: 'var(--safe-area-bottom)' }}
+          >
+            <div className="relative max-w-full max-h-full" onClick={(e) => e.stopPropagation()}>
+              <img
+                src={currentPost.imageUrl}
+                alt="投稿画像（拡大）"
+                className="max-w-full max-h-[90vh] object-contain"
+              />
+              <button
+                onClick={() => setIsImageExpanded(false)}
+                className="absolute -top-10 right-0 text-white text-2xl hover:text-gray-300 transition"
+              >
+                ✕
+              </button>
+            </div>
           </div>
         )}
       </div>

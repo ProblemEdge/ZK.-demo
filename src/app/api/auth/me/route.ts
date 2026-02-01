@@ -5,11 +5,7 @@ import { prisma } from '@/lib/prisma';
 export async function GET(request: Request) {
   try {
     // Cookieからトークン取得
-    const cookieHeader = request.headers.get('cookie');
-    const token = cookieHeader
-      ?.split('; ')
-      .find(row => row.startsWith('auth-token='))
-      ?.split('=')[1];
+    const token = request.cookies.get('auth-token')?.value;
 
     if (!token) {
       return NextResponse.json(
@@ -24,7 +20,7 @@ export async function GET(request: Request) {
       username: string;
     };
 
-    // ユーザー情報取得（カウントは除外して軽量化）
+    // ユーザー情報取得
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
       select: {
@@ -36,7 +32,15 @@ export async function GET(request: Request) {
         createdAt: true,
         level: true,
         gems: true,
-        experience: true
+        experience: true,
+        completedQuestsCount: true,
+        _count: {
+          select: {
+            posts: { where: { isApproved: true } },
+            friendsAsUser: true,
+            friendsAsFriend: true
+          }
+        }
       }
     });
 
@@ -47,7 +51,22 @@ export async function GET(request: Request) {
       );
     }
 
-    return NextResponse.json(user);
+    const friendCount = user._count.friendsAsUser + user._count.friendsAsFriend;
+
+    return NextResponse.json({
+      id: user.id,
+      username: user.username,
+      displayName: user.displayName,
+      bio: user.bio,
+      avatarUrl: user.avatarUrl,
+      createdAt: user.createdAt,
+      level: user.level,
+      gems: user.gems,
+      experience: user.experience,
+      completedQuestsCount: user.completedQuestsCount,
+      postCount: user._count.posts,
+      friendCount
+    });
 
   } catch (error) {
     console.error('Get user error:', error);

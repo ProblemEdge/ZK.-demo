@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 export default function RegisterPage() {
   const [username, setUsername] = useState('');
@@ -29,7 +30,6 @@ export default function RegisterPage() {
         return;
       }
 
-      alert('登録成功！ログイン画面に移動します');
       router.push('/login');
 
     } catch (err) {
@@ -40,53 +40,58 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-900">
-      <div className="max-w-md w-full space-y-8 p-8 bg-gray-800 rounded-lg shadow-lg border border-gray-700">
-        <h2 className="text-3xl font-bold text-center text-white">
-          アカウント登録
-        </h2>
-        
-        <form onSubmit={handleSubmit} className="mt-8 space-y-6">
-          {error && (
-            <div className="bg-red-900/80 text-red-200 p-3 rounded-lg border border-red-700">
-              {error}
+    <div className="relative min-h-0 min-h-svh h-svh w-full bg-gradient-to-b from-[#0b0c0f] to-[#0f0f0f] flex flex-col items-center justify-center overflow-hidden">
+      <div className="mb-4 flex items-center justify-center z-10">
+        <span className="text-white text-[64px] font-bold select-none">ZK.</span>
+      </div>
+      <div className="w-full max-w-[352px] h-auto bg-gradient-to-b from-[rgba(20,22,26,0.2)] to-[rgba(102,105,110,0.2)] border-2 border-[#0e4b7f] rounded-[24px] shadow-[0px_8px_4px_0px_rgba(0,0,0,0.25)] flex items-center justify-center px-[21px] py-[25px] overflow-auto mx-auto">
+        <div className="w-full flex flex-col items-center gap-[48px]">
+          <div className="w-full flex flex-col items-center gap-[24px]">
+            <div className="w-[174px] flex flex-col items-center gap-[8px]">
+              <p className="text-[32px] text-white font-bold text-center w-[230px]">アカウント登録</p>
+              <p className="text-[16px] text-[#475467] text-center">松本の”今”を切り抜こう</p>
             </div>
-          )}
-
-          <div>
-            <label className="block text-sm font-medium text-white">
-              ユーザー名
-            </label>
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="mt-1 block w-full px-3 py-2 border border-gray-700 rounded-md bg-gray-700 text-white placeholder-gray-500"
-              required
-            />
+            <form onSubmit={handleSubmit} className="w-full flex flex-col gap-[32px] items-start">
+              <div className="w-full flex flex-col gap-[8px]">
+                <div className="w-full flex flex-col gap-[4px] h-[58px] items-center justify-center">
+                  <label className="text-[12px] text-white font-bold w-full">ユーザー名</label>
+                  <input
+                    type="text"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    className="bg-[#475467] h-[38px] rounded-[4px] w-full px-3 text-white outline-none"
+                    required
+                  />
+                </div>
+                <div className="w-full flex flex-col gap-[4px] h-[58px] items-center justify-center">
+                  <label className="text-[12px] text-white font-bold w-full">パスワード</label>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="bg-[#475467] h-[38px] rounded-[4px] w-full px-3 text-white outline-none"
+                    required
+                  />
+                </div>
+              </div>
+              {error && (
+                <div className="bg-red-900/80 text-red-200 p-3 rounded-lg border border-red-700 w-full text-center">
+                  {error}
+                </div>
+              )}
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full h-[38px] rounded-[4px] bg-gradient-to-b from-[#00a63e] to-[#13ac4c] text-white font-bold shadow-[0px_2px_4px_0px_rgba(32,192,67,0.25)] px-[118px] py-[9px] flex items-center justify-center disabled:opacity-50"
+              >
+                {loading ? '登録中...' : '登録'}
+              </button>
+            </form>
           </div>
-
-          <div>
-            <label className="block text-sm font-medium text-white">
-              パスワード
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 block w-full px-3 py-2 border border-gray-700 rounded-md bg-gray-700 text-white placeholder-gray-500"
-              required
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-2 px-4 bg-green-600 hover:bg-green-500 text-white rounded-md disabled:opacity-50 font-semibold transition border border-green-500 shadow-lg shadow-green-600/30"
-          >
-            {loading ? '登録中...' : '登録する'}
-          </button>
-        </form>
+          <Link href="/login" className="text-[15px] font-bold text-[rgba(0,181,76,0.85)] text-center w-full underline">
+            アカウントをすでにお持ちですか？
+          </Link>
+        </div>
       </div>
     </div>
   );

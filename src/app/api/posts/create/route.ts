@@ -24,6 +24,7 @@ export async function POST(request: Request) {
 
     const {
       imageUrl,
+      title,
       caption,
       tags,
       visibilityScope,
@@ -86,7 +87,7 @@ export async function POST(request: Request) {
     }
 
     // 公開範囲（デフォルトはフォロワーのみ）
-    const scope = visibilityScope === 'PUBLIC' ? 'PUBLIC' : 'FOLLOWERS';
+    const scope = visibilityScope === 'PUBLIC' ? 'PUBLIC' : 'FRIENDS';
 
     // 公開期間（分）。'unlimited' なら null、数字なら最低5分。デフォルトは24時間(1440分)
     let visibilityDurationMinutes: number | null = null;
@@ -126,6 +127,7 @@ export async function POST(request: Request) {
       data: {
         userId: decoded.userId,
         imageUrl,
+        title: title || '',
         caption,
         tags: tags || '',
         isApproved: false,
@@ -184,18 +186,26 @@ export async function POST(request: Request) {
       }
     }
 
-    // フォロワーに通知を送信（全世界でもフォロワー限定でも）
+    // フレンドに通知を送信（全世界でもフレンド限定でも）
     // 非同期で並列実行して高速化
-    const followers = await prisma.follow.findMany({
-      where: { followingId: decoded.userId },
-      select: { followerId: true }
+    const friends = await prisma.friend.findMany({
+      where: {
+        OR: [
+          { userId: decoded.userId },
+          { friendId: decoded.userId }
+        ]
+      },
+      select: { userId: true, friendId: true }
     });
+    const friendIds = friends.map(f => 
+      f.userId === decoded.userId ? f.friendId : f.userId
+    );
 
     // Promise.allで並列実行（レスポンスを待たずに通知を送る）
     Promise.all(
-      followers.map(follow =>
+      friendIds.map(friendId =>
         sendNotificationToUser(
-          follow.followerId,
+          friendId,
           `📸 新しい投稿があります`,
           `投票に参加してあげよう！`,
           `/feed`,

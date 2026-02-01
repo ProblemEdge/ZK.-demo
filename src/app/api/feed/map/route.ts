@@ -21,12 +21,19 @@ export async function GET(request: Request) {
       userId: string;
     };
 
-    const followingList = await prisma.follow.findMany({
-      where: { followerId: decoded.userId },
-      select: { followingId: true }
+    const friendsList = await prisma.friend.findMany({
+      where: {
+        OR: [
+          { userId: decoded.userId },
+          { friendId: decoded.userId }
+        ]
+      },
+      select: { userId: true, friendId: true }
     });
-    const followingIds = followingList.map(f => f.followingId);
-    const allowedIds = [decoded.userId, ...followingIds];
+    const friendIds = friendsList.map(f => 
+      f.userId === decoded.userId ? f.friendId : f.userId
+    );
+    const allowedIds = [decoded.userId, ...friendIds];
 
     const posts = await prisma.post.findMany({
       where: {
@@ -37,7 +44,7 @@ export async function GET(request: Request) {
           { visibilityScope: 'PUBLIC' },
           {
             AND: [
-              { visibilityScope: 'FOLLOWERS' },
+              { visibilityScope: 'FRIENDS' },
               { userId: { in: allowedIds } }
             ]
           }

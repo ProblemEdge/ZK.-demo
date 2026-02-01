@@ -24,19 +24,26 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
     const tab = url.searchParams.get('tab') || 'all';
 
-    // フォロー中のユーザー一覧を一度だけ取得
-    const followingList = await prisma.follow.findMany({
-      where: { followerId: decoded.userId },
-      select: { followingId: true }
+    // フレンド一覧を取得
+    const friendsList = await prisma.friend.findMany({
+      where: {
+        OR: [
+          { userId: decoded.userId },
+          { friendId: decoded.userId }
+        ]
+      },
+      select: { userId: true, friendId: true }
     });
-    const followingIds = followingList.map((f: { followingId: string }) => f.followingId);
-    const allowedIds = [decoded.userId, ...followingIds];
+    const friendIds = friendsList.map(f => 
+      f.userId === decoded.userId ? f.friendId : f.userId
+    );
+    const allowedIds = [decoded.userId, ...friendIds];
 
     let approvedWhereClause: any = {
       isApproved: true,
       OR: [
         { visibilityScope: 'PUBLIC' },
-        { AND: [ { visibilityScope: 'FOLLOWERS' }, { userId: { in: allowedIds } } ] }
+        { AND: [ { visibilityScope: 'FRIENDS' }, { userId: { in: allowedIds } } ] }
       ]
     };
 
@@ -45,7 +52,7 @@ export async function GET(request: Request) {
     };
 
     if (tab === 'following') {
-      // フォロー中タブでは自分+フォロー中のみ表示
+      // フレンドタブでは自分+フレンドのみ表示
       approvedWhereClause = { isApproved: true, userId: { in: allowedIds } };
       votingWhereClause.userId = { in: allowedIds };
     }
@@ -58,6 +65,7 @@ export async function GET(request: Request) {
           id: true,
           userId: true,
           imageUrl: true,
+          title: true,
           caption: true,
           tags: true,
           postedAt: true,
@@ -110,6 +118,7 @@ export async function GET(request: Request) {
           id: true,
           userId: true,
           imageUrl: true,
+          title: true,
           caption: true,
           tags: true,
           postedAt: true,
@@ -179,7 +188,7 @@ export async function GET(request: Request) {
     // 投票中投稿: 公開範囲・公開期間を適用し、匿名化
     const enrichedVotingPosts = votingPosts
       .filter((post) => {
-        if ((post as any).visibilityScope === 'FOLLOWERS') {
+        if ((post as any).visibilityScope === 'FRIENDS') {
           return allowedIds.includes((post as any).userId);
         }
         return true;

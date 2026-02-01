@@ -10,11 +10,11 @@ export interface AuthUser {
   avatarUrl: string | null;
   createdAt: string;
   postCount: number;
-  followerCount: number;
-  followingCount: number;
+  friendCount: number;
   level: number;
   gems: number;
   experience: number;
+  completedQuestsCount: number;
 }
 
 type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated';

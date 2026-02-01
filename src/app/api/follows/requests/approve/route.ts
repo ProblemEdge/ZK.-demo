@@ -28,7 +28,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const requestRecord = await prisma.followRequest.findUnique({
+    const requestRecord = await prisma.friendRequest.findUnique({
       where: {
         requesterId_targetId: {
           requesterId,
@@ -44,37 +44,39 @@ export async function POST(request: Request) {
       );
     }
 
-    await prisma.follow.create({
+    const [firstId, secondId] = [decoded.userId, requesterId].sort();
+
+    await prisma.friend.create({
       data: {
-        followerId: requesterId,
-        followingId: decoded.userId
+        userId: firstId,
+        friendId: secondId
       }
     });
 
-    await prisma.followRequest.update({
+    await prisma.friendRequest.update({
       where: { id: requestRecord.id },
       data: { status: 'APPROVED' }
     });
 
     await sendNotificationToUser(
       requesterId,
-      'フォローリクエストが承認されました',
-      'フォローが承認されました',
+      'フレンド申請が承認されました',
+      'フレンドになりました',
       `/user/${decoded.userId}`,
       decoded.userId,
-      'FOLLOW_ACCEPTED'
+      'FRIEND_ACCEPTED'
     );
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
-    console.error('Approve follow request error:', error);
+    console.error('Approve friend request error:', error);
 
     if (error.code === 'P2002') {
       return NextResponse.json({ success: true });
     }
 
     return NextResponse.json(
-      { error: '承認に失敗しました' },
+      { error: 'フレンド承認に失敗しました' },
       { status: 500 }
     );
   }

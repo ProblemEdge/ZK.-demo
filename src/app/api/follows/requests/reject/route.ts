@@ -28,7 +28,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const requestRecord = await prisma.followRequest.findUnique({
+    const requestRecord = await prisma.friendRequest.findUnique({
       where: {
         requesterId_targetId: {
           requesterId,
@@ -44,25 +44,25 @@ export async function POST(request: Request) {
       );
     }
 
-    await prisma.followRequest.update({
+    await prisma.friendRequest.update({
       where: { id: requestRecord.id },
       data: { status: 'REJECTED' }
     });
 
     await sendNotificationToUser(
       requesterId,
-      'フォローリクエストが拒否されました',
-      'フォローが拒否されました',
+      'フレンド申請が拒否されました',
+      'フレンド申請が拒否されました',
       `/user/${decoded.userId}`,
       decoded.userId,
-      'FOLLOW_REJECTED'
+      'FRIEND_REJECTED'
     );
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Reject follow request error:', error);
+    console.error('Reject friend request error:', error);
     return NextResponse.json(
-      { error: '拒否に失敗しました' },
+      { error: 'フレンド拒否に失敗しました' },
       { status: 500 }
     );
   }

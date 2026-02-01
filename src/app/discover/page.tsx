@@ -3,6 +3,10 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import BottomNav from '../components/BottomNav';
+import UserDogtag from '../components/UserDogtag';
+import DiscoverHeader from '../components/DiscoverHeader';
+import { RankFirstFrame, RankSecondFrame, RankThirdFrame, RankListFrame } from '../components/RankingFrames';
+import StatButton from '../components/StatButton';
 
 interface User {
   id: string;
@@ -10,12 +14,13 @@ interface User {
   displayName: string | null;
   avatarUrl: string | null;
   bio: string | null;
+  level: number;
+  gems: number;
   _count: {
     posts: number;
-    followers: number;
-    following: number;
+    friends: number;
   };
-  isFollowing: boolean;
+  isFriend: boolean;
   isRequested?: boolean;
 }
 
@@ -27,13 +32,14 @@ interface RankingUser {
   level: number;
   gems: number;
   totalVotes?: number;
+  totalLikes?: number;
   avgCompletionTime?: number;
   completedCount?: number;
 }
 
 type MainTab = 'search' | 'ranking';
-type RankingType = 'level' | 'gems' | 'votes' | 'quest-speed';
-type Period = 'today' | 'week' | 'month' | 'year' | 'all';
+type RankingType = 'level' | 'gems' | 'votes' | 'likes';
+type Period = 'all' | 'today' | 'week' | 'month' | 'year';
 type Mode = 'world' | 'following';
 
 export default function DiscoverPage() {
@@ -41,7 +47,6 @@ export default function DiscoverPage() {
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
-  const [tab, setTab] = useState<'following' | 'not-following'>('not-following');
   const [mainTab, setMainTab] = useState<MainTab>('search');
   
   // ランキング関連
@@ -50,6 +55,8 @@ export default function DiscoverPage() {
   const [mode, setMode] = useState<Mode>('world');
   const [ranking, setRanking] = useState<RankingUser[]>([]);
   const [rankingLoading, setRankingLoading] = useState(false);
+  const [rankingPage, setRankingPage] = useState(1);
+  const [hasMoreRanking, setHasMoreRanking] = useState(true);
   
   const router = useRouter();
 
@@ -72,22 +79,37 @@ export default function DiscoverPage() {
   // ランキング取得
   useEffect(() => {
     if (mainTab === 'ranking') {
-      fetchRanking();
+      setRankingPage(1);
+      setHasMoreRanking(true);
+      fetchRanking(true);
     }
   }, [rankingType, period, mode, mainTab]);
 
-  const fetchRanking = async () => {
+  const fetchRanking = async (reset: boolean = false) => {
+    if (rankingLoading || (!reset && !hasMoreRanking)) return;
+    
     try {
       setRankingLoading(true);
+      const currentPage = reset ? 1 : rankingPage;
       const res = await fetch(
-        `/api/rankings?type=${rankingType}&period=${period}&mode=${mode}`,
+        `/api/rankings?type=${rankingType}&period=${period}&mode=${mode}&page=${currentPage}&limit=10`,
         { cache: 'no-store' }
       );
 
       if (!res.ok) throw new Error('ランキングの取得に失敗しました');
 
       const data = await res.json();
-      setRanking(data.ranking);
+      
+      if (reset) {
+        setRanking(data.ranking);
+      } else {
+        setRanking([...ranking, ...data.ranking]);
+      }
+      
+      setHasMoreRanking(data.ranking.length === 10 && currentPage < 10); // 最大100位まで（10ページ）
+      if (!reset) {
+        setRankingPage(currentPage + 1);
+      }
     } catch (err) {
       console.error('Ranking error:', err);
       setRanking([]);
@@ -134,7 +156,7 @@ export default function DiscoverPage() {
       }
 
       // UIを更新
-      setUsers(users.map(u => u.id === targetUserId ? { ...u, isFollowing: false, isRequested: true } : u));
+      setUsers(users.map(u => u.id === targetUserId ? { ...u, isFriend: false, isRequested: true } : u));
     } catch (err) {
       console.error('Follow error:', err);
       alert('フォローに失敗しました');
@@ -157,7 +179,7 @@ export default function DiscoverPage() {
       }
 
       // UIを更新
-      setUsers(users.map(u => u.id === targetUserId ? { ...u, isFollowing: false } : u));
+      setUsers(users.map(u => u.id === targetUserId ? { ...u, isFriend: false } : u));
     } catch (err) {
       console.error('Unfollow error:', err);
       alert('フォロー解除に失敗しました');
@@ -165,125 +187,120 @@ export default function DiscoverPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900" style={{ paddingBottom: 'calc(6rem + var(--safe-area-bottom))' }}>
-      <header className="bg-gradient-to-r from-gray-900 to-gray-800 border-b border-gray-700 sticky z-40 shadow-md" style={{ top: '0', paddingBottom: '0.75rem' }}>
-        <div style={{ paddingTop: 'var(--safe-area-top)', paddingLeft: '0.75rem', paddingRight: '0.75rem', paddingBottom: '0.75rem' }}>
-        <div className="flex gap-2 mb-3">
-          <button
-            onClick={() => setMainTab('search')}
-            className={`flex-1 py-2 rounded-lg text-sm font-bold transition ${
-              mainTab === 'search'
-                ? 'bg-green-600 text-white'
-                : 'bg-gray-800 text-gray-400'
-            }`}
-          >
-            🔍 ユーザー検索
-          </button>
-          <button
-            onClick={() => setMainTab('ranking')}
-            className={`flex-1 py-2 rounded-lg text-sm font-bold transition ${
-              mainTab === 'ranking'
-                ? 'bg-green-600 text-white'
-                : 'bg-gray-800 text-gray-400'
-            }`}
-          >
-            🏆 ランキング
-          </button>
+    <div className="min-h-screen bg-[#0b0c0f]" style={{ paddingBottom: 'calc(6rem + var(--safe-area-bottom))' }}>
+      <div className="sticky top-0 z-40 bg-[#0b0c0f]">
+        <DiscoverHeader mainTab={mainTab} />
+
+        <div className="px-3">
+          <div className="bg-[#1d1e21] rounded-[8px] h-[32px] flex items-center justify-center gap-2 px-2">
+            <button
+              onClick={() => setMainTab('search')}
+              className={`flex-1 h-[24px] rounded-[8px] flex items-center justify-center gap-[6px] ${
+                mainTab === 'search' ? 'bg-[#00e676] text-white' : 'bg-[#475467] text-white'
+              }`}
+            >
+              <img src="/icon/User_icon.svg" alt="ユーザー" className="w-5 h-5" />
+              <span className="text-[20px] font-bold leading-none">ユーザー検索</span>
+            </button>
+            <button
+              onClick={() => setMainTab('ranking')}
+              className={`flex-1 h-[24px] rounded-[8px] flex items-center justify-center gap-[6px] ${
+                mainTab === 'ranking' ? 'bg-[#00e676] text-white' : 'bg-[#475467] text-white'
+              }`}
+            >
+              <img src="/icon/Award_icon.svg" alt="ランキング" className="w-5 h-5" />
+              <span className="text-[20px] font-bold leading-none">ランキング</span>
+            </button>
+          </div>
         </div>
-        
+
+        <div className="bg-[#14161a] h-[4px] w-full mt-3" />
+
         {/* 検索バー（検索タブ時のみ） */}
         {mainTab === 'search' && (
-          <div className="relative">
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="ユーザー名で検索..."
-              className="w-full px-4 py-2 bg-gray-800 text-white placeholder-gray-500 border border-gray-700 rounded-lg focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500"
-            />
-            <img
-              src="/icon_people.png"
-              alt="検索"
-              className="absolute right-3 top-2.5 w-5 h-5 object-contain"
-            />
+          <div className="px-3 mt-3">
+            <div className="relative">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="ユーザー名/プロフィール名を入力"
+                className="w-full h-[38px] px-3 pr-10 bg-[#14161a] text-white placeholder-[#475467] border border-white rounded-[4px] focus:outline-none"
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-white">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="11" cy="11" r="7" stroke="white" strokeWidth="2" />
+                  <path d="M20 20L16.65 16.65" stroke="white" strokeWidth="2" strokeLinecap="round" />
+                </svg>
+              </span>
+            </div>
           </div>
         )}
 
         {/* ランキングフィルター（ランキングタブ時のみ） */}
         {mainTab === 'ranking' && (
-          <div className="space-y-2">
-            {/* ランキング種類 */}
-            <div className="flex gap-2 overflow-x-auto pb-1">
-              <button
-                onClick={() => setRankingType('level')}
-                className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap ${
-                  rankingType === 'level'
-                    ? 'bg-green-600 text-white'
-                    : 'bg-gray-800 text-gray-400'
-                }`}
-              >
-                📊 レベル
-              </button>
-              <button
-                onClick={() => setRankingType('gems')}
-                className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap ${
-                  rankingType === 'gems'
-                    ? 'bg-green-600 text-white'
-                    : 'bg-gray-800 text-gray-400'
-                }`}
-              >
-                💎 ジェム
-              </button>
-              <button
-                onClick={() => setRankingType('votes')}
-                className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap ${
-                  rankingType === 'votes'
-                    ? 'bg-green-600 text-white'
-                    : 'bg-gray-800 text-gray-400'
-                }`}
-              >
-                ✅ 投票数
-              </button>
-              <button
-                onClick={() => setRankingType('quest-speed')}
-                className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap ${
-                  rankingType === 'quest-speed'
-                    ? 'bg-green-600 text-white'
-                    : 'bg-gray-800 text-gray-400'
-                }`}
-              >
-                ⚡ クエスト速度
-              </button>
+          <>
+            <div className="bg-[#14161a] h-[4px] w-full" />
+            
+            <div className="px-1 flex items-center justify-center gap-0 overflow-x-auto py-0">
+              <StatButton 
+                type="level" 
+                label="レベル" 
+                onClick={() => { setRankingLoading(true); setRankingType('level'); }}
+                active={rankingType === 'level'}
+              />
+              <StatButton 
+                type="gem" 
+                label="ジェム" 
+                onClick={() => { setRankingLoading(true); setRankingType('gems'); }}
+                active={rankingType === 'gems'}
+              />
+              <StatButton 
+                type="votes" 
+                label="投票数" 
+                onClick={() => { setRankingLoading(true); setRankingType('votes'); }}
+                active={rankingType === 'votes'}
+              />
+              <StatButton 
+                type="likes" 
+                label="いいね" 
+                onClick={() => { setRankingLoading(true); setRankingType('likes'); }}
+                active={rankingType === 'likes'}
+              />
             </div>
 
-            {/* 期間とモード */}
-            <div className="flex gap-2">
+            <div className="px-3 mt-2 flex gap-2">
               <select
                 value={period}
-                onChange={(e) => setPeriod(e.target.value as Period)}
-                className="flex-1 px-2 py-1 bg-gray-800 text-white text-xs rounded border border-gray-700"
+                onChange={(e) => { setRankingLoading(true); setPeriod(e.target.value as Period); }}
+                className="flex-1 h-[31px] border border-white rounded-[12px] bg-[#0b0c0f] text-white text-[16px] font-bold px-3 appearance-none cursor-pointer"
+                style={{
+                  backgroundImage: 'url(/icon/Chevron_down.svg)',
+                  backgroundRepeat: 'no-repeat',
+                  backgroundPosition: 'right 4px center',
+                  backgroundSize: '24px 24px'
+                }}
               >
-                <option value="today">今日</option>
-                <option value="week">今週</option>
-                <option value="month">今月</option>
-                <option value="year">今年</option>
-                <option value="all">全期間</option>
+                <option value="all" className="bg-[#0b0c0f] text-white">全期間</option>
+                <option value="today" className="bg-[#0b0c0f] text-white">今日</option>
+                <option value="week" className="bg-[#0b0c0f] text-white">今週</option>
+                <option value="month" className="bg-[#0b0c0f] text-white">今月</option>
+                <option value="year" className="bg-[#0b0c0f] text-white">今年</option>
               </select>
-              <select
-                value={mode}
-                onChange={(e) => setMode(e.target.value as Mode)}
-                className="flex-1 px-2 py-1 bg-gray-800 text-white text-xs rounded border border-gray-700"
+              <button
+                onClick={() => { setRankingLoading(true); setMode(mode === 'world' ? 'following' : 'world'); }}
+                className="flex-1 h-[31px] border border-white rounded-[12px] flex items-center justify-center gap-2 text-white"
               >
-                <option value="world">🌍 ワールド</option>
-                <option value="following">👥 フォロー中</option>
-              </select>
+                <img src="/icon/Refresh cw.svg" alt="" className="w-5 h-5" />
+                <span className="text-[20px] font-bold">{mode === 'world' ? '世界' : '友達'}</span>
+              </button>
             </div>
-          </div>
+          </>
         )}
-        </div>
-      </header>
+        <div className="bg-[#14161a] h-[4px] w-full mt-3" />
+      </div>
 
-      <div className="p-3 max-w-2xl mx-auto">
+      <div className="px-3 pt-3 max-w-2xl mx-auto">
         {/* 検索タブコンテンツ */}
         {mainTab === 'search' && (
           <>
@@ -306,109 +323,30 @@ export default function DiscoverPage() {
             )}
 
             {!loading && users.length > 0 && (
-              <>
-                {/* タブ */}
-                <div className="flex gap-2 mb-3">
-                  <button
-                    onClick={() => setTab('not-following')}
-                    className={`px-4 py-1 rounded-full text-xs font-bold transition ${
-                      tab === 'not-following'
-                        ? 'bg-green-600 text-white'
-                        : 'bg-gray-800 text-gray-300'
-                    }`}
-                  >
-                    フォローしてない ({users.filter(u => !u.isFollowing).length})
-                  </button>
-                  <button
-                    onClick={() => setTab('following')}
-                    className={`px-4 py-1 rounded-full text-xs font-bold transition ${
-                      tab === 'following'
-                        ? 'bg-green-600 text-white'
-                        : 'bg-gray-800 text-gray-300'
-                    }`}
-                  >
-                    フォロー中 ({users.filter(u => u.isFollowing).length})
-                  </button>
-                </div>
-
-                {/* ユーザーリスト */}
-                <div className="space-y-2">
-                  {users
-                    .filter(u => (tab === 'following' ? u.isFollowing : !u.isFollowing))
-                    .map((user) => (
-                      <div
-                        key={user.id}
-                        className="bg-gray-800 rounded-lg p-3 border border-gray-700 hover:border-green-500 transition cursor-pointer"
-                        onClick={() => router.push(`/user/${user.id}`)}
-                      >
-                        <div className="flex items-start gap-3">
-                          {/* アバター */}
-                          <div
-                            className="w-10 h-10 bg-gray-700 rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center border border-gray-600"
-                          >
-                            {user.avatarUrl ? (
-                              <img
-                                src={user.avatarUrl}
-                                alt={user.username}
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              <span className="text-sm font-bold text-gray-400">
-                                {user.username[0].toUpperCase()}
-                              </span>
-                            )}
-                          </div>
-
-                          {/* ユーザー情報 */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <h3 className="font-bold text-white text-sm truncate">
-                                {user.displayName || user.username}
-                              </h3>
-                              <span className="text-xs text-gray-400">@{user.username}</span>
-                            </div>
-                            
-                            {user.bio && (
-                              <p className="text-xs text-gray-300 mt-1 line-clamp-2">{user.bio}</p>
-                            )}
-
-                            {/* 統計 */}
-                            <div className="flex gap-3 mt-1 text-xs text-gray-400">
-                              <span>{user._count.posts}投稿</span>
-                              <span>{user._count.followers}フォロワー</span>
-                              <span>{user._count.following}フォロー中</span>
-                            </div>
-                          </div>
-
-                          {/* フォローボタン */}
-                          {user.isFollowing ? (
-                            <button
-                              onClick={(e) => handleUnfollow(user.id, e)}
-                              className="px-3 py-1 bg-gray-700 text-white rounded-full text-xs font-bold hover:bg-red-600 transition"
-                            >
-                              フォロー中
-                            </button>
-                          ) : user.isRequested ? (
-                            <button
-                              onClick={(e) => e.stopPropagation()}
-                              className="px-3 py-1 bg-gray-600 text-gray-200 rounded-full text-xs font-bold opacity-70 cursor-not-allowed"
-                              disabled
-                            >
-                              リクエスト済み
-                            </button>
-                          ) : (
-                            <button
-                              onClick={(e) => handleFollow(user.id, e)}
-                              className="px-3 py-1 bg-green-600 text-white rounded-full text-xs font-bold hover:bg-green-500 transition"
-                            >
-                              フォロー
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              </>
+              <div className="space-y-2">
+                {users.map((user) => (
+                  <div key={user.id} onClick={() => router.push(`/user/${user.id}`)} className="cursor-pointer">
+                    <UserDogtag
+                      name={user.displayName || user.username}
+                      username={user.username}
+                      level={user.level}
+                      gems={user.gems}
+                      posts={user._count.posts}
+                      friends={user._count.friends}
+                      status={user.isFriend ? 'friend' : user.isRequested ? 'pending' : 'add'}
+                      avatarUrl={user.avatarUrl}
+                      onStatusClick={(e) => {
+                        e.stopPropagation();
+                        if (user.isFriend) {
+                          handleUnfollow(user.id, e);
+                        } else if (!user.isRequested) {
+                          handleFollow(user.id, e);
+                        }
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
             )}
           </>
         )}
@@ -416,7 +354,7 @@ export default function DiscoverPage() {
         {/* ランキングタブコンテンツ */}
         {mainTab === 'ranking' && (
           <>
-            {rankingLoading && (
+            {rankingLoading && ranking.length === 0 && (
               <div className="text-center py-8">
                 <p className="text-gray-400">読み込み中...</p>
               </div>
@@ -428,77 +366,96 @@ export default function DiscoverPage() {
               </div>
             )}
 
-            {!rankingLoading && ranking.length > 0 && (
-              <div className="space-y-2">
-                {ranking.map((user, index) => (
-                  <div
-                    key={user.id}
-                    className="bg-gray-800 rounded-lg p-3 border border-gray-700 hover:border-green-500 transition cursor-pointer"
-                    onClick={() => router.push(`/user/${user.id}`)}
-                  >
-                    <div className="flex items-center gap-3">
-                      {/* 順位 */}
-                      <div className="w-8 flex-shrink-0 text-center">
-                        {index === 0 && <span className="text-2xl">🥇</span>}
-                        {index === 1 && <span className="text-2xl">🥈</span>}
-                        {index === 2 && <span className="text-2xl">🥉</span>}
-                        {index > 2 && (
-                          <span className="text-lg font-bold text-gray-400">
-                            {index + 1}
-                          </span>
-                        )}
-                      </div>
-
-                      {/* アバター */}
-                      <div className="w-10 h-10 bg-gray-700 rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center border border-gray-600">
-                        {user.avatarUrl ? (
-                          <img
-                            src={user.avatarUrl}
-                            alt={user.username}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <span className="text-sm font-bold text-gray-400">
-                            {user.username[0].toUpperCase()}
-                          </span>
-                        )}
-                      </div>
-
-                      {/* ユーザー情報 */}
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-bold text-white text-sm truncate">
-                          {user.displayName || user.username}
-                        </h3>
-                        <p className="text-xs text-gray-400">@{user.username}</p>
-                      </div>
-
-                      {/* スコア */}
-                      <div className="text-right">
-                        {rankingType === 'level' && (
-                          <div className="text-sm font-bold text-blue-400">
-                            LV {user.level}
-                          </div>
-                        )}
-                        {rankingType === 'gems' && (
-                          <div className="text-sm font-bold text-yellow-400">
-                            💎 {user.gems}
-                          </div>
-                        )}
-                        {rankingType === 'votes' && (
-                          <div className="text-sm font-bold text-green-400">
-                            ✅ {user.totalVotes}票
-                          </div>
-                        )}
-                        {rankingType === 'quest-speed' && user.avgCompletionTime !== undefined && (
-                          <div className="text-sm font-bold text-purple-400">
-                            ⚡ {Math.floor(user.avgCompletionTime / 1000 / 60)}分
-                          </div>
-                        )}
-                      </div>
+            {ranking.length > 0 && (
+              <>
+                {/* 1位〜3位の特別表示 */}
+                <div className="flex flex-col items-center gap-2 mb-3">
+                  {ranking[0] && (
+                    <div className="w-[148px]">
+                      <RankFirstFrame
+                        name={ranking[0].displayName || ranking[0].username}
+                        username={ranking[0].username}
+                        level={ranking[0].level}
+                        avatarUrl={ranking[0].avatarUrl}
+                        onClick={() => router.push(`/user/${ranking[0].id}`)}
+                        rankingType={rankingType}
+                        score={rankingType === 'gems' ? ranking[0].gems : rankingType === 'votes' ? ranking[0].totalVotes : ranking[0].totalLikes}
+                      />
                     </div>
+                  )}
+                  
+                  <div className="flex gap-6 items-start">
+                    {ranking[1] && (
+                      <div className="w-[128px]">
+                        <RankSecondFrame
+                          name={ranking[1].displayName || ranking[1].username}
+                          username={ranking[1].username}
+                          level={ranking[1].level}
+                          avatarUrl={ranking[1].avatarUrl}
+                          onClick={() => router.push(`/user/${ranking[1].id}`)}
+                          rankingType={rankingType}
+                          score={rankingType === 'gems' ? ranking[1].gems : rankingType === 'votes' ? ranking[1].totalVotes : ranking[1].totalLikes}
+                        />
+                      </div>
+                    )}
+                    
+                    {ranking[2] && (
+                      <div className="w-[128px]">
+                        <RankThirdFrame
+                          name={ranking[2].displayName || ranking[2].username}
+                          username={ranking[2].username}
+                          level={ranking[2].level}
+                          avatarUrl={ranking[2].avatarUrl}
+                          onClick={() => router.push(`/user/${ranking[2].id}`)}
+                          rankingType={rankingType}
+                          score={rankingType === 'gems' ? ranking[2].gems : rankingType === 'votes' ? ranking[2].totalVotes : ranking[2].totalLikes}
+                        />
+                      </div>
+                    )}
                   </div>
-                ))}
-              </div>
+                </div>
+
+                {/* 4位以降のリスト表示 */}
+                <div className="space-y-2 w-full">
+                  {ranking.slice(3).map((user, index) => (
+                    <RankListFrame
+                      key={user.id}
+                      rank={index + 4}
+                      name={user.displayName || user.username}
+                      username={user.username}
+                      level={user.level}
+                      avatarUrl={user.avatarUrl}
+                      onClick={() => router.push(`/user/${user.id}`)}
+                      rankingType={rankingType}
+                      score={rankingType === 'gems' ? user.gems : rankingType === 'votes' ? user.totalVotes : user.totalLikes}
+                    />
+                  ))}
+                </div>
+
+                {/* もっと読み込むボタン */}
+                {hasMoreRanking && !rankingLoading && (
+                  <div className="text-center py-4">
+                    <button
+                      onClick={() => fetchRanking(false)}
+                      className="px-6 py-2 bg-[#00e676] text-white rounded-lg font-bold hover:opacity-80"
+                    >
+                      もっと読み込む
+                    </button>
+                  </div>
+                )}
+
+                {rankingLoading && ranking.length > 0 && (
+                  <div className="text-center py-4">
+                    <p className="text-gray-400">読み込み中...</p>
+                  </div>
+                )}
+
+                {!hasMoreRanking && ranking.length > 0 && (
+                  <div className="text-center py-4">
+                    <p className="text-gray-400 text-sm">すべてのランキングを表示しました</p>
+                  </div>
+                )}
+              </>
             )}
           </>
         )}

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import BottomNav from '../components/BottomNav';
+import RankingsHeader from '../components/RankingsHeader';
 
 interface RankingUser {
   id: string;
@@ -83,63 +84,14 @@ export default function RankingsPage() {
 
   return (
     <div className="min-h-screen bg-gray-900 pb-24" style={{ paddingBottom: 'calc(6rem + var(--safe-area-bottom))' }}>
-      {/* ヘッダー */}
-      <header className="fixed left-0 right-0 z-40 bg-gray-900 border-b border-gray-800 p-3" style={{ top: 'calc(-1 * var(--safe-area-top))', paddingTop: 'calc(0.75rem + var(--safe-area-top))' }}>
-        <div className="flex items-center justify-between mb-3">
-          <h1 className="text-xl font-bold text-white">🏆 ランキング</h1>
-          <button
-            onClick={() => router.back()}
-            className="text-gray-400 hover:text-white transition"
-          >
-            ✕
-          </button>
-        </div>
-
-        {/* モード切り替え */}
-        <div className="flex gap-2 mb-3">
-          <button
-            onClick={() => setMode('world')}
-            className={`px-3 py-1 rounded-full text-xs font-semibold transition ${
-              mode === 'world'
-                ? 'bg-green-600 text-white shadow-lg shadow-green-600/50'
-                : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-            }`}
-          >
-            🌍 世界
-          </button>
-          <button
-            onClick={() => setMode('following')}
-            className={`px-3 py-1 rounded-full text-xs font-semibold transition ${
-              mode === 'following'
-                ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/50'
-                : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-            }`}
-          >
-            👥 身内
-          </button>
-        </div>
-
-        {/* 期間フィルター */}
-        <div className="flex gap-1 overflow-x-auto pb-1">
-          {(['today', 'week', 'month', 'year', 'all'] as Period[]).map(p => (
-            <button
-              key={p}
-              onClick={() => setPeriod(p)}
-              className={`px-2 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition ${
-                period === p
-                  ? 'bg-purple-600 text-white'
-                  : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-              }`}
-            >
-              {p === 'today' && '今日'}
-              {p === 'week' && '今週'}
-              {p === 'month' && '今月'}
-              {p === 'year' && '今年'}
-              {p === 'all' && '全部'}
-            </button>
-          ))}
-        </div>
-      </header>
+      <div className="fixed left-0 right-0 top-0 z-40" style={{ paddingTop: 'var(--safe-area-top)' }}>
+        <RankingsHeader
+          period={period}
+          mode={mode}
+          onPeriodChange={setPeriod}
+          onModeChange={setMode}
+        />
+      </div>
 
       {/* ランキングタイプ選択 */}
       <div className="pt-36 px-3 pb-3">

@@ -18,16 +18,17 @@ model User {
   level         Int      @default(1)  // ユーザーレベル
   gems          Int      @default(0)  // ジェム（通貨）
   experience    Int      @default(0)  // 経験値
+  completedQuestsCount Int @default(0) // 完了したクエスト数
   createdAt     DateTime @default(now())
   
   posts         Post[]
   votes         Vote[]
   likes         Like[]
   comments      Comment[]
-  followers     Follow[] @relation("follower")
-  following     Follow[] @relation("following")
-  followRequestsSent     FollowRequest[] @relation("followRequestRequester")
-  followRequestsReceived FollowRequest[] @relation("followRequestTarget")
+  friendsAsUser           Friend[]        @relation("friendUser")
+  friendsAsFriend         Friend[]        @relation("friendTarget")
+  friendRequestsSent      FriendRequest[] @relation("friendRequestRequester")
+  friendRequestsReceived  FriendRequest[] @relation("friendRequestTarget")
   notifications          Notification[]
   notificationsAsActor   Notification[] @relation("notificationActor")
   reports       Report[]
@@ -40,6 +41,7 @@ model Post {
   id            String   @id @default(uuid())
   userId        String
   imageUrl      String
+  title         String?  // 投稿タイトル（追加）
   caption       String
   tags          String
   postedAt      DateTime @default(now())
@@ -64,7 +66,7 @@ model Post {
 
 enum VisibilityScope {
   PUBLIC
-  FOLLOWERS
+  FRIENDS
 }
 
 // 投票（承認/却下）
@@ -81,16 +83,16 @@ model Vote {
   @@unique([postId, voterId])
 }
 
-// フォロー関係
-model Follow {
-  followerId  String
-  followingId String
-  createdAt   DateTime @default(now())
-  
-  follower    User     @relation("follower", fields: [followerId], references: [id])
-  following   User     @relation("following", fields: [followingId], references: [id])
-  
-  @@id([followerId, followingId])
+// フレンド関係（双方向）
+model Friend {
+  userId    String
+  friendId  String
+  createdAt DateTime @default(now())
+
+  user      User     @relation("friendUser", fields: [userId], references: [id])
+  friend    User     @relation("friendTarget", fields: [friendId], references: [id])
+
+  @@id([userId, friendId])
 }
 
 enum FollowRequestStatus {
@@ -99,7 +101,7 @@ enum FollowRequestStatus {
   REJECTED
 }
 
-model FollowRequest {
+model FriendRequest {
   id          String              @id @default(uuid())
   requesterId String
   targetId    String
@@ -107,16 +109,16 @@ model FollowRequest {
   createdAt   DateTime            @default(now())
   updatedAt   DateTime            @updatedAt
 
-  requester   User @relation("followRequestRequester", fields: [requesterId], references: [id], onDelete: Cascade)
-  target      User @relation("followRequestTarget", fields: [targetId], references: [id], onDelete: Cascade)
+  requester   User @relation("friendRequestRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  target      User @relation("friendRequestTarget", fields: [targetId], references: [id], onDelete: Cascade)
 
   @@unique([requesterId, targetId])
 }
 
 enum NotificationType {
-  FOLLOW_REQUEST
-  FOLLOW_ACCEPTED
-  FOLLOW_REJECTED
+  FRIEND_REQUEST
+  FRIEND_ACCEPTED
+  FRIEND_REJECTED
   POST_APPROVED
   POST_REJECTED
   COMMENT_RECEIVED

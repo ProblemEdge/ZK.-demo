@@ -35,7 +35,20 @@ export async function GET(request: Request) {
           { votingEndedAt: { gt: now } } // 投票受付時間が未来
         ]
       },
-      include: {
+      select: {
+        id: true,
+        title: true,
+        imageUrl: true,
+        caption: true,
+        tags: true,
+        postedAt: true,
+        rejectedAt: true,
+        isApproved: true,
+        questId: true,
+        visibilityScope: true,
+        visibilityDurationMinutes: true,
+        votingEndedAt: true,
+        userId: true,
         user: {
           select: {
             id: true,
@@ -66,14 +79,21 @@ export async function GET(request: Request) {
     });
 
     // 投票の割合を計算（5票未満のみ表示）
-    // フォロー限定の投稿は、フォロワー（または本人）のみ閲覧可能
+    // フレンド限定の投稿は、フレンド（または本人）のみ閲覧可能
     let allowedIds: string[] = [];
     if (currentUserId) {
-      const followingList = await prisma.follow.findMany({
-        where: { followerId: currentUserId },
-        select: { followingId: true }
+      const friendsList = await prisma.friend.findMany({
+        where: {
+          OR: [
+            { userId: currentUserId },
+            { friendId: currentUserId }
+          ]
+        },
+        select: { userId: true, friendId: true }
       });
-      allowedIds = followingList.map((f: { followingId: string }) => f.followingId);
+      allowedIds = friendsList.map(f => 
+        f.userId === currentUserId ? f.friendId : f.userId
+      );
       allowedIds.push(currentUserId);
     }
 
@@ -82,7 +102,7 @@ export async function GET(request: Request) {
     const postsWithVoteCount = posts
       .filter((post) => {
         // 公開範囲フィルタ
-        if ((post as any).visibilityScope === 'FOLLOWERS') {
+        if ((post as any).visibilityScope === 'FRIENDS') {
           if (!currentUserId) return false;
           return allowedIds.includes((post as any).userId);
         }

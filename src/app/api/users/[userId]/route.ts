@@ -44,8 +44,8 @@ export async function GET(
         _count: {
           select: {
             posts: { where: { isApproved: true } },
-            followers: true,
-            following: true
+            friendsAsUser: true,
+            friendsAsFriend: true
           }
         }
       }
@@ -58,21 +58,22 @@ export async function GET(
       );
     }
 
-    // フォロー状態を確認
-    let isFollowing = false;
+    // フレンド状態を確認
+    let isFriend = false;
     let isRequestedByMe = false;
     let isRequestingMe = false;
     if (currentUserId && currentUserId !== userId) {
-      const [follow, outgoingRequest, incomingRequest] = await Promise.all([
-        prisma.follow.findUnique({
+      const [firstId, secondId] = [currentUserId, userId].sort();
+      const [friend, outgoingRequest, incomingRequest] = await Promise.all([
+        prisma.friend.findUnique({
           where: {
-            followerId_followingId: {
-              followerId: currentUserId,
-              followingId: userId
+            userId_friendId: {
+              userId: firstId,
+              friendId: secondId
             }
           }
         }),
-        prisma.followRequest.findUnique({
+        prisma.friendRequest.findUnique({
           where: {
             requesterId_targetId: {
               requesterId: currentUserId,
@@ -80,7 +81,7 @@ export async function GET(
             }
           }
         }),
-        prisma.followRequest.findUnique({
+        prisma.friendRequest.findUnique({
           where: {
             requesterId_targetId: {
               requesterId: userId,
@@ -89,23 +90,22 @@ export async function GET(
           }
         })
       ]);
-      isFollowing = !!follow;
+      isFriend = !!friend;
       isRequestedByMe = outgoingRequest?.status === 'PENDING';
       isRequestingMe = incomingRequest?.status === 'PENDING';
     }
 
-    const userWithFixedCounts = {
-      ...user,
-      _count: {
-        posts: user._count.posts,
-        followers: user._count.following,
-        following: user._count.followers
-      }
-    };
+    const friendCount = user._count.friendsAsUser + user._count.friendsAsFriend;
 
     return NextResponse.json({
-      user: userWithFixedCounts,
-      isFollowing,
+      user: {
+        ...user,
+        _count: {
+          posts: user._count.posts,
+          friends: friendCount
+        }
+      },
+      isFriend,
       isRequestedByMe,
       isRequestingMe
     });

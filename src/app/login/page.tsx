@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useAuth } from '../context/AuthContext';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
@@ -10,6 +11,7 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const { refresh } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,6 +21,7 @@ export default function LoginPage() {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ username, password })
       });
       const data = await res.json();
@@ -26,7 +29,7 @@ export default function LoginPage() {
         setError(data.error);
         return;
       }
-      alert('ログイン成功！');
+      await refresh();
       router.push('/');
     } catch (err) {
       setError('ネットワークエラーが発生しました');
@@ -84,14 +87,14 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full h-[38px] rounded-[4px] bg-gradient-to-b from-[#00a63e] to-[#13ac4c] text-white font-bold shadow-[0px_2px_4px_0px_rgba(32,192,67,0.25)] px-[118px] py-[9px] flex items-center justify-center disabled:opacity-50"
+                className="w-full h-[38px] rounded-[4px] bg-gradient-to-b from-[#00a63e] to-[#13ac4c] text-white font-bold shadow-[0px_2px_4px_0px_rgba(32,192,67,0.25)] px-[118px] py-[9px] flex items-center justify-center disabled:opacity-50 whitespace-nowrap"
               >
                 {loading ? 'ログイン中...' : 'ログイン'}
               </button>
             </form>
           </div>
           {/* 新規アカウント作成リンク */}
-          <Link href="/register" className="text-[#00b54c] text-[12px] font-bold text-center w-full hover:underline mt-6 block">
+          <Link href="/register" className="text-[15px] font-bold text-[rgba(0,181,76,0.85)] text-center w-full underline">
             新規アカウントを作成
           </Link>
         </div>

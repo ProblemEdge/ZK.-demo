@@ -32,34 +32,36 @@ export async function POST(request: Request) {
       );
     }
 
-    // フォロー関係を削除
-    await prisma.follow.delete({
+    const [firstId, secondId] = [decoded.userId, targetUserId].sort();
+
+    // フレンド関係を削除
+    await prisma.friend.delete({
       where: {
-        followerId_followingId: {
-          followerId: decoded.userId,
-          followingId: targetUserId
+        userId_friendId: {
+          userId: firstId,
+          friendId: secondId
         }
       }
     });
 
     return NextResponse.json({
       success: true,
-      isFollowing: false
+      isFriend: false
     });
 
   } catch (error: any) {
-    console.error('Unfollow error:', error);
+    console.error('Remove friend error:', error);
     
     // フォロー関係が見つからない場合
     if (error.code === 'P2025') {
       return NextResponse.json(
-        { error: 'フォロー関係が見つかりません' },
+        { error: 'フレンド関係が見つかりません' },
         { status: 400 }
       );
     }
 
     return NextResponse.json(
-      { error: 'フォロー解除に失敗しました' },
+      { error: 'フレンド解除に失敗しました' },
       { status: 500 }
     );
   }
