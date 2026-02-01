@@ -1,11 +1,13 @@
 import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import jwt from 'jsonwebtoken';
 import { prisma } from '@/lib/prisma';
 
 export async function GET(request: Request) {
   try {
     // Cookieからトークン取得
-    const token = request.cookies.get('auth-token')?.value;
+    const cookieStore = await cookies();
+    const token = cookieStore.get('auth-token')?.value;
 
     if (!token) {
       return NextResponse.json(
