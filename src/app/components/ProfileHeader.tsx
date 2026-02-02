@@ -1,13 +1,23 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
+import Link from 'next/link';
 
 export default function ProfileHeader() {
   const router = useRouter();
+  const pathname = usePathname();
+
+  const handleLogoClick = (e: React.MouseEvent) => {
+    if (pathname === '/feed') {
+      e.preventDefault();
+      router.refresh();
+      window.location.reload();
+    }
+  };
 
   return (
     <header className="bg-[#0b0c0f] border-b-4 border-white h-[65px] sticky top-0 z-50 flex items-center justify-between px-4">
-      <p className="text-2xl font-bold text-white">ZK.</p>
+      <Link href="/feed" onClick={handleLogoClick} className="text-2xl font-bold text-white cursor-pointer hover:opacity-80 transition">ZK.</Link>
       <h1 className="absolute left-1/2 transform -translate-x-1/2 text-2xl font-bold text-white">プロフィール</h1>
       <button
         type="button"

@@ -120,22 +120,29 @@ export default function FeedCard({
               <VoteStatusLabel type={voteStatusType} approvedCount={approvedCount} rejectedCount={rejectedCount} />
             </div>
           )}
+          {/* 右下: 投票ボタン */}
+          {isVoting && (
+            <div className="absolute right-2 bottom-2 flex gap-2">
+              <VoteOkButton onClick={(e) => {
+                e.stopPropagation();
+                onVoteOk?.();
+              }} />
+              <VoteNgButton onClick={(e) => {
+                e.stopPropagation();
+                onVoteNg?.();
+              }} />
+            </div>
+          )}
         </div>
         {/* 本文エリア */}
       <div className="bg-[#222] px-4 pt-3 pb-2 relative">
-        {/* 投票数・残り時間・投票ボタン */}
+        {/* 投票数・残り時間 */}
         <div className="absolute right-4 top-3 flex flex-col items-end gap-1 z-10">
           <div className="text-xs text-gray-400 bg-black/60 px-2 py-1 rounded shadow">
             投票数 {voteCount}
           </div>
           {isVotingOpen && postedAt && (
             <VoteTimer postedAt={postedAt} />
-          )}
-          {isVoting && (
-            <div className="flex gap-2 mt-1">
-              <VoteOkButton onClick={onVoteOk} />
-              <VoteNgButton onClick={onVoteNg} />
-            </div>
           )}
         </div>
         {/* ユーザー情報＋アイコン */}

@@ -78,19 +78,31 @@ export default function DiscoverPage() {
 
   // ランキング取得
   useEffect(() => {
+    console.log('=== useEffect triggered ===');
+    console.log('mainTab:', mainTab, 'rankingType:', rankingType);
     if (mainTab === 'ranking') {
       setRankingPage(1);
       setHasMoreRanking(true);
+      setRankingLoading(false); // ローディング状態をリセット
       fetchRanking(true);
     }
   }, [rankingType, period, mode, mainTab]);
 
   const fetchRanking = async (reset: boolean = false) => {
-    if (rankingLoading || (!reset && !hasMoreRanking)) return;
+    console.log('=== fetchRanking called ===');
+    console.log('rankingLoading:', rankingLoading, 'reset:', reset, 'hasMoreRanking:', hasMoreRanking);
+    
+    if (rankingLoading || (!reset && !hasMoreRanking)) {
+      console.log('Early return from fetchRanking');
+      return;
+    }
     
     try {
       setRankingLoading(true);
       const currentPage = reset ? 1 : rankingPage;
+      console.log('=== Discover: Fetching ranking ===');
+      console.log('Type:', rankingType, 'Period:', period, 'Mode:', mode, 'Page:', currentPage);
+      
       const res = await fetch(
         `/api/rankings?type=${rankingType}&period=${period}&mode=${mode}&page=${currentPage}&limit=10`,
         { cache: 'no-store' }
@@ -99,6 +111,7 @@ export default function DiscoverPage() {
       if (!res.ok) throw new Error('ランキングの取得に失敗しました');
 
       const data = await res.json();
+      console.log('Received ranking data:', data);
       
       if (reset) {
         setRanking(data.ranking);
@@ -246,25 +259,37 @@ export default function DiscoverPage() {
               <StatButton 
                 type="level" 
                 label="レベル" 
-                onClick={() => { setRankingLoading(true); setRankingType('level'); }}
+                onClick={() => { 
+                  console.log('Level button clicked');
+                  setRankingType('level');
+                }}
                 active={rankingType === 'level'}
               />
               <StatButton 
                 type="gem" 
                 label="ジェム" 
-                onClick={() => { setRankingLoading(true); setRankingType('gems'); }}
+                onClick={() => { 
+                  console.log('Gems button clicked');
+                  setRankingType('gems');
+                }}
                 active={rankingType === 'gems'}
               />
               <StatButton 
                 type="votes" 
                 label="投票数" 
-                onClick={() => { setRankingLoading(true); setRankingType('votes'); }}
+                onClick={() => { 
+                  console.log('Votes button clicked');
+                  setRankingType('votes');
+                }}
                 active={rankingType === 'votes'}
               />
               <StatButton 
                 type="likes" 
                 label="いいね" 
-                onClick={() => { setRankingLoading(true); setRankingType('likes'); }}
+                onClick={() => { 
+                  console.log('Likes button clicked');
+                  setRankingType('likes');
+                }}
                 active={rankingType === 'likes'}
               />
             </div>
@@ -354,8 +379,9 @@ export default function DiscoverPage() {
         {/* ランキングタブコンテンツ */}
         {mainTab === 'ranking' && (
           <>
-            {rankingLoading && ranking.length === 0 && (
+            {rankingLoading && (
               <div className="text-center py-8">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#00e676] mb-2"></div>
                 <p className="text-gray-400">読み込み中...</p>
               </div>
             )}
@@ -366,7 +392,7 @@ export default function DiscoverPage() {
               </div>
             )}
 
-            {ranking.length > 0 && (
+            {!rankingLoading && ranking.length > 0 && (
               <>
                 {/* 1位〜3位の特別表示 */}
                 <div className="flex flex-col items-center gap-2 mb-3">

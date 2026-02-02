@@ -194,14 +194,16 @@ export default function FeedPage() {
     const post = allPosts.find(p => p.id === postId);
     if (!post) return;
 
+    const wasLiked = post.hasLiked;
+
     try {
-      const method = post.hasLiked ? 'DELETE' : 'POST';
+      const method = wasLiked ? 'DELETE' : 'POST';
       const res = await fetch(`/api/posts/${postId}/likes`, { method, credentials: 'include' });
 
       if (res.ok) {
         setAllPosts(prev => prev.map(p => 
           p.id === postId 
-            ? { ...p, hasLiked: !p.hasLiked, likeCount: (p.likeCount || 0) + (p.hasLiked ? -1 : 1) }
+            ? { ...p, hasLiked: !wasLiked, likeCount: (p.likeCount || 0) + (wasLiked ? -1 : 1) }
             : p
         ));
       }
@@ -329,7 +331,7 @@ export default function FeedPage() {
               if (post.isApproved) {
                 voteStatusType = 'success';
               } else if (votingClosed || post.rejectedAt) {
-                // 投票終了または却下された場合のみultimate/perfectを表示
+                // 投票終了または却下された場合は必ずsuccess以上を表示（questionは表示しない）
                 if (post.totalVotes !== undefined && post.totalVotes > 0 && post.approveCount !== undefined) {
                   if (post.approveCount === post.totalVotes && post.totalVotes >= 10) {
                     voteStatusType = 'ultimate';
@@ -339,12 +341,15 @@ export default function FeedPage() {
                     voteStatusType = 'success';
                   }
                 } else {
-                  voteStatusType = 'question';
+                  voteStatusType = 'success';
                 }
               } else if (isOwnPost || post.hasVoted) {
                 // 自分の投稿または投票済みで投票期間中の場合は常にsuccess（投票状況を表示）
                 voteStatusType = 'success';
               }
+
+              // 投票中で未投票の場合はタイトルを非表示
+              const shouldHideTitle = isVotingActive;
 
               return (
                 <FeedCard
@@ -353,7 +358,7 @@ export default function FeedPage() {
                   userName={post.user.displayName || post.user.username}
                   userId={post.user.username}
                   postedAt={post.postedAt}
-                  title={post.title}
+                  title={shouldHideTitle ? undefined : post.title}
                   tags={post.tags ? post.tags.split(',').map((t: string) => t.trim()) : []}
                   postStatus={postStatus}
                   questTag={post.quest?.title}

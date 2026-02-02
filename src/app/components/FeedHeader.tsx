@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter, usePathname } from 'next/navigation';
 
 interface FeedHeaderProps {
   tab: 'all' | 'following';
@@ -10,10 +11,27 @@ interface FeedHeaderProps {
 }
 
 export default function FeedHeader({ tab, viewTab, onTabChange, onViewTabChange }: FeedHeaderProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const handleLogoClick = (e: React.MouseEvent) => {
+    if (pathname === '/feed') {
+      e.preventDefault();
+      router.refresh();
+      window.location.reload();
+    }
+  };
+
   return (
     <div className="bg-[#0b0c0f] border-b-4 border-white px-4 h-[65px] flex items-center justify-between">
       {/* ロゴ */}
-      <div className="text-white text-[32px] font-bold">ZK.</div>
+      <Link 
+        href="/feed" 
+        onClick={handleLogoClick}
+        className="text-white text-[32px] font-bold cursor-pointer hover:opacity-80 transition"
+      >
+        ZK.
+      </Link>
       
       {/* 右側のボタン群 */}
       <div className="flex items-center gap-2">

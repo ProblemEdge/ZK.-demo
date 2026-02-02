@@ -9,10 +9,11 @@ export async function GET(request: Request) {
     const now = Date.now();
     const fiveMinutesAgo = now - 5 * 60 * 1000;
     
-    // 承認待ちの投稿を全て取得
+    // 承認待ちの投稿を全て取得（まだ投票終了処理されていないもののみ）
     const pendingPosts = await prisma.post.findMany({
       where: {
-        isApproved: false
+        isApproved: false,
+        votingEndedAt: null // 投票終了処理されていないもののみ
       },
       include: {
         votes: {

@@ -13,11 +13,13 @@ interface RankingUser {
   level: number;
   gems: number;
   totalVotes?: number;
+  votedCount?: number;
+  totalLikes?: number;
   completedCount?: number;
   avgCompletionTime?: number;
 }
 
-type RankingType = 'level' | 'gems' | 'votes' | 'quest-speed';
+type RankingType = 'level' | 'gems' | 'votes' | 'voted' | 'likes' | 'quest-speed';
 type Period = 'today' | 'week' | 'month' | 'year' | 'all';
 type Mode = 'world' | 'following';
 
@@ -36,6 +38,9 @@ export default function RankingsPage() {
   const fetchRanking = async () => {
     try {
       setLoading(true);
+      console.log('=== フロントエンド: Fetching ranking ===');
+      console.log('Type:', rankingType, 'Period:', period, 'Mode:', mode);
+      
       const res = await fetch(
         `/api/rankings?type=${rankingType}&period=${period}&mode=${mode}`,
         { cache: 'no-store' }
@@ -46,6 +51,7 @@ export default function RankingsPage() {
       }
 
       const data = await res.json();
+      console.log('Received ranking data:', data);
       setRanking(data.ranking);
     } catch (err) {
       console.error('Error fetching ranking:', err);
@@ -61,7 +67,11 @@ export default function RankingsPage() {
       case 'gems':
         return 'ジェムランキング';
       case 'votes':
-        return '投票数ランキング';
+        return 'もらった投票数ランキング';
+      case 'voted':
+        return '投票した回数ランキング';
+      case 'likes':
+        return 'いいねされた回数ランキング';
       case 'quest-speed':
         return 'クエスト処理速度ランキング';
     }
@@ -95,18 +105,23 @@ export default function RankingsPage() {
 
       {/* ランキングタイプ選択 */}
       <div className="pt-36 px-3 pb-3">
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-3 gap-2">
           {(
             [
               { type: 'level' as RankingType, label: 'LV', icon: '📈' },
               { type: 'gems' as RankingType, label: 'ジェム', icon: '💎' },
-              { type: 'votes' as RankingType, label: '投票数', icon: '🗳️' },
+              { type: 'votes' as RankingType, label: 'もらった投票', icon: '🗳️' },
+              { type: 'voted' as RankingType, label: '投票した数', icon: '✅' },
+              { type: 'likes' as RankingType, label: 'いいね数', icon: '❤️' },
               { type: 'quest-speed' as RankingType, label: 'クエスト速度', icon: '⚡' }
             ]
           ).map(item => (
             <button
               key={item.type}
-              onClick={() => setRankingType(item.type)}
+              onClick={() => {
+                console.log('Button clicked:', item.type);
+                setRankingType(item.type);
+              }}
               className={`p-3 rounded-lg font-semibold transition border ${
                 rankingType === item.type
                   ? 'bg-gradient-to-br from-purple-600 to-purple-800 border-purple-400 text-white'
@@ -114,7 +129,7 @@ export default function RankingsPage() {
               }`}
             >
               <div className="text-2xl mb-1">{item.icon}</div>
-              <div className="text-sm">{item.label}</div>
+              <div className="text-xs">{item.label}</div>
             </button>
           ))}
         </div>
@@ -184,6 +199,16 @@ export default function RankingsPage() {
                   {rankingType === 'votes' && (
                     <p className="text-base font-bold text-green-400">
                       {user.totalVotes ?? 0}票
+                    </p>
+                  )}
+                  {rankingType === 'voted' && (
+                    <p className="text-base font-bold text-blue-400">
+                      {user.votedCount ?? 0}回
+                    </p>
+                  )}
+                  {rankingType === 'likes' && (
+                    <p className="text-base font-bold text-pink-400">
+                      ❤️ {user.totalLikes ?? 0}
                     </p>
                   )}
                   {rankingType === 'quest-speed' && (

@@ -13,10 +13,10 @@ interface VoteStatusLabelProps {
 export default function VoteStatusLabel({ type, percent, approvedCount, rejectedCount }: VoteStatusLabelProps) {
   // アイコンとラベル色・背景色を状態ごとに切り替え
   if (type === "question") {
-    // 投票前: テキストなし、アイコン中央
+    // 投票前: テキストなし、アイコン中央（大きく表示）
     return (
-      <div className="flex items-center justify-center px-3 py-1 rounded-full bg-gray-800/80 border border-gray-600 min-w-[80px] min-h-[28px]">
-        <img src="/icon/question.svg" alt="?" className="w-4 h-4 mx-auto" />
+      <div className="flex items-center justify-center rounded-full bg-gray-800/80 border border-gray-600 min-w-[80px] min-h-[28px]">
+        <img src="/icon/secret.svg" alt="?" className="w-32 h-8 mx-auto" />
       </div>
     );
   }

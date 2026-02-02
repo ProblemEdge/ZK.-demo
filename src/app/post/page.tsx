@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import QuestSelector from '../components/QuestSelector';
+import QuestOverlayNew from '../components/QuestOverlayNew';
 
 interface Quest {
   id: number;
@@ -291,7 +291,7 @@ export default function NewPostPage() {
       }
 
       if (isQuestMode && selectedQuestId) {
-        postData.questId = parseInt(selectedQuestId, 10);
+        postData.questId = selectedQuestId;
       }
 
       const res = await fetch('/api/posts/create', {
@@ -787,7 +787,7 @@ export default function NewPostPage() {
         </div>
       )}
 
-      <QuestSelector
+      <QuestOverlayNew
         open={showQuestSelector}
         quests={quests}
         selectedQuestId={selectedQuestId}

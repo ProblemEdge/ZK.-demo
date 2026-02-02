@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import BottomNav from '../components/BottomNav';
 import ProfileHeader from '../components/ProfileHeader';
+import QuestOverlayNew from '../components/QuestOverlayNew';
 import { useAuth } from '../context/AuthContext';
 
 interface User {
@@ -45,6 +46,8 @@ function ProfilePageContent() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [resetLoading, setResetLoading] = useState(false);
+  const [showQuestOverlay, setShowQuestOverlay] = useState(false);
+  const [quests, setQuests] = useState<any[]>([]);
   const router = useRouter();
   const { user: authUser, status } = useAuth();
 
@@ -211,7 +214,15 @@ function ProfilePageContent() {
       {/* Quest and Shop Buttons */}
       <div className="mx-3 mt-6 grid grid-cols-2 gap-4">
         <button
-          onClick={() => router.push('/quest')}
+          onClick={() => {
+            fetch('/api/quests/today')
+              .then(res => res.json())
+              .then(data => {
+                if (data.quests) setQuests(data.quests);
+                setShowQuestOverlay(true);
+              })
+              .catch(err => console.error('クエスト取得エラー:', err));
+          }}
           className="bg-[#14161a] border border-white rounded-2xl p-4 flex items-center gap-3 hover:bg-white/5 transition"
         >
           <img src="/icon/Compass_big.svg" alt="Quest" className="w-12 h-12" />
@@ -265,6 +276,13 @@ function ProfilePageContent() {
       )}
 
       <BottomNav />
+      
+      {/* クエストオーバーレイ */}
+      <QuestOverlayNew
+        open={showQuestOverlay}
+        quests={quests}
+        onClose={() => setShowQuestOverlay(false)}
+      />
     </div>
   );
 }

@@ -41,6 +41,8 @@ export async function GET(request: Request) {
     const page = parseInt(url.searchParams.get('page') || '1', 10);
     const limit = parseInt(url.searchParams.get('limit') || '10', 10);
     
+    console.log(`=== Ranking Request: type=${rankingType}, period=${period}, mode=${mode} ===`);
+    
     const skip = (page - 1) * limit;
 
     const cookieHeader = request.headers.get('cookie');
@@ -114,15 +116,23 @@ export async function GET(request: Request) {
         break;
 
       case 'votes':
-        // もらえた投票数ランキング
+        // もらった投票数ランキング（投稿への投票数）
         const usersWithVotes = await prisma.user.findMany({
           where: userFilter,
-          include: {
+          select: {
+            id: true,
+            username: true,
+            displayName: true,
+            avatarUrl: true,
+            level: true,
+            gems: true,
             posts: {
               where: dateFilter ? { postedAt: dateFilter } : {},
               select: {
                 id: true,
-                votes: true
+                _count: {
+                  select: { votes: true }
+                }
               }
             }
           }
@@ -131,7 +141,7 @@ export async function GET(request: Request) {
         ranking = usersWithVotes
           .map(user => {
             const totalVotes = user.posts.reduce(
-              (sum: number, post: any) => sum + post.votes.length,
+              (sum: number, post: any) => sum + post._count.votes,
               0
             );
             return {
@@ -148,11 +158,57 @@ export async function GET(request: Request) {
           .slice(skip, skip + limit);
         break;
 
+      case 'voted':
+        // 投票した回数ランキング
+        const usersWithVotedCount = await prisma.user.findMany({
+          where: userFilter,
+          select: {
+            id: true,
+            username: true,
+            displayName: true,
+            avatarUrl: true,
+            level: true,
+            gems: true,
+            votes: {
+              where: dateFilter ? { createdAt: dateFilter } : {},
+              select: { id: true }
+            }
+          }
+        });
+
+        ranking = usersWithVotedCount
+          .map(user => {
+            const votedCount = user.votes.length;
+            return {
+              id: user.id,
+              username: user.username,
+              displayName: user.displayName,
+              avatarUrl: user.avatarUrl,
+              level: user.level,
+              gems: user.gems,
+              votedCount
+            };
+          })
+          .sort((a, b) => b.votedCount - a.votedCount)
+          .slice(skip, skip + limit);
+        break;
+
       case 'likes':
         // 獲得いいねランキング
+        // デバッグ: データベース内の全いいね数を確認
+        const totalLikesInDb = await prisma.like.count();
+        console.log('=== いいねランキング DEBUG ===');
+        console.log('Total likes in database:', totalLikesInDb);
+        
         const usersWithLikes = await prisma.user.findMany({
           where: userFilter,
-          include: {
+          select: {
+            id: true,
+            username: true,
+            displayName: true,
+            avatarUrl: true,
+            level: true,
+            gems: true,
             posts: {
               where: dateFilter ? { postedAt: dateFilter } : {},
               select: {
@@ -165,12 +221,18 @@ export async function GET(request: Request) {
           }
         });
 
+        console.log('Total users:', usersWithLikes.length);
+        if (usersWithLikes.length > 0) {
+          console.log('First user posts:', JSON.stringify(usersWithLikes[0].posts, null, 2));
+        }
+        
         ranking = usersWithLikes
           .map(user => {
             const totalLikes = user.posts.reduce(
               (sum: number, post: any) => sum + post._count.likes,
               0
             );
+            console.log(`User ${user.username}: ${user.posts.length} posts, ${totalLikes} total likes`);
             return {
               id: user.id,
               username: user.username,
@@ -183,11 +245,13 @@ export async function GET(request: Request) {
           })
           .sort((a, b) => b.totalLikes - a.totalLikes)
           .slice(skip, skip + limit);
+        
+        console.log('Final ranking:', ranking.map(u => ({ username: u.username, totalLikes: u.totalLikes })));
         break;
     }
 
     // userFilter を適用（身内モードの場合）
-    if (mode === 'following' && currentUserId && !['votes', 'likes'].includes(rankingType)) {
+    if (mode === 'following' && currentUserId && !['votes', 'voted', 'likes'].includes(rankingType)) {
       const friendsList = await prisma.friend.findMany({
         where: {
           OR: [
