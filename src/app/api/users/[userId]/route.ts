@@ -95,7 +95,7 @@ export async function GET(
       isRequestingMe = incomingRequest?.status === 'PENDING';
     }
 
-    const friendCount = user._count.friendsAsUser + user._count.friendsAsFriend;
+    const friendCount = user._count.friendsAsUser;
 
     return NextResponse.json({
       user: {

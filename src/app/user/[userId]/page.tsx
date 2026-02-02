@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import BottomNav from '../../components/BottomNav';
+import ProfileHeader from '../../components/ProfileHeader';
+import Badges, { BadgeData } from '../../components/Badges';
 
 interface UserProfile {
   id: string;
@@ -47,6 +49,7 @@ export default function UserProfilePage() {
   const [isFriend, setIsFriend] = useState(false);
   const [isRequestedByMe, setIsRequestedByMe] = useState(false);
   const [isRequestingMe, setIsRequestingMe] = useState(false);
+  const [badges, setBadges] = useState<BadgeData[]>([]);
   const [showFriendsModal, setShowFriendsModal] = useState(false);
   const [friends, setFriends] = useState<FollowUser[]>([]);
   const [friendsLoading, setFriendsLoading] = useState(false);
@@ -58,6 +61,7 @@ export default function UserProfilePage() {
     if (userId) {
       fetchUser();
       fetchUserPosts();
+      fetchUserBadges();
     }
   }, [userId]);
 
@@ -99,6 +103,21 @@ export default function UserProfilePage() {
     }
   };
 
+  const fetchUserBadges = async () => {
+    try {
+      const res = await fetch(`/api/users/${userId}/badges`, {
+        cache: 'no-store'
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setBadges(data);
+      }
+    } catch (err) {
+      console.error('Error fetching badges:', err);
+    }
+  };
+
   const handleFriendRequest = async () => {
     try {
       const res = await fetch('/api/follows/follow', {
@@ -136,6 +155,11 @@ export default function UserProfilePage() {
       }
 
       setIsFriend(false);
+      setIsRequestedByMe(false);
+      // 友達数を更新
+      if (user) {
+        setUser({ ...user, _count: { ...user._count, friends: Math.max(0, user._count.friends - 1) } });
+      }
     } catch (err) {
       console.error('Remove friend error:', err);
       alert('フレンド解除に失敗しました');
@@ -158,6 +182,10 @@ export default function UserProfilePage() {
 
       setIsRequestingMe(false);
       setIsFriend(true);
+      // 友達数を更新
+      if (user) {
+        setUser({ ...user, _count: { ...user._count, friends: user._count.friends + 1 } });
+      }
     } catch (err) {
       console.error('Approve friend request error:', err);
       alert('承認に失敗しました');
@@ -179,6 +207,10 @@ export default function UserProfilePage() {
       }
 
       setIsRequestingMe(false);
+      // 友達数を更新
+      if (user) {
+        setUser({ ...user, _count: { ...user._count, friends: Math.max(0, user._count.friends - 1) } });
+      }
     } catch (err) {
       console.error('Reject friend request error:', err);
       alert('拒否に失敗しました');
@@ -251,7 +283,7 @@ export default function UserProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center pb-20">
+      <div className="min-h-screen bg-[#0b0c0f] flex items-center justify-center pb-20">
         <p className="text-gray-300">読み込み中...</p>
       </div>
     );
@@ -259,149 +291,174 @@ export default function UserProfilePage() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center pb-20">
+      <div className="min-h-screen bg-[#0b0c0f] flex items-center justify-center pb-20">
         <p className="text-gray-300">ユーザーが見つかりません</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 pb-24" style={{ paddingBottom: 'calc(6rem + var(--safe-area-bottom))' }}>
-      <header className="bg-gradient-to-r from-gray-900 to-gray-800 border-b border-gray-700 p-4 shadow-md" style={{ marginTop: 'calc(-1 * var(--safe-area-top))', paddingTop: 'calc(1rem + var(--safe-area-top))', position: 'sticky', top: 'calc(-1 * var(--safe-area-top))', zIndex: 40 }}>
-        <button
-          onClick={() => router.back()}
-          className="text-green-400 hover:text-green-300 text-lg font-bold mb-4"
-        >
-          ← 戻る
-        </button>
-      </header>
+    <div className="min-h-screen bg-[#0b0c0f] pb-24" style={{ paddingBottom: 'calc(6rem + var(--safe-area-bottom))' }}>
+      <div className="sticky top-0 z-40 bg-[#0b0c0f]">
+        <ProfileHeader
+          onBack={() => router.back()}
+          displayName={user.displayName || user.username}
+        />
+      </div>
 
-      <div className="max-w-2xl mx-auto">
-        {/* プロフィールセクション */}
-        <div className="bg-gray-800 border-b border-gray-700 p-6">
-          <div className="flex items-start gap-4 mb-4">
-            {/* アバター */}
-            <div className="w-24 h-24 bg-gray-700 rounded-full overflow-hidden flex items-center justify-center border-2 border-green-500 flex-shrink-0">
-              {user.avatarUrl ? (
-                <img
-                  src={user.avatarUrl}
-                  alt={user.username}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <span className="text-4xl font-bold text-gray-400">
-                  {user.username[0].toUpperCase()}
-                </span>
-              )}
+      {/* Profile Details Card */}
+      <div className="mx-3 mt-4 bg-[#14161a] border border-white rounded-2xl p-4">
+        <div className="flex items-start gap-3">
+          {/* Avatar */}
+          <div className="w-[64px] h-[64px] bg-[#bfbdbd] rounded-full overflow-hidden flex-shrink-0 border-2 border-white">
+            {user.avatarUrl ? (
+              <img
+                src={user.avatarUrl}
+                alt={user.username}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <span className="flex items-center justify-center w-full h-full text-2xl font-bold text-[#14161a]">
+                {user.username[0].toUpperCase()}
+              </span>
+            )}
+          </div>
+
+          {/* User Info */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between gap-2 mb-1">
+              <h1 className="text-[24px] font-bold text-white truncate">
+                {user.displayName || user.username}
+              </h1>
             </div>
+            <p className="text-[16px] text-[#bfbdbd] mb-2">@{user.username}</p>
+            
+            {user.bio && (
+              <p className="text-[14px] text-white mb-3">{user.bio}</p>
+            )}
 
-            <div className="flex-1">
-              <div className="flex items-center gap-3 mb-2">
-                <h1 className="text-2xl font-bold text-white">
-                  {user.displayName || user.username}
-                </h1>
+            {/* Badges */}
+            {badges.length > 0 && (
+              <div className="mb-3">
+                <Badges badges={badges} size="sm" />
               </div>
-              <p className="text-gray-400 mb-2">@{user.username}</p>
-              
-              {user.bio && (
-                <p className="text-gray-300 mb-4">{user.bio}</p>
-              )}
+            )}
 
-              {/* フレンドボタン */}
+            {/* Friend Button */}
+            <div className="flex items-center gap-2 flex-wrap">
               {isFriend ? (
-                <button
-                  onClick={handleRemoveFriend}
-                  className="px-6 py-2 bg-gray-700 text-white rounded-full font-semibold hover:bg-red-600 transition border border-gray-600 hover:border-red-500"
-                >
-                  フレンド中
-                </button>
+                <>
+                  <span className="text-xs font-bold text-[#00e676] bg-[#00e676]/20 px-2 py-1 rounded-full">
+                    ✓ フレンド
+                  </span>
+                  <button
+                    onClick={handleRemoveFriend}
+                    className="px-4 py-1.5 bg-[#475467] text-white rounded-full text-sm font-bold hover:bg-red-600 transition border border-white"
+                  >
+                    フレンド解除
+                  </button>
+                </>
               ) : isRequestingMe ? (
-                <div className="flex gap-2">
+                <>
+                  <span className="text-xs font-bold text-[#ffc107] bg-[#ffc107]/20 px-2 py-1 rounded-full">
+                    ⏳ 承認待ち
+                  </span>
                   <button
                     onClick={handleApproveRequest}
-                    className="px-4 py-2 bg-green-600 text-white rounded-full font-semibold hover:bg-green-500 transition border border-green-500"
+                    className="px-3 py-1.5 bg-[#00e676] text-white rounded-full text-sm font-bold hover:bg-[#00d664] transition border border-white"
                   >
                     承認
                   </button>
                   <button
                     onClick={handleRejectRequest}
-                    className="px-4 py-2 bg-red-600 text-white rounded-full font-semibold hover:bg-red-500 transition border border-red-500"
+                    className="px-3 py-1.5 bg-red-600 text-white rounded-full text-sm font-bold hover:bg-red-500 transition border border-white"
                   >
                     拒否
                   </button>
-                </div>
+                </>
               ) : isRequestedByMe ? (
-                <button
-                  className="px-6 py-2 bg-gray-600 text-gray-200 rounded-full font-semibold border border-gray-500 cursor-not-allowed opacity-80"
-                  disabled
-                >
-                  申請中
-                </button>
+                <>
+                  <span className="text-xs font-bold text-[#ffc107] bg-[#ffc107]/20 px-2 py-1 rounded-full">
+                    ⏳ 申請中
+                  </span>
+                  <button
+                    className="px-4 py-1.5 bg-[#475467] text-white rounded-full text-sm font-bold border border-white opacity-60 cursor-not-allowed"
+                    disabled
+                  >
+                    キャンセル
+                  </button>
+                </>
               ) : (
                 <button
                   onClick={handleFriendRequest}
-                  className="px-6 py-2 bg-green-600 text-white rounded-full font-semibold hover:bg-green-500 transition border border-green-500"
+                  className="px-4 py-1.5 bg-[#00e676] text-white rounded-full text-sm font-bold hover:bg-[#00d664] transition border border-white"
                 >
-                  フレンド申請
+                  + フレンド申請
                 </button>
               )}
             </div>
           </div>
+        </div>
 
-          {/* レベル・ジェム情報 */}
-          <div className="mt-4 pt-4 border-t border-gray-700 flex gap-4 justify-start">
-            <div className="text-center">
-              <p className="text-2xl font-bold text-blue-400">{user.level}</p>
-              <p className="text-xs text-gray-400 mt-1">LV</p>
-            </div>
-            <div className="text-center">
-              <p className="text-2xl font-bold text-yellow-400">{user.gems}</p>
-              <p className="text-xs text-gray-400 mt-1">💎 ジェム</p>
-            </div>
-          </div>
-
-          {/* 統計 */}
-          <div className="flex gap-6 text-sm">
+        {/* Stats */}
+        <div className="mt-4 flex items-center gap-6">
+          <div className="flex items-center gap-2">
+            <img src="/icon/level_icon.svg" alt="Level" className="w-5 h-5" />
             <div>
-              <span className="font-bold text-white">{user._count.posts}</span>
-              <span className="text-gray-400"> 投稿</span>
+              <p className="text-[20px] font-bold text-[#ff6d00] leading-none">{user.level}</p>
+              <p className="text-[10px] text-[#bfbdbd] mt-0.5">LV</p>
             </div>
-            <button
-              onClick={fetchFriends}
-              className="hover:text-green-400 transition"
-            >
-              <span className="font-bold text-white">{user._count.friends}</span>
-              <span className="text-gray-400"> 友達</span>
-            </button>
+          </div>
+          <div className="flex items-center gap-2">
+            <img src="/icon/Gem_Icon.png" alt="Gems" className="w-5 h-5" />
+            <div>
+              <p className="text-[20px] font-bold text-[#09ffe2] leading-none">{user.gems}</p>
+              <p className="text-[10px] text-[#bfbdbd] mt-0.5">ジェム</p>
+            </div>
+          </div>
+          <button
+            onClick={fetchFriends}
+            className="flex items-center gap-2 hover:opacity-80 transition"
+          >
+            <div>
+              <p className="text-[20px] font-bold text-white leading-none">{user._count.friends}</p>
+              <p className="text-[10px] text-[#bfbdbd] mt-0.5">友達</p>
+            </div>
+          </button>
+          <div className="flex items-center gap-2">
+            <div>
+              <p className="text-[20px] font-bold text-white leading-none">{user._count.posts}</p>
+              <p className="text-[10px] text-[#bfbdbd] mt-0.5">投稿</p>
+            </div>
           </div>
         </div>
+      </div>
 
-        {/* 投稿セクション */}
-        <div className="p-4">
-          <h2 className="text-xl font-bold text-white mb-4">承認された投稿</h2>
+      {/* 投稿セクション */}
+      <div className="p-4">
+        <h2 className="text-xl font-bold text-white mb-4">承認された投稿</h2>
           
-          {posts.length === 0 ? (
-            <div className="bg-gray-800 rounded-lg p-8 text-center border border-gray-700">
-              <p className="text-gray-400">投稿がありません</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-3 gap-2">
-              {posts.map((post) => (
-                <div
-                  key={post.id}
-                  className="bg-gray-800 rounded-lg overflow-hidden border border-gray-700 hover:border-green-500 transition cursor-pointer aspect-square"
-                  onClick={() => router.push(`/feed?postId=${post.id}`)}
-                >
-                  <img
-                    src={post.imageUrl}
-                    alt={post.caption}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        {posts.length === 0 ? (
+          <div className="bg-gray-800 rounded-lg p-8 text-center border border-gray-700">
+            <p className="text-gray-400">投稿がありません</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-3 gap-2">
+            {posts.map((post) => (
+              <div
+                key={post.id}
+                className="bg-gray-800 rounded-lg overflow-hidden border border-gray-700 hover:border-green-500 transition cursor-pointer aspect-square"
+                onClick={() => router.push(`/feed?postId=${post.id}`)}
+              >
+                <img
+                  src={post.imageUrl}
+                  alt={post.caption}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* フレンドモーダル */}

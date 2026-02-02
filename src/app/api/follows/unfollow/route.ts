@@ -32,17 +32,27 @@ export async function POST(request: Request) {
       );
     }
 
-    const [firstId, secondId] = [decoded.userId, targetUserId].sort();
+    const currentUserId = decoded.userId;
 
-    // フレンド関係を削除
-    await prisma.friend.delete({
-      where: {
-        userId_friendId: {
-          userId: firstId,
-          friendId: secondId
+    // フレンド関係を削除（両方向）
+    await Promise.all([
+      prisma.friend.delete({
+        where: {
+          userId_friendId: {
+            userId: currentUserId,
+            friendId: targetUserId
+          }
         }
-      }
-    });
+      }).catch(() => {}), // 片方向が存在しない場合もある
+      prisma.friend.delete({
+        where: {
+          userId_friendId: {
+            userId: targetUserId,
+            friendId: currentUserId
+          }
+        }
+      }).catch(() => {})
+    ]);
 
     return NextResponse.json({
       success: true,
@@ -52,7 +62,7 @@ export async function POST(request: Request) {
   } catch (error: any) {
     console.error('Remove friend error:', error);
     
-    // フォロー関係が見つからない場合
+    // フレンド関係が見つからない場合
     if (error.code === 'P2025') {
       return NextResponse.json(
         { error: 'フレンド関係が見つかりません' },

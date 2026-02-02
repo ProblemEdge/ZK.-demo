@@ -82,7 +82,7 @@ export async function GET(
 
     const result = friends.map(f => {
       const friendUser = f.userId === userId ? f.friend : f.user;
-      const friendCount = friendUser._count.friendsAsUser + friendUser._count.friendsAsFriend;
+      const friendCount = friendUser._count.friendsAsUser;
       return {
         id: friendUser.id,
         username: friendUser.username,

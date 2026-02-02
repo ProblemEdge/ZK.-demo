@@ -1,9 +1,7 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
 import jwt from 'jsonwebtoken';
+import { prisma } from '@/lib/prisma';
 import { sendNotificationToUser } from '../../utils/notifications';
-
-const prisma = new PrismaClient();
 
 export async function POST(request: Request) {
   try {
@@ -42,14 +40,12 @@ export async function POST(request: Request) {
       );
     }
 
-    const [firstId, secondId] = [decoded.userId, targetUserId].sort();
-
     // 既にフレンドか確認
     const existingFriend = await prisma.friend.findUnique({
       where: {
         userId_friendId: {
-          userId: firstId,
-          friendId: secondId
+          userId: decoded.userId,
+          friendId: targetUserId
         }
       }
     });
@@ -62,38 +58,17 @@ export async function POST(request: Request) {
       });
     }
 
-    // 相手からのリクエストがある場合は承認
-    const incomingRequest = await prisma.friendRequest.findUnique({
+    // 逆方向も確認
+    const existingFriendReverse = await prisma.friend.findUnique({
       where: {
-        requesterId_targetId: {
-          requesterId: targetUserId,
-          targetId: decoded.userId
+        userId_friendId: {
+          userId: targetUserId,
+          friendId: decoded.userId
         }
       }
     });
 
-    if (incomingRequest?.status === 'PENDING') {
-      await prisma.friend.create({
-        data: {
-          userId: firstId,
-          friendId: secondId
-        }
-      });
-
-      await prisma.friendRequest.update({
-        where: { id: incomingRequest.id },
-        data: { status: 'APPROVED' }
-      });
-
-      await sendNotificationToUser(
-        targetUserId,
-        'フレンド申請が承認されました',
-        'フレンドになりました',
-        `/user/${decoded.userId}`,
-        decoded.userId,
-        'FRIEND_ACCEPTED'
-      );
-
+    if (existingFriendReverse) {
       return NextResponse.json({
         success: true,
         isFriend: true,
@@ -101,41 +76,50 @@ export async function POST(request: Request) {
       });
     }
 
-    // フレンドリクエストを作成
-    const friendRequest = await prisma.friendRequest.upsert({
+    // 既にリクエストがあるか確認
+    const existingRequest = await prisma.friendRequest.findUnique({
       where: {
         requesterId_targetId: {
           requesterId: decoded.userId,
           targetId: targetUserId
         }
-      },
-      create: {
+      }
+    });
+
+    if (existingRequest?.status === 'PENDING') {
+      return NextResponse.json({
+        success: true,
+        isFriend: false,
+        isRequested: true
+      });
+    }
+
+    // 新しいフレンドリクエストを作成
+    const friendRequest = await prisma.friendRequest.create({
+      data: {
         requesterId: decoded.userId,
         targetId: targetUserId,
-        status: 'PENDING'
-      },
-      update: {
         status: 'PENDING'
       }
     });
 
-    console.log('[Follow] Sending follow request notification to:', targetUserId);
+    console.log('[Follow] Sending friend request notification to:', targetUserId);
     
     await sendNotificationToUser(
       targetUserId,
-      'フレンドリクエストが届きました',
-      'フレンド申請を承認するか選択してください',
-      '/profile',
+      '🤝 フレンド申請が届きました',
+      '承認するには友達ページをチェック！',
+      '/discover?friendFilter=request',
       decoded.userId,
       'FRIEND_REQUEST'
     );
     
-    console.log('[Follow] Follow request notification sent successfully');
+    console.log('[Follow] Friend request notification sent successfully');
 
     return NextResponse.json({
       success: true,
       isFriend: false,
-      isRequested: friendRequest.status === 'PENDING'
+      isRequested: true
     });
 
   } catch (error: any) {

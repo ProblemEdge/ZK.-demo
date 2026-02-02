@@ -53,7 +53,7 @@ export async function GET(request: Request) {
       );
     }
 
-    const friendCount = user._count.friendsAsUser + user._count.friendsAsFriend;
+    const friendCount = user._count.friendsAsUser;
 
     return NextResponse.json({
       id: user.id,

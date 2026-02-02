@@ -8,9 +8,10 @@ interface UserDogtagProps {
   gems: number;
   posts: number;
   friends: number;
-  status: FriendStatus;
+  status?: FriendStatus;
   avatarUrl?: string | null;
   onStatusClick?: (event: React.MouseEvent<HTMLButtonElement>) => void;
+  button?: React.ReactNode;
 }
 
 const defaultAvatar = '/icon/profile_icon.svg';
@@ -24,7 +25,8 @@ export default function UserDogtag({
   friends,
   status,
   avatarUrl,
-  onStatusClick
+  onStatusClick,
+  button
 }: UserDogtagProps) {
   const buttonSizeClass = status === 'pending' ? 'h-[32px] w-[64px]' : 'h-[32px] w-[48px]';
 
@@ -55,7 +57,7 @@ export default function UserDogtag({
           </div>
         </div>
       </div>
-      <FriendStatusButton status={status} onClick={onStatusClick} className={`ml-auto ${buttonSizeClass}`} />
+      {button ? button : status && <FriendStatusButton status={status} onClick={onStatusClick} className={`ml-auto ${buttonSizeClass}`} />}
     </div>
   );
 }

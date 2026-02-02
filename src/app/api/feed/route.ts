@@ -23,6 +23,9 @@ export async function GET(request: Request) {
 
     const url = new URL(request.url);
     const tab = url.searchParams.get('tab') || 'all';
+    const page = parseInt(url.searchParams.get('page') || '1', 10);
+    const limit = 10;
+    const skip = (page - 1) * limit;
 
     // フレンド一覧を取得
     const friendsList = await prisma.friend.findMany({
@@ -110,7 +113,8 @@ export async function GET(request: Request) {
         orderBy: {
           postedAt: 'desc'
         },
-        take: 5
+        skip: skip,
+        take: limit
       }),
       prisma.post.findMany({
         where: votingWhereClause,
@@ -163,6 +167,7 @@ export async function GET(request: Request) {
         orderBy: {
           postedAt: 'desc'
         },
+        skip: 0,
         take: 5
       })
     ]);

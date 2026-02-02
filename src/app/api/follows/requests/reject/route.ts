@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
-import { sendNotificationToUser } from '../../../utils/notifications';
 import { prisma } from '@/lib/prisma';
 
 export async function POST(request: Request) {
@@ -28,39 +27,29 @@ export async function POST(request: Request) {
       );
     }
 
-    const requestRecord = await prisma.friendRequest.findUnique({
+    const currentUserId = decoded.userId;
+
+    // フレンドリクエストを削除（拒否）
+    await prisma.friendRequest.delete({
       where: {
         requesterId_targetId: {
           requesterId,
-          targetId: decoded.userId
+          targetId: currentUserId
         }
       }
     });
 
-    if (!requestRecord || requestRecord.status !== 'PENDING') {
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    console.error('Reject friend request error:', error);
+    
+    if (error.code === 'P2025') {
       return NextResponse.json(
         { error: 'リクエストが見つかりません' },
         { status: 404 }
       );
     }
-
-    await prisma.friendRequest.update({
-      where: { id: requestRecord.id },
-      data: { status: 'REJECTED' }
-    });
-
-    await sendNotificationToUser(
-      requesterId,
-      'フレンド申請が拒否されました',
-      'フレンド申請が拒否されました',
-      `/user/${decoded.userId}`,
-      decoded.userId,
-      'FRIEND_REJECTED'
-    );
-
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error('Reject friend request error:', error);
+    
     return NextResponse.json(
       { error: 'フレンド拒否に失敗しました' },
       { status: 500 }

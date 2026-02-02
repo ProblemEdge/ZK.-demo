@@ -41,8 +41,6 @@ export async function GET(request: Request) {
     const page = parseInt(url.searchParams.get('page') || '1', 10);
     const limit = parseInt(url.searchParams.get('limit') || '10', 10);
     
-    console.log(`=== Ranking Request: type=${rankingType}, period=${period}, mode=${mode} ===`);
-    
     const skip = (page - 1) * limit;
 
     const cookieHeader = request.headers.get('cookie');
@@ -195,11 +193,6 @@ export async function GET(request: Request) {
 
       case 'likes':
         // 獲得いいねランキング
-        // デバッグ: データベース内の全いいね数を確認
-        const totalLikesInDb = await prisma.like.count();
-        console.log('=== いいねランキング DEBUG ===');
-        console.log('Total likes in database:', totalLikesInDb);
-        
         const usersWithLikes = await prisma.user.findMany({
           where: userFilter,
           select: {
@@ -220,11 +213,6 @@ export async function GET(request: Request) {
             }
           }
         });
-
-        console.log('Total users:', usersWithLikes.length);
-        if (usersWithLikes.length > 0) {
-          console.log('First user posts:', JSON.stringify(usersWithLikes[0].posts, null, 2));
-        }
         
         ranking = usersWithLikes
           .map(user => {
@@ -232,7 +220,6 @@ export async function GET(request: Request) {
               (sum: number, post: any) => sum + post._count.likes,
               0
             );
-            console.log(`User ${user.username}: ${user.posts.length} posts, ${totalLikes} total likes`);
             return {
               id: user.id,
               username: user.username,
@@ -245,8 +232,6 @@ export async function GET(request: Request) {
           })
           .sort((a, b) => b.totalLikes - a.totalLikes)
           .slice(skip, skip + limit);
-        
-        console.log('Final ranking:', ranking.map(u => ({ username: u.username, totalLikes: u.totalLikes })));
         break;
     }
 

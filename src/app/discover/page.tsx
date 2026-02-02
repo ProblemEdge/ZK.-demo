@@ -7,7 +7,9 @@ import UserDogtag from '../components/UserDogtag';
 import DiscoverHeader from '../components/DiscoverHeader';
 import { RankFirstFrame, RankSecondFrame, RankThirdFrame, RankListFrame } from '../components/RankingFrames';
 import StatButton from '../components/StatButton';
-
+import DiscoverFilterTabs from '../components/DiscoverFilterTabs';
+import { useAuth } from '../context/AuthContext';
+import { FriendAddButton, FriendingButton, FriendReqingButton } from '../components/FriendButtons';
 interface User {
   id: string;
   username: string;
@@ -22,6 +24,7 @@ interface User {
   };
   isFriend: boolean;
   isRequested?: boolean;
+  isReceivedRequest?: boolean;
 }
 
 interface RankingUser {
@@ -41,13 +44,24 @@ type MainTab = 'search' | 'ranking';
 type RankingType = 'level' | 'gems' | 'votes' | 'likes';
 type Period = 'all' | 'today' | 'week' | 'month' | 'year';
 type Mode = 'world' | 'following';
+type FriendFilter = 'discover' | 'friend' | 'pending' | 'request';
 
 export default function DiscoverPage() {
+  const { refresh } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [mainTab, setMainTab] = useState<MainTab>('search');
+  const [friendFilter, setFriendFilter] = useState<FriendFilter>('discover');
+  const [loadingUserIds, setLoadingUserIds] = useState<Set<string>>(new Set());
+  const [receivedRequests, setReceivedRequests] = useState<User[]>([]);
+  const [requestsLoading, setRequestsLoading] = useState(false);
+  
+  // ページング関連
+  const [userPage, setUserPage] = useState(1);
+  const [hasMoreUsers, setHasMoreUsers] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   
   // ランキング関連
   const [rankingType, setRankingType] = useState<RankingType>('level');
@@ -72,14 +86,40 @@ export default function DiscoverPage() {
   // ユーザー検索
   useEffect(() => {
     if (mainTab === 'search') {
-      fetchUsers();
+      setUserPage(1);
+      setHasMoreUsers(true);
+      fetchUsers(1);
     }
   }, [debouncedQuery, mainTab]);
 
+  // リクエスト取得
+  useEffect(() => {
+    if (mainTab === 'search' && friendFilter === 'request') {
+      fetchReceivedRequests();
+    }
+  }, [friendFilter, mainTab]);
+
+  // 無限スクロール検出
+  useEffect(() => {
+    if (mainTab !== 'search' || !hasMoreUsers || isLoadingMore || loading) return;
+
+    const observer = new IntersectionObserver(
+      entries => {
+        if (entries[0].isIntersecting) {
+          fetchUsers(userPage + 1);
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    const sentinel = document.getElementById('scroll-sentinel');
+    if (sentinel) observer.observe(sentinel);
+
+    return () => observer.disconnect();
+  }, [userPage, hasMoreUsers, isLoadingMore, loading, mainTab]);
+
   // ランキング取得
   useEffect(() => {
-    console.log('=== useEffect triggered ===');
-    console.log('mainTab:', mainTab, 'rankingType:', rankingType);
     if (mainTab === 'ranking') {
       setRankingPage(1);
       setHasMoreRanking(true);
@@ -89,19 +129,11 @@ export default function DiscoverPage() {
   }, [rankingType, period, mode, mainTab]);
 
   const fetchRanking = async (reset: boolean = false) => {
-    console.log('=== fetchRanking called ===');
-    console.log('rankingLoading:', rankingLoading, 'reset:', reset, 'hasMoreRanking:', hasMoreRanking);
-    
-    if (rankingLoading || (!reset && !hasMoreRanking)) {
-      console.log('Early return from fetchRanking');
-      return;
-    }
+    if (rankingLoading || (!reset && !hasMoreRanking)) return;
     
     try {
       setRankingLoading(true);
       const currentPage = reset ? 1 : rankingPage;
-      console.log('=== Discover: Fetching ranking ===');
-      console.log('Type:', rankingType, 'Period:', period, 'Mode:', mode, 'Page:', currentPage);
       
       const res = await fetch(
         `/api/rankings?type=${rankingType}&period=${period}&mode=${mode}&page=${currentPage}&limit=10`,
@@ -111,7 +143,6 @@ export default function DiscoverPage() {
       if (!res.ok) throw new Error('ランキングの取得に失敗しました');
 
       const data = await res.json();
-      console.log('Received ranking data:', data);
       
       if (reset) {
         setRanking(data.ranking);
@@ -131,11 +162,19 @@ export default function DiscoverPage() {
     }
   };
 
-  const fetchUsers = async () => {
+  const fetchUsers = async (page: number = userPage) => {
     try {
-      setLoading(true);
+      if (page === 1) {
+        setLoading(true);
+      } else {
+        setIsLoadingMore(true);
+      }
+
       const query = debouncedQuery ? `?q=${encodeURIComponent(debouncedQuery)}` : '';
-      const res = await fetch(`/api/users${query}`, {
+      const separator = query ? '&' : '?';
+      const url = `/api/users${query}${separator}limit=10&offset=${(page - 1) * 10}`;
+      
+      const res = await fetch(url, {
         cache: 'no-store'
       });
 
@@ -144,17 +183,72 @@ export default function DiscoverPage() {
       }
 
       const data = await res.json();
-      setUsers(data);
+      
+      if (page === 1) {
+        setUsers(data);
+      } else {
+        // 既に存在するユーザーを除外して追加
+        setUsers(prev => {
+          const existingIds = new Set(prev.map(u => u.id));
+          const newUsers = data.filter((u: User) => !existingIds.has(u.id));
+          return [...prev, ...newUsers];
+        });
+      }
+      
+      setHasMoreUsers(data.length === 10);
+      setUserPage(page);
     } catch (err) {
       console.error('Error fetching users:', err);
-      setUsers([]);
+      if (page === 1) {
+        setUsers([]);
+      }
     } finally {
       setLoading(false);
+      setIsLoadingMore(false);
     }
   };
 
+  const fetchReceivedRequests = async () => {
+    try {
+      setRequestsLoading(true);
+      const res = await fetch('/api/friends/requests/received', {
+        cache: 'no-store'
+      });
+
+      if (!res.ok) {
+        throw new Error('リクエストの取得に失敗しました');
+      }
+
+      const data = await res.json();
+      // APIから返されるデータはすでにUser型の形式なので、そのまま使用
+      setReceivedRequests(data);
+    } catch (err) {
+      console.error('Error fetching received requests:', err);
+      setReceivedRequests([]);
+    } finally {
+      setRequestsLoading(false);
+    }
+  };
+
+  // フレンドフィルターを適用したユーザーリスト
+  const filteredUsers = users.filter(user => {
+    if (friendFilter === 'discover') return !user.isFriend && !user.isRequested && !user.isReceivedRequest;
+    if (friendFilter === 'friend') return user.isFriend === true;
+    if (friendFilter === 'pending') return user.isRequested === true;
+    if (friendFilter === 'request') return false; // リクエストは別途で表示
+    return true;
+  });
+
+  // 発見タブはフィルター無しで表示、他は filteredUsers を使用
+  // 重複を排除
+  const uniqueDisplayedUsers = Array.from(
+    new Map(filteredUsers.map(user => [user.id, user])).values()
+  );
+  const displayedUsers = uniqueDisplayedUsers;
+
   const handleFollow = async (targetUserId: string, e: React.MouseEvent) => {
     e.stopPropagation();
+    setLoadingUserIds(prev => new Set(prev).add(targetUserId));
     try {
       const res = await fetch('/api/follows/follow', {
         method: 'POST',
@@ -162,40 +256,145 @@ export default function DiscoverPage() {
         body: JSON.stringify({ targetUserId })
       });
 
+      const data = await res.json();
+
       if (!res.ok) {
-        const data = await res.json();
-        alert(data.error);
+        console.error('Follow error response:', data);
+        alert(data.error || 'フォローに失敗しました');
         return;
       }
 
-      // UIを更新
-      setUsers(users.map(u => u.id === targetUserId ? { ...u, isFriend: false, isRequested: true } : u));
+      // UIを更新：最新の状態を使用
+      setUsers(prevUsers => 
+        prevUsers.map(u => u.id === targetUserId ? { ...u, isFriend: false, isRequested: true } : u)
+      );
     } catch (err) {
       console.error('Follow error:', err);
       alert('フォローに失敗しました');
+    } finally {
+      setLoadingUserIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(targetUserId);
+        return newSet;
+      });
     }
   };
 
-  const handleUnfollow = async (targetUserId: string, e: React.MouseEvent) => {
+  const handleUnfollow = async (targetUserId: string, e: React.MouseEvent, isRequest: boolean = false) => {
     e.stopPropagation();
+    
+    // 申請中の削除ではなく、友達削除の場合のみ確認
+    if (!isRequest && !confirm('本当にこのユーザーとの友達関係を削除しますか？')) {
+      return;
+    }
+    
+    setLoadingUserIds(prev => new Set(prev).add(targetUserId));
     try {
-      const res = await fetch('/api/follows/unfollow', {
+      // 申請中の場合は cancel エンドポイント（targetUserId指定で送信済みリクエスト削除）
+      // 友達削除は unfollow を使う
+      const endpoint = isRequest ? '/api/friends/requests/cancel' : '/api/follows/unfollow';
+      const bodyData = isRequest ? { targetUserId } : { targetUserId };
+      
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ targetUserId })
+        body: JSON.stringify(bodyData)
       });
 
       if (!res.ok) {
-        const data = await res.json();
-        alert(data.error);
+        let errorMessage = `HTTP ${res.status}`;
+        try {
+          const errorData = await res.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch (e) {
+          console.error('Failed to parse error response:', e);
+        }
+        console.error('API Error:', errorMessage);
         return;
       }
 
-      // UIを更新
-      setUsers(users.map(u => u.id === targetUserId ? { ...u, isFriend: false } : u));
+      // UIを更新：最新の状態を使用
+      setUsers(prevUsers =>
+        prevUsers.map(u => u.id === targetUserId ? { ...u, isFriend: false, isRequested: false } : u)
+      );
+      
+      // ユーザー認証情報を更新（friendCountを再計算）
+      await refresh();
     } catch (err) {
-      console.error('Unfollow error:', err);
-      alert('フォロー解除に失敗しました');
+      console.error('Error:', err);
+    } finally {
+      setLoadingUserIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(targetUserId);
+        return newSet;
+      });
+    }
+  };
+
+  const handleApproveRequest = async (requesterId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setLoadingUserIds(prev => new Set(prev).add(requesterId));
+    try {
+      const res = await fetch('/api/friends/requests/approve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requesterId })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        console.error('Approve error response:', data);
+        alert(data.error || '承認に失敗しました');
+        return;
+      }
+
+      // UIを更新：最新の状態を使用
+      setReceivedRequests(prevRequests => prevRequests.filter(r => r.id !== requesterId));
+      setUsers(prevUsers => prevUsers.filter(u => u.id !== requesterId));
+      
+      // ユーザー認証情報を更新（friendCountを再計算）
+      await refresh();
+    } catch (err) {
+      console.error('Approve error:', err);
+      alert('承認に失敗しました');
+    } finally {
+      setLoadingUserIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(requesterId);
+        return newSet;
+      });
+    }
+  };
+
+  const handleRejectRequest = async (requesterId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setLoadingUserIds(prev => new Set(prev).add(requesterId));
+    try {
+      const res = await fetch('/api/friends/requests/reject', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requesterId })
+      });
+
+      if (!res.ok) {
+        console.error('Reject error response:', res);
+        return;
+      }
+
+      // UIを更新：最新の状態を使用
+      setReceivedRequests(prevRequests => prevRequests.filter(r => r.id !== requesterId));
+      
+      // users配列から完全に削除（リロード後も表示されないようにする）
+      setUsers(prevUsers => prevUsers.filter(u => u.id !== requesterId));
+    } catch (err) {
+      console.error('Reject error:', err);
+    } finally {
+      setLoadingUserIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(requesterId);
+        return newSet;
+      });
     }
   };
 
@@ -268,28 +467,25 @@ export default function DiscoverPage() {
               <StatButton 
                 type="gem" 
                 label="ジェム" 
-                onClick={() => { 
-                  console.log('Gems button clicked');
-                  setRankingType('gems');
-                }}
+                onClick={() => setRankingType('level')}
+                active={rankingType === 'level'}
+              />
+              <StatButton 
+                type="gem" 
+                label="ジェム" 
+                onClick={() => setRankingType('gems')}
                 active={rankingType === 'gems'}
               />
               <StatButton 
                 type="votes" 
                 label="投票数" 
-                onClick={() => { 
-                  console.log('Votes button clicked');
-                  setRankingType('votes');
-                }}
+                onClick={() => setRankingType('votes')}
                 active={rankingType === 'votes'}
               />
               <StatButton 
                 type="likes" 
                 label="いいね" 
-                onClick={() => { 
-                  console.log('Likes button clicked');
-                  setRankingType('likes');
-                }}
+                onClick={() => setRankingType('likes')}
                 active={rankingType === 'likes'}
               />
             </div>
@@ -329,27 +525,39 @@ export default function DiscoverPage() {
         {/* 検索タブコンテンツ */}
         {mainTab === 'search' && (
           <>
+            {/* フレンドステータスフィルター */}
+            <DiscoverFilterTabs 
+              activeFilter={friendFilter}
+              onFilterChange={(filter) => setFriendFilter(filter as FriendFilter)}
+            />
+
             {loading && (
               <div className="text-center py-8">
                 <p className="text-gray-400">検索中...</p>
               </div>
             )}
 
-            {!loading && users.length === 0 && debouncedQuery === '' && (
-              <div className="text-center py-12">
-                <p className="text-gray-400 mb-4">ユーザー名を入力して検索してください</p>
-              </div>
-            )}
-
-            {!loading && users.length === 0 && debouncedQuery !== '' && (
+            {friendFilter === 'discover' && !loading && users.length === 0 && debouncedQuery !== '' && (
               <div className="text-center py-12">
                 <p className="text-gray-400">「{debouncedQuery}」に該当するユーザーが見つかりません</p>
               </div>
             )}
 
-            {!loading && users.length > 0 && (
+            {friendFilter !== 'discover' && friendFilter !== 'request' && !loading && displayedUsers.length === 0 && (
+              <div className="text-center py-12">
+                <p className="text-gray-400">該当するユーザーがいません</p>
+              </div>
+            )}
+
+            {friendFilter === 'request' && !requestsLoading && receivedRequests.length === 0 && (
+              <div className="text-center py-12">
+                <p className="text-gray-400">リクエストがありません</p>
+              </div>
+            )}
+
+            {!loading && displayedUsers.length > 0 && (
               <div className="space-y-2">
-                {users.map((user) => (
+                {displayedUsers.map((user) => (
                   <div key={user.id} onClick={() => router.push(`/user/${user.id}`)} className="cursor-pointer">
                     <UserDogtag
                       name={user.displayName || user.username}
@@ -358,21 +566,84 @@ export default function DiscoverPage() {
                       gems={user.gems}
                       posts={user._count.posts}
                       friends={user._count.friends}
-                      status={user.isFriend ? 'friend' : user.isRequested ? 'pending' : 'add'}
                       avatarUrl={user.avatarUrl}
-                      onStatusClick={(e) => {
-                        e.stopPropagation();
-                        if (user.isFriend) {
-                          handleUnfollow(user.id, e);
-                        } else if (!user.isRequested) {
-                          handleFollow(user.id, e);
-                        }
-                      }}
+                      button={
+                        friendFilter === 'discover' && (
+                          <FriendAddButton
+                            disabled={loadingUserIds.has(user.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleFollow(user.id, e);
+                            }}
+                          />
+                        ) || friendFilter === 'friend' && (
+                          <FriendingButton
+                            disabled={loadingUserIds.has(user.id)}
+                            isHovered={true}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleUnfollow(user.id, e);
+                            }}
+                          />
+                        ) || friendFilter === 'pending' && (
+                          <FriendReqingButton
+                            disabled={loadingUserIds.has(user.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleUnfollow(user.id, e, true);
+                            }}
+                          />
+                        )
+                      }
                     />
                   </div>
                 ))}
               </div>
             )}
+
+            {!requestsLoading && friendFilter === 'request' && receivedRequests.length > 0 && (
+              <div className="space-y-2">
+                {Array.from(new Map(receivedRequests.map(u => [u.id, u])).values()).map((user) => (
+                  <div key={user.id} onClick={() => router.push(`/user/${user.id}`)} className="cursor-pointer">
+                    <UserDogtag
+                      name={user.displayName || user.username}
+                      username={user.username}
+                      level={user.level}
+                      gems={user.gems}
+                      posts={user._count.posts}
+                      friends={user._count.friends}
+                      avatarUrl={user.avatarUrl}
+                      button={
+                        <div className="flex gap-2">
+                          <button
+                            disabled={loadingUserIds.has(user.id)}
+                            onClick={(e) => handleApproveRequest(user.id, e)}
+                            className="px-3 py-1 bg-[#00e676] text-white rounded-[6px] text-sm font-bold hover:bg-[#00c853] disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            承認
+                          </button>
+                          <button
+                            disabled={loadingUserIds.has(user.id)}
+                            onClick={(e) => handleRejectRequest(user.id, e)}
+                            className="px-3 py-1 bg-[#ff5252] text-white rounded-[6px] text-sm font-bold hover:bg-[#ff1744] disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            拒否
+                          </button>
+                        </div>
+                      }
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {isLoadingMore && (
+              <div className="text-center py-4">
+                <p className="text-gray-400">読み込み中...</p>
+              </div>
+            )}
+
+            <div id="scroll-sentinel" className="h-1" />
           </>
         )}
 

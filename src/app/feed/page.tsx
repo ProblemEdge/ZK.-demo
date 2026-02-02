@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import BottomNav from '../components/BottomNav';
@@ -95,6 +95,10 @@ export default function FeedPage() {
   const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
   const [mapPosts, setMapPosts] = useState<MapPost[]>([]);
   const [mapLoading, setMapLoading] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const observerTarget = useRef<HTMLDivElement>(null);
 
   const { showReward } = useReward();
 
@@ -102,7 +106,10 @@ export default function FeedPage() {
   useEffect(() => {
     if (status !== 'authenticated') return;
     
-    fetchPosts();
+    setPage(1);
+    setHasMore(true);
+    setAllPosts([]);
+    fetchPosts(1, true);
     checkRewards();
 
     const interval = setInterval(() => {
@@ -112,6 +119,29 @@ export default function FeedPage() {
     
     return () => clearInterval(interval);
   }, [tab, status]);
+
+  // 無限スクロール
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loading && !loadingMore && status === 'authenticated') {
+          loadMorePosts();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (observerTarget.current) {
+      observer.observe(observerTarget.current);
+    }
+
+    return () => observer.disconnect();
+  }, [hasMore, loading, loadingMore, page, status]);
+
+  const loadMorePosts = async () => {
+    if (loadingMore || !hasMore) return;
+    await fetchPosts(page + 1, false);
+  };
 
   const processExpiredVotes = async () => {
     try {
@@ -139,11 +169,17 @@ export default function FeedPage() {
     }
   };
 
-  const fetchPosts = async () => {
+  const fetchPosts = async (pageNum: number = 1, reset: boolean = false) => {
     try {
       if (status !== 'authenticated') return;
-      setLoading(true);
-      const res = await fetch(`/api/feed?tab=${tab}`, {
+      
+      if (reset) {
+        setLoading(true);
+      } else {
+        setLoadingMore(true);
+      }
+      
+      const res = await fetch(`/api/feed?tab=${tab}&page=${pageNum}`, {
         cache: 'no-store',
         credentials: 'include'
       });
@@ -151,11 +187,21 @@ export default function FeedPage() {
       if (!res.ok) throw new Error('投稿の取得に失敗しました');
 
       const data: FeedResponse = await res.json();
-      setAllPosts([...data.voting, ...data.approved]);
+      const newPosts = [...data.voting, ...data.approved];
+      
+      if (reset) {
+        setAllPosts(newPosts);
+      } else {
+        setAllPosts(prev => [...prev, ...newPosts]);
+      }
+      
+      setPage(pageNum);
+      setHasMore(newPosts.length === 10); // 10件未満なら最後のページ
     } catch (err) {
       console.error('Error fetching posts:', err);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   };
 
@@ -383,6 +429,21 @@ export default function FeedPage() {
         ) : (
           <div className="space-y-3">
             <FeedMap key="map-feed" posts={mapPosts} />
+          </div>
+        )}
+        
+        {/* 無限スクロール用の監視ターゲット */}
+        {viewTab === 'feed' && !loading && hasMore && (
+          <div ref={observerTarget} className="py-2 text-center">
+            {loadingMore && (
+              <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-[#00e676]"></div>
+            )}
+          </div>
+        )}
+        
+        {viewTab === 'feed' && !loading && !hasMore && allPosts.length > 0 && (
+          <div className="py-4 text-center text-gray-400 text-sm">
+            全ての投稿を表示しました
           </div>
         )}
       </div>

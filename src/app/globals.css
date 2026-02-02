@@ -9,6 +9,7 @@
   --safe-area-right: env(safe-area-inset-right, 0px);
 }
 
+/* stylelint-disable-next-line */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

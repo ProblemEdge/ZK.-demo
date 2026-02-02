@@ -34,6 +34,32 @@ model User {
   reports       Report[]
   questProgress UserQuestProgress[]
   pushSubscriptions PushSubscription[]
+  badges       UserBadge[]
+}
+
+// バッジ定義
+model Badge {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  displayName String   // 表示名（例：「デベロッパー」）
+  description String?  // 説明
+  imageUrl    String   // バッジ画像URL
+  createdAt   DateTime @default(now())
+  
+  users       UserBadge[]
+}
+
+// ユーザーが持つバッジ
+model UserBadge {
+  id        String   @id @default(uuid())
+  userId    String
+  badgeId   String
+  awardedAt DateTime @default(now())
+  
+  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badge     Badge  @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, badgeId])
 }
 
 // 投稿（写真とキャプション）

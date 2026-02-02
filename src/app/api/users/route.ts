@@ -65,8 +65,9 @@ export async function GET(req: Request) {
     // 現在のユーザーのフレンド情報を取得
     let friendUserIds: Set<string> = new Set();
     let requestedUserIds: Set<string> = new Set();
+    let receivedRequestUserIds: Set<string> = new Set();
     if (currentUserId) {
-      const [friends, outgoingRequests] = await Promise.all([
+      const [friends, outgoingRequests, incomingRequests] = await Promise.all([
         prisma.friend.findMany({
           where: { OR: [{ userId: currentUserId }, { friendId: currentUserId }] },
           select: { userId: true, friendId: true }
@@ -74,22 +75,28 @@ export async function GET(req: Request) {
         prisma.friendRequest.findMany({
           where: { requesterId: currentUserId, status: 'PENDING' },
           select: { targetId: true }
+        }),
+        prisma.friendRequest.findMany({
+          where: { targetId: currentUserId, status: 'PENDING' },
+          select: { requesterId: true }
         })
       ]);
       friendUserIds = new Set(
         friends.map(f => (f.userId === currentUserId ? f.friendId : f.userId))
       );
       requestedUserIds = new Set(outgoingRequests.map(r => r.targetId));
+      receivedRequestUserIds = new Set(incomingRequests.map(r => r.requesterId));
     }
 
     // フレンド情報を追加
     const usersWithFriendStatus = users.map(user => {
-      const friendCount = user._count.friendsAsUser + user._count.friendsAsFriend;
+      const friendCount = user._count.friendsAsUser;
       return {
         ...user,
         _count: { posts: user._count.posts, friends: friendCount },
         isFriend: friendUserIds.has(user.id),
-        isRequested: requestedUserIds.has(user.id)
+        isRequested: requestedUserIds.has(user.id),
+        isReceivedRequest: receivedRequestUserIds.has(user.id)
       };
     });
 

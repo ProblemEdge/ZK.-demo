@@ -28,42 +28,52 @@ export async function POST(request: Request) {
       );
     }
 
-    const requestRecord = await prisma.friendRequest.findUnique({
+    const currentUserId = decoded.userId;
+
+    // フレンドリクエストを承認
+    await prisma.friendRequest.update({
       where: {
         requesterId_targetId: {
           requesterId,
-          targetId: decoded.userId
+          targetId: currentUserId
+        }
+      },
+      data: {
+        status: 'APPROVED'
+      }
+    });
+
+    // 相互フレンド関係を作成
+    await prisma.friend.create({
+      data: {
+        userId: currentUserId,
+        friendId: requesterId
+      }
+    });
+
+    await prisma.friend.create({
+      data: {
+        userId: requesterId,
+        friendId: currentUserId
+      }
+    });
+
+    // リクエストを削除
+    await prisma.friendRequest.delete({
+      where: {
+        requesterId_targetId: {
+          requesterId,
+          targetId: currentUserId
         }
       }
     });
 
-    if (!requestRecord || requestRecord.status !== 'PENDING') {
-      return NextResponse.json(
-        { error: 'リクエストが見つかりません' },
-        { status: 404 }
-      );
-    }
-
-    const [firstId, secondId] = [decoded.userId, requesterId].sort();
-
-    await prisma.friend.create({
-      data: {
-        userId: firstId,
-        friendId: secondId
-      }
-    });
-
-    await prisma.friendRequest.update({
-      where: { id: requestRecord.id },
-      data: { status: 'APPROVED' }
-    });
-
     await sendNotificationToUser(
       requesterId,
-      'フレンド申請が承認されました',
-      'フレンドになりました',
-      `/user/${decoded.userId}`,
-      decoded.userId,
+      '✅ フレンド申請が承認されました',
+      'フレンドになりました！',
+      `/user/${currentUserId}`,
+      currentUserId,
       'FRIEND_ACCEPTED'
     );
 
@@ -71,8 +81,11 @@ export async function POST(request: Request) {
   } catch (error: any) {
     console.error('Approve friend request error:', error);
 
-    if (error.code === 'P2002') {
-      return NextResponse.json({ success: true });
+    if (error.code === 'P2025') {
+      return NextResponse.json(
+        { error: 'リクエストが見つかりません' },
+        { status: 404 }
+      );
     }
 
     return NextResponse.json(

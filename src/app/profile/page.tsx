@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import BottomNav from '../components/BottomNav';
 import ProfileHeader from '../components/ProfileHeader';
 import QuestOverlayNew from '../components/QuestOverlayNew';
+import Badges, { BadgeData } from '../components/Badges';
 import { useAuth } from '../context/AuthContext';
 
 interface User {
@@ -45,11 +46,13 @@ function ProfilePageContent() {
   const [user, setUser] = useState<User | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [resetLoading, setResetLoading] = useState(false);
   const [showQuestOverlay, setShowQuestOverlay] = useState(false);
   const [quests, setQuests] = useState<any[]>([]);
+  const [badges, setBadges] = useState<BadgeData[]>([]);
   const router = useRouter();
-  const { user: authUser, status } = useAuth();
+  const { user: authUser, status, refresh } = useAuth();
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -58,13 +61,43 @@ function ProfilePageContent() {
     }
 
     if (status === 'authenticated') {
-      if (authUser) {
-        setUser(authUser);
+      // 初期ロード時のみローディング状態を表示
+      if (isInitialLoad) {
+        // 初期ロード時は待機
+        refresh().then(() => {
+          fetchLatestUser();
+          fetchMyPosts();
+          if (authUser?.id) {
+            fetchMyBadges(authUser.id);
+          }
+          setLoading(false);
+          setIsInitialLoad(false);
+        });
+      } else {
+        // タブ切り替え時はバックグラウンドで更新（ローディング状態は表示しない）
+        refresh();
+        fetchLatestUser();
+        fetchMyPosts();
+        if (authUser?.id) {
+          fetchMyBadges(authUser.id);
+        }
       }
-      setLoading(false);
-      fetchMyPosts();
     }
   }, [status]);
+
+  const fetchLatestUser = async () => {
+    try {
+      const res = await fetch('/api/auth/me', {
+        cache: 'no-store'
+      });
+      if (res.ok) {
+        const userData = await res.json();
+        setUser(userData);
+      }
+    } catch (error) {
+      console.error('Error fetching latest user:', error);
+    }
+  };
 
   const fetchMyPosts = async () => {
     try {
@@ -77,6 +110,22 @@ function ProfilePageContent() {
       console.error('Error fetching posts:', error);
     }
   };
+
+  const fetchMyBadges = async (userId: string) => {
+    try {
+      const res = await fetch(`/api/users/${userId}/badges`, {
+        cache: 'no-store'
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setBadges(data);
+      }
+    } catch (error) {
+      console.error('Error fetching badges:', error);
+    }
+  };
+
 
   const handleResetTokens = async () => {
     setResetLoading(true);
@@ -99,14 +148,6 @@ function ProfilePageContent() {
     router.push('/login');
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#0b0c0f] flex items-center justify-center">
-        <p className="text-gray-500">読み込み中...</p>
-      </div>
-    );  
-  }
-
   if (!user) return null;
 
   const expPercentage = user.experience ? (user.experience % 100) / 100 * 100 : 0;
@@ -115,11 +156,18 @@ function ProfilePageContent() {
     <div className="min-h-screen bg-gradient-to-b from-[#0b0c0f] via-[#0b0c0f] to-[#0f0f0f] pb-24" style={{ paddingBottom: 'calc(6rem + var(--safe-area-bottom))' }}>
       <ProfileHeader />
 
-      {/* Profile Card */}
-      <div className="mx-3 mt-6 bg-[#14161a] border border-white rounded-2xl p-6 relative">
-        {/* Edit Button */}
-        <button
-          onClick={() => router.push('/profile/edit')}
+      {loading ? (
+        // ローディング中
+        <div className="flex items-center justify-center py-32">
+          <p className="text-gray-500">読み込み中...</p>
+        </div>
+      ) : (
+        <>
+          {/* Profile Card */}
+          <div className="mx-3 mt-6 bg-[#14161a] border border-white rounded-2xl p-6 relative">
+            {/* Edit Button */}
+            <button
+              onClick={() => router.push('/profile/edit')}
           className="absolute top-3 left-3 w-6 h-6 rounded-full bg-transparent hover:bg-white/10 flex items-center justify-center transition"
         >
           <img src="/icon/Edit.svg" alt="Edit" className="w-5 h-5" />
@@ -162,7 +210,7 @@ function ProfilePageContent() {
 
         {/* EXP Bar */}
         <div className="px-8 mb-6">
-          <div className="bg-[#f0e] border border-white h-2 rounded-full overflow-hidden mb-1">
+          <div className="bg-[#475467] border border-white h-2 rounded-full overflow-hidden mb-1">
             <div
               className="bg-gradient-to-r from-purple-500 to-pink-500 h-full transition-all"
               style={{ width: `${expPercentage}%` }}
@@ -192,6 +240,14 @@ function ProfilePageContent() {
 
         {/* Divider */}
         <div className="h-px bg-white mt-4" />
+
+        {/* Badges */}
+        {badges.length > 0 && (
+          <div className="mt-4">
+            <p className="text-sm font-bold text-white mb-2">バッジ</p>
+            <Badges badges={badges} size="md" />
+          </div>
+        )}
 
         {/* Debug Button */}
         <button
@@ -273,6 +329,8 @@ function ProfilePageContent() {
             </div>
           ))}
         </div>
+      )}
+      </>
       )}
 
       <BottomNav />
