@@ -300,10 +300,7 @@ export default function UserProfilePage() {
   return (
     <div className="min-h-screen bg-[#0b0c0f] pb-24" style={{ paddingBottom: 'calc(6rem + var(--safe-area-bottom))' }}>
       <div className="sticky top-0 z-40 bg-[#0b0c0f]">
-        <ProfileHeader
-          onBack={() => router.back()}
-          displayName={user.displayName || user.username}
-        />
+        <ProfileHeader />
       </div>
 
       {/* Profile Details Card */}
