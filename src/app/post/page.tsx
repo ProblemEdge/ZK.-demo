@@ -294,6 +294,9 @@ export default function NewPostPage() {
         postData.questId = selectedQuestId;
       }
 
+      console.log('投稿データ:', postData);
+      console.log('isQuestMode:', isQuestMode, 'selectedQuestId:', selectedQuestId);
+
       const res = await fetch('/api/posts/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -301,7 +304,10 @@ export default function NewPostPage() {
         signal: controller.signal
       });
 
-      if (!res.ok) throw new Error('投稿作成失敗');
+      const responseData = await res.json();
+      console.log('API レスポンス:', responseData, '状態:', res.status);
+
+      if (!res.ok) throw new Error(responseData.error || '投稿作成失敗');
 
       submitDoneRef.current = true;
       setSendingProgress(100);

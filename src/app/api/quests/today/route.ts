@@ -244,7 +244,7 @@ export async function GET(request: Request) {
         order: quest.order,
         completed: userProgress?.completed || hasApprovedPost,
         completedAt: userProgress?.completedAt || null,
-        inProgress: hasPendingPost && !hasApprovedPost,
+        inProgress: hasPendingPost && !hasApprovedPost && !userProgress?.completed,
         locked: false
       };
     });
