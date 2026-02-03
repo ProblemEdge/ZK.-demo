@@ -10,94 +10,66 @@ import StatButton from '../components/StatButton';
 import DiscoverFilterTabs from '../components/DiscoverFilterTabs';
 import { useAuth } from '../context/AuthContext';
 import { FriendAddButton, FriendingButton, FriendReqingButton } from '../components/FriendButtons';
-interface User {
-  id: string;
-  username: string;
-  displayName: string | null;
-  avatarUrl: string | null;
-  bio: string | null;
-  level: number;
-  gems: number;
-  _count: {
-    posts: number;
-    friends: number;
-  };
-  isFriend: boolean;
-  isRequested?: boolean;
-  isReceivedRequest?: boolean;
-}
 
-interface RankingUser {
-  id: string;
-  username: string;
-  displayName: string | null;
-  avatarUrl: string | null;
-  level: number;
-  gems: number;
-  totalVotes?: number;
-  totalLikes?: number;
-  avgCompletionTime?: number;
-  completedCount?: number;
-}
+// 型とヘルパーのインポート
+import type { MainTab, RankingType, Period, Mode, FriendFilter } from './_types';
+import { getFilteredUsers } from './_helpers';
 
-type MainTab = 'search' | 'ranking';
-type RankingType = 'level' | 'gems' | 'votes' | 'likes';
-type Period = 'all' | 'today' | 'week' | 'month' | 'year';
-type Mode = 'world' | 'following';
-type FriendFilter = 'discover' | 'friend' | 'pending' | 'request';
+// カスタムフックのインポート
+import { useDebounce } from './_hooks/useDebounce';
+import { useUserSearch } from './_hooks/useUserSearch';
+import { useRanking } from './_hooks/useRanking';
+import { useFriendActions } from './_hooks/useFriendActions';
 
 export default function DiscoverPage() {
   const { refresh } = useAuth();
-  const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(false);
+  const router = useRouter();
+
   const [searchQuery, setSearchQuery] = useState('');
-  const [debouncedQuery, setDebouncedQuery] = useState('');
+  const debouncedQuery = useDebounce(searchQuery, 300);
   const [mainTab, setMainTab] = useState<MainTab>('search');
   const [friendFilter, setFriendFilter] = useState<FriendFilter>('discover');
-  const [loadingUserIds, setLoadingUserIds] = useState<Set<string>>(new Set());
-  const [receivedRequests, setReceivedRequests] = useState<User[]>([]);
-  const [requestsLoading, setRequestsLoading] = useState(false);
-  
-  // ページング関連
-  const [userPage, setUserPage] = useState(1);
-  const [hasMoreUsers, setHasMoreUsers] = useState(true);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
   
   // ランキング関連
   const [rankingType, setRankingType] = useState<RankingType>('level');
   const [period, setPeriod] = useState<Period>('all');
   const [mode, setMode] = useState<Mode>('world');
-  const [ranking, setRanking] = useState<RankingUser[]>([]);
-  const [rankingLoading, setRankingLoading] = useState(false);
-  const [rankingPage, setRankingPage] = useState(1);
-  const [hasMoreRanking, setHasMoreRanking] = useState(true);
-  
-  const router = useRouter();
 
-  // デバウンス処理
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedQuery(searchQuery);
-    }, 300);
+  // カスタムフックの使用
+  const {
+    users,
+    setUsers,
+    loading,
+    userPage,
+    hasMoreUsers,
+    isLoadingMore,
+    fetchUsers,
+  } = useUserSearch(debouncedQuery, mainTab);
 
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
+  const {
+    ranking,
+    rankingLoading,
+    hasMoreRanking,
+    fetchRanking,
+  } = useRanking(mainTab, rankingType, period, mode);
 
-  // ユーザー検索
-  useEffect(() => {
-    if (mainTab === 'search') {
-      setUserPage(1);
-      setHasMoreUsers(true);
-      fetchUsers(1);
-    }
-  }, [debouncedQuery, mainTab]);
+  const {
+    loadingUserIds,
+    receivedRequests,
+    requestsLoading,
+    fetchReceivedRequests,
+    handleFollow,
+    handleUnfollow,
+    handleApproveRequest,
+    handleRejectRequest,
+  } = useFriendActions(refresh);
 
   // リクエスト取得
   useEffect(() => {
     if (mainTab === 'search' && friendFilter === 'request') {
       fetchReceivedRequests();
     }
-  }, [friendFilter, mainTab]);
+  }, [friendFilter, mainTab, fetchReceivedRequests]);
 
   // 無限スクロール検出
   useEffect(() => {
@@ -116,287 +88,10 @@ export default function DiscoverPage() {
     if (sentinel) observer.observe(sentinel);
 
     return () => observer.disconnect();
-  }, [userPage, hasMoreUsers, isLoadingMore, loading, mainTab]);
-
-  // ランキング取得
-  useEffect(() => {
-    if (mainTab === 'ranking') {
-      setRankingPage(1);
-      setHasMoreRanking(true);
-      setRankingLoading(false); // ローディング状態をリセット
-      fetchRanking(true);
-    }
-  }, [rankingType, period, mode, mainTab]);
-
-  const fetchRanking = async (reset: boolean = false) => {
-    if (rankingLoading || (!reset && !hasMoreRanking)) return;
-    
-    try {
-      setRankingLoading(true);
-      const currentPage = reset ? 1 : rankingPage;
-      
-      const res = await fetch(
-        `/api/rankings?type=${rankingType}&period=${period}&mode=${mode}&page=${currentPage}&limit=10`,
-        { cache: 'no-store' }
-      );
-
-      if (!res.ok) throw new Error('ランキングの取得に失敗しました');
-
-      const data = await res.json();
-      
-      if (reset) {
-        setRanking(data.ranking);
-      } else {
-        setRanking([...ranking, ...data.ranking]);
-      }
-      
-      setHasMoreRanking(data.ranking.length === 10 && currentPage < 10); // 最大100位まで（10ページ）
-      if (!reset) {
-        setRankingPage(currentPage + 1);
-      }
-    } catch (err) {
-      console.error('Ranking error:', err);
-      setRanking([]);
-    } finally {
-      setRankingLoading(false);
-    }
-  };
-
-  const fetchUsers = async (page: number = userPage) => {
-    try {
-      if (page === 1) {
-        setLoading(true);
-      } else {
-        setIsLoadingMore(true);
-      }
-
-      const query = debouncedQuery ? `?q=${encodeURIComponent(debouncedQuery)}` : '';
-      const separator = query ? '&' : '?';
-      const url = `/api/users${query}${separator}limit=10&offset=${(page - 1) * 10}`;
-      
-      const res = await fetch(url, {
-        cache: 'no-store'
-      });
-
-      if (!res.ok) {
-        throw new Error('ユーザーの取得に失敗しました');
-      }
-
-      const data = await res.json();
-      
-      if (page === 1) {
-        setUsers(data);
-      } else {
-        // 既に存在するユーザーを除外して追加
-        setUsers(prev => {
-          const existingIds = new Set(prev.map(u => u.id));
-          const newUsers = data.filter((u: User) => !existingIds.has(u.id));
-          return [...prev, ...newUsers];
-        });
-      }
-      
-      setHasMoreUsers(data.length === 10);
-      setUserPage(page);
-    } catch (err) {
-      console.error('Error fetching users:', err);
-      if (page === 1) {
-        setUsers([]);
-      }
-    } finally {
-      setLoading(false);
-      setIsLoadingMore(false);
-    }
-  };
-
-  const fetchReceivedRequests = async () => {
-    try {
-      setRequestsLoading(true);
-      const res = await fetch('/api/friends/requests/received', {
-        cache: 'no-store'
-      });
-
-      if (!res.ok) {
-        throw new Error('リクエストの取得に失敗しました');
-      }
-
-      const data = await res.json();
-      // APIから返されるデータはすでにUser型の形式なので、そのまま使用
-      setReceivedRequests(data);
-    } catch (err) {
-      console.error('Error fetching received requests:', err);
-      setReceivedRequests([]);
-    } finally {
-      setRequestsLoading(false);
-    }
-  };
+  }, [userPage, hasMoreUsers, isLoadingMore, loading, mainTab, fetchUsers]);
 
   // フレンドフィルターを適用したユーザーリスト
-  const filteredUsers = users.filter(user => {
-    if (friendFilter === 'discover') return !user.isFriend && !user.isRequested && !user.isReceivedRequest;
-    if (friendFilter === 'friend') return user.isFriend === true;
-    if (friendFilter === 'pending') return user.isRequested === true;
-    if (friendFilter === 'request') return false; // リクエストは別途で表示
-    return true;
-  });
-
-  // 発見タブはフィルター無しで表示、他は filteredUsers を使用
-  // 重複を排除
-  const uniqueDisplayedUsers = Array.from(
-    new Map(filteredUsers.map(user => [user.id, user])).values()
-  );
-  const displayedUsers = uniqueDisplayedUsers;
-
-  const handleFollow = async (targetUserId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setLoadingUserIds(prev => new Set(prev).add(targetUserId));
-    try {
-      const res = await fetch('/api/follows/follow', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ targetUserId })
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        console.error('Follow error response:', data);
-        alert(data.error || 'フォローに失敗しました');
-        return;
-      }
-
-      // UIを更新：最新の状態を使用
-      setUsers(prevUsers => 
-        prevUsers.map(u => u.id === targetUserId ? { ...u, isFriend: false, isRequested: true } : u)
-      );
-    } catch (err) {
-      console.error('Follow error:', err);
-      alert('フォローに失敗しました');
-    } finally {
-      setLoadingUserIds(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(targetUserId);
-        return newSet;
-      });
-    }
-  };
-
-  const handleUnfollow = async (targetUserId: string, e: React.MouseEvent, isRequest: boolean = false) => {
-    e.stopPropagation();
-    
-    // 申請中の削除ではなく、友達削除の場合のみ確認
-    if (!isRequest && !confirm('本当にこのユーザーとの友達関係を削除しますか？')) {
-      return;
-    }
-    
-    setLoadingUserIds(prev => new Set(prev).add(targetUserId));
-    try {
-      // 申請中の場合は cancel エンドポイント（targetUserId指定で送信済みリクエスト削除）
-      // 友達削除は unfollow を使う
-      const endpoint = isRequest ? '/api/friends/requests/cancel' : '/api/follows/unfollow';
-      const bodyData = isRequest ? { targetUserId } : { targetUserId };
-      
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(bodyData)
-      });
-
-      if (!res.ok) {
-        let errorMessage = `HTTP ${res.status}`;
-        try {
-          const errorData = await res.json();
-          errorMessage = errorData.error || errorMessage;
-        } catch (e) {
-          console.error('Failed to parse error response:', e);
-        }
-        console.error('API Error:', errorMessage);
-        return;
-      }
-
-      // UIを更新：最新の状態を使用
-      setUsers(prevUsers =>
-        prevUsers.map(u => u.id === targetUserId ? { ...u, isFriend: false, isRequested: false } : u)
-      );
-      
-      // ユーザー認証情報を更新（friendCountを再計算）
-      await refresh();
-    } catch (err) {
-      console.error('Error:', err);
-    } finally {
-      setLoadingUserIds(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(targetUserId);
-        return newSet;
-      });
-    }
-  };
-
-  const handleApproveRequest = async (requesterId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setLoadingUserIds(prev => new Set(prev).add(requesterId));
-    try {
-      const res = await fetch('/api/friends/requests/approve', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ requesterId })
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        console.error('Approve error response:', data);
-        alert(data.error || '承認に失敗しました');
-        return;
-      }
-
-      // UIを更新：最新の状態を使用
-      setReceivedRequests(prevRequests => prevRequests.filter(r => r.id !== requesterId));
-      setUsers(prevUsers => prevUsers.filter(u => u.id !== requesterId));
-      
-      // ユーザー認証情報を更新（friendCountを再計算）
-      await refresh();
-    } catch (err) {
-      console.error('Approve error:', err);
-      alert('承認に失敗しました');
-    } finally {
-      setLoadingUserIds(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(requesterId);
-        return newSet;
-      });
-    }
-  };
-
-  const handleRejectRequest = async (requesterId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setLoadingUserIds(prev => new Set(prev).add(requesterId));
-    try {
-      const res = await fetch('/api/friends/requests/reject', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ requesterId })
-      });
-
-      if (!res.ok) {
-        console.error('Reject error response:', res);
-        return;
-      }
-
-      // UIを更新：最新の状態を使用
-      setReceivedRequests(prevRequests => prevRequests.filter(r => r.id !== requesterId));
-      
-      // users配列から完全に削除（リロード後も表示されないようにする）
-      setUsers(prevUsers => prevUsers.filter(u => u.id !== requesterId));
-    } catch (err) {
-      console.error('Reject error:', err);
-    } finally {
-      setLoadingUserIds(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(requesterId);
-        return newSet;
-      });
-    }
-  };
+  const displayedUsers = getFilteredUsers(users, friendFilter);
 
   return (
     <div className="min-h-screen bg-[#0b0c0f]" style={{ paddingBottom: 'calc(6rem + var(--safe-area-bottom))' }}>
