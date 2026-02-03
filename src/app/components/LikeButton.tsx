@@ -50,7 +50,7 @@ export default function LikeButton({ count, initialLiked = false, onClick }: Lik
         className={`absolute right-4 top-1/2 -translate-y-1/2 font-bold text-[12px] text-center font-sans pointer-events-none ${liked ? "text-white" : "text-[#ff73c7]"}`}
         style={{minWidth: 0}}
       >
-        {count + (liked ? 1 : 0)}
+        {count}
       </span>
     </button>
   );

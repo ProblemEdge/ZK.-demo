@@ -269,9 +269,21 @@ export default function FeedPage() {
     if (!post) return;
 
     const wasLiked = post.hasLiked;
+    const originalLikeCount = post.likeCount || 0;
 
     try {
       setLikingPosts(prev => new Set(prev).add(postId));
+
+      // 楽観的更新
+      setAllPosts(prev => prev.map(p =>
+        p.id === postId
+          ? {
+              ...p,
+              hasLiked: !wasLiked,
+              likeCount: Math.max(0, (p.likeCount || 0) + (wasLiked ? -1 : 1))
+            }
+          : p
+      ));
       
       const method = wasLiked ? 'DELETE' : 'POST';
       const res = await fetch(`/api/posts/${postId}/likes`, { method, credentials: 'include' });
@@ -286,6 +298,12 @@ export default function FeedPage() {
       }
     } catch (err) {
       console.error('Like error:', err);
+      // 失敗時は元に戻す
+      setAllPosts(prev => prev.map(p =>
+        p.id === postId
+          ? { ...p, hasLiked: wasLiked, likeCount: originalLikeCount }
+          : p
+      ));
     } finally {
       setLikingPosts(prev => {
         const next = new Set(prev);

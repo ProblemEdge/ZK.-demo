@@ -63,8 +63,8 @@ export default function BottomNav() {
     `flex items-center justify-center transition ${pathname === href ? 'opacity-100' : 'opacity-70'}`;
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-[#0b0c0f] border-t-4 border-white z-50" style={{ paddingBottom: 'var(--safe-area-bottom)', transform: 'translateZ(0)', WebkitTransform: 'translateZ(0)' }}>
-      <div className="flex items-center justify-center gap-8 px-4 py-3" style={{ paddingBottom: 'calc(0.75rem + var(--safe-area-bottom))' }}>
+    <nav className="fixed bottom-0 left-0 right-0 bg-[#0b0c0f] border-t-4 border-white z-50" style={{ transform: 'translateZ(0)', WebkitTransform: 'translateZ(0)' }}>
+      <div className="flex items-center justify-center gap-8 px-4 py-2" style={{ paddingBottom: 'var(--safe-area-bottom)' }}>
         {navItems.map((item) => (
           <Link key={item.href} href={item.href} className={getLinkClasses(item.href)}>
             {item.type === 'feed' && (

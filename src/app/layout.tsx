@@ -38,26 +38,77 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="ZK." />
         <meta name="mobile-web-app-capable" content="yes" />
         <style>{`
-          html, body {
-            --safe-area-top: max(env(safe-area-inset-top), 0px);
-            --safe-area-bottom: max(env(safe-area-inset-bottom), 0px);
+          :root {
+            --safe-area-top: env(safe-area-inset-top, 0px);
+            --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+            --safe-area-left: env(safe-area-inset-left, 0px);
+            --safe-area-right: env(safe-area-inset-right, 0px);
+          }
+          
+          html {
+            height: 100%;
+            overflow: hidden;
+          }
+          
+          body {
+            height: 100vh;
+            height: calc(100vh - var(--safe-area-top) - var(--safe-area-bottom));
+            min-height: -webkit-fill-available;
+            overflow: hidden;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            left: 0;
+          }
+          
+          #root-wrapper {
+            height: 100vh;
+            padding-top: var(--safe-area-top);
+            padding-bottom: var(--safe-area-bottom);
+            padding-left: var(--safe-area-left);
+            padding-right: var(--safe-area-right);
+            box-sizing: border-box;
+            overflow: auto;
+            -webkit-overflow-scrolling: touch;
           }
         `}</style>
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-900`}>
-        {/* ステータスバー擬似背景 */}
+        {/* Safe Area対応のステータスバー背景（固定配置） */}
         <div
           style={{
-            height: 'env(safe-area-inset-top)',
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 'var(--safe-area-top)',
             backgroundColor: '#0B0C0F',
+            zIndex: 9999,
+            pointerEvents: 'none',
+          }}
+        />
+        
+        {/* Safe Area対応のボトムバー背景（固定配置） */}
+        <div
+          style={{
+            position: 'fixed',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: 'var(--safe-area-bottom)',
+            backgroundColor: '#0B0C0F',
+            zIndex: 9999,
+            pointerEvents: 'none',
           }}
         />
 
-        <AuthProvider>
-          <RewardProvider>
-            {children}
-          </RewardProvider>
-        </AuthProvider>
+        <div id="root-wrapper">
+          <AuthProvider>
+            <RewardProvider>
+              {children}
+            </RewardProvider>
+          </AuthProvider>
+        </div>
       </body>
 
     </html>
