@@ -1,11 +1,11 @@
 {
   "name": "ZK.",
   "short_name": "ZK.",
-  "description": "松本市の写真共有SNS",
+  "description": "松本を共有するSNS",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#111827",
-  "theme_color": "#111827",
+  "background_color": "#0B0C0F",
+  "theme_color": "#0B0C0F",
   "icons": [
     {
       "src": "/favicon.ico",

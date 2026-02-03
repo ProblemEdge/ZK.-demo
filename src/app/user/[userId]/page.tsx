@@ -281,28 +281,37 @@ export default function UserProfilePage() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#0b0c0f] flex items-center justify-center pb-20">
-        <p className="text-gray-300">読み込み中...</p>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-[#0b0c0f] flex items-center justify-center pb-20">
-        <p className="text-gray-300">ユーザーが見つかりません</p>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-[#0b0c0f] pb-24" style={{ paddingBottom: 'calc(6rem + var(--safe-area-bottom))' }}>
       <div className="sticky top-0 z-40 bg-[#0b0c0f]">
         <ProfileHeader />
       </div>
 
+      {!user ? (
+        // ローディングスケルトン
+        <div className="mx-3 mt-4 bg-[#14161a] border border-white rounded-2xl p-4">
+          <div className="flex items-start gap-3">
+            <div className="w-[64px] h-[64px] bg-gray-700 rounded-full animate-pulse flex-shrink-0"></div>
+            <div className="flex-1 min-w-0">
+              <div className="h-7 w-32 bg-gray-700 animate-pulse rounded mb-2"></div>
+              <div className="h-5 w-24 bg-gray-700 animate-pulse rounded mb-3"></div>
+              <div className="h-9 w-32 bg-gray-700 animate-pulse rounded"></div>
+            </div>
+          </div>
+          <div className="mt-4 flex items-center gap-6">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="flex items-center gap-2">
+                <div className="w-5 h-5 bg-gray-700 animate-pulse rounded"></div>
+                <div>
+                  <div className="h-6 w-12 bg-gray-700 animate-pulse rounded mb-1"></div>
+                  <div className="h-3 w-8 bg-gray-700 animate-pulse rounded"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <>
       {/* Profile Details Card */}
       <div className="mx-3 mt-4 bg-[#14161a] border border-white rounded-2xl p-4">
         <div className="flex items-start gap-3">
@@ -537,6 +546,8 @@ export default function UserProfilePage() {
             </div>
           </div>
         </div>
+      )}
+        </>
       )}
 
       <BottomNav />

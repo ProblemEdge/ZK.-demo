@@ -21,7 +21,7 @@ export default function QuestSelector({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center" role="dialog" aria-modal="true">
-      <div className="w-full max-w-2xl bg-[#111827] rounded-t-2xl border border-gray-700 p-4">
+      <div className="w-full max-w-2xl bg-[#0B0C0F] rounded-t-2xl border border-gray-700 p-4">
         <div className="flex items-center justify-between mb-3">
           <p className="text-white font-semibold">クエストを選択</p>
           <button onClick={onClose} className="text-gray-300">閉じる</button>

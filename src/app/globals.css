@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 :root {
-  --background: #111827;
+  --background: #0B0C0F;
   --foreground: #f3f4f6;
   --safe-area-top: env(safe-area-inset-top, 0px);
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
@@ -36,7 +36,7 @@ body {
 }
 
 /* PWA standalone モード時に上下オフセットを調整 */
-@media (display-mode: standalone) {
+/* @media (display-mode: standalone) {
   body {
     padding-top: 0;
     padding-bottom: 0;
@@ -46,4 +46,4 @@ body {
     margin-top: calc(-1 * var(--safe-area-top));
     padding-top: calc(0.75rem + var(--safe-area-top));
   }
-}
+} */

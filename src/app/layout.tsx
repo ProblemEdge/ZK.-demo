@@ -32,7 +32,7 @@ export default function RootLayout({
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
         <link rel="manifest" href="/manifest.json" />
-        <meta name="theme-color" content="#111827" />
+        <meta name="theme-color" content="#0B0C0F" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="ZK." />
@@ -44,16 +44,22 @@ export default function RootLayout({
           }
         `}</style>
       </head>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-900`}
-        style={{ paddingTop: 'var(--safe-area-top)' }}
-      >
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-900`}>
+        {/* ステータスバー擬似背景 */}
+        <div
+          style={{
+            height: 'env(safe-area-inset-top)',
+            backgroundColor: '#0B0C0F',
+          }}
+        />
+
         <AuthProvider>
           <RewardProvider>
             {children}
           </RewardProvider>
         </AuthProvider>
       </body>
+
     </html>
   );
 }

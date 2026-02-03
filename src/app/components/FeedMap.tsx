@@ -100,7 +100,7 @@ export default function FeedMap({ posts }: { posts: MapPost[] }) {
           transform: scale(1.2);
         }
         .leaflet-popup-content-wrapper {
-          background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+          background: linear-gradient(135deg, #1f2937 0%, #0B0C0F 100%);
           border-radius: 12px;
           border: 1px solid #374151;
           box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);

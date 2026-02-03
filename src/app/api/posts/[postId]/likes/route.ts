@@ -103,7 +103,12 @@ export async function POST(
       }
     });
 
-    return NextResponse.json(like, { status: 201 });
+    // 総いいね数を取得
+    const likeCount = await prisma.like.count({
+      where: { postId }
+    });
+
+    return NextResponse.json({ ...like, likeCount }, { status: 201 });
   } catch (error) {
     console.error('Create like error:', error);
     return NextResponse.json(
@@ -138,26 +143,29 @@ export async function DELETE(
     };
     const userId = decoded.userId;
 
-    const like = await prisma.like.findUnique({
+    // deleteMany を使用して、存在しないレコードのエラーを回避
+    const result = await prisma.like.deleteMany({
       where: {
-        postId_userId: { postId, userId }
+        AND: [
+          { postId },
+          { userId }
+        ]
       }
     });
 
-    if (!like) {
+    if (result.count === 0) {
       return NextResponse.json(
         { error: 'いいねが見つかりません' },
         { status: 404 }
       );
     }
 
-    await prisma.like.delete({
-      where: {
-        postId_userId: { postId, userId }
-      }
+    // 総いいね数を取得
+    const likeCount = await prisma.like.count({
+      where: { postId }
     });
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, likeCount });
   } catch (error) {
     console.error('Delete like error:', error);
     return NextResponse.json(

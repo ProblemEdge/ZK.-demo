@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import BottomNav from '../components/BottomNav';
 import ProfileHeader from '../components/ProfileHeader';
@@ -148,7 +148,17 @@ function ProfilePageContent() {
     router.push('/login');
   };
 
-  if (!user) return null;
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-[#0b0c0f] via-[#0b0c0f] to-[#0f0f0f] pb-24" style={{ paddingBottom: 'calc(6rem + var(--safe-area-bottom))' }}>
+        <ProfileHeader />
+        <div className="flex items-center justify-center py-32">
+          <p className="text-gray-500">読み込み中...</p>
+        </div>
+        <BottomNav />
+      </div>
+    );
+  }
 
   const expPercentage = user.experience ? (user.experience % 100) / 100 * 100 : 0;
 
@@ -346,9 +356,5 @@ function ProfilePageContent() {
 }
 
 export default function ProfilePage() {
-  return (
-    <Suspense fallback={<div className="flex items-center justify-center min-h-screen">読み込み中...</div>}>
-      <ProfilePageContent />
-    </Suspense>
-  );
+  return <ProfilePageContent />;
 }

@@ -474,7 +474,7 @@ export default function NewPostPage() {
                     return (
                       <div
                         key={i}
-                        className={`h-3 w-6 rounded-sm ${i < remaining ? 'bg-[#22c55e]' : 'bg-[#111827]'}`}
+                        className={`h-3 w-6 rounded-sm ${i < remaining ? 'bg-[#22c55e]' : 'bg-[#0B0C0F]'}`}
                       />
                     );
                   })}
@@ -841,7 +841,7 @@ export default function NewPostPage() {
           }}
         >
           <div 
-            className="bg-[#111827] border-2 border-white rounded-2xl p-6 w-full max-w-md"
+            className="bg-[#0B0C0F] border-2 border-white rounded-2xl p-6 w-full max-w-md"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">

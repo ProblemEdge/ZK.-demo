@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useState } from "react";
+import Link from "next/link";
 import SimpleTag from "./SimpleTag";
 import { VoteOkButton, VoteNgButton } from "./VoteOkNgButton";
 import LikeButton from "./LikeButton";
@@ -25,6 +26,7 @@ interface FeedCardProps {
   isVoting?: boolean;
   voteCount: number;
   likeCount: number;
+  hasLiked?: boolean;
   commentCount: number;
   onLike?: () => void;
   onComment?: () => void;
@@ -83,6 +85,7 @@ export default function FeedCard({
   isVoting,
   voteCount,
   likeCount,
+  hasLiked = false,
   commentCount,
   onLike,
   onComment,
@@ -146,22 +149,24 @@ export default function FeedCard({
           )}
         </div>
         {/* ユーザー情報＋アイコン */}
-        <div className="flex items-center gap-3 mb-2">
-          <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-700 border border-gray-500 flex items-center justify-center">
-            {userIconUrl ? (
-              <img src={userIconUrl} alt={userName} className="w-full h-full object-cover" />
-            ) : (
-              <span className="text-gray-400 text-xl font-bold">?</span>
-            )}
+        <Link href={`/user/${userId}`}>
+          <div className="flex items-center gap-3 mb-2 cursor-pointer hover:opacity-75 transition-opacity">
+            <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-700 border border-gray-500 flex items-center justify-center">
+              {userIconUrl ? (
+                <img src={userIconUrl} alt={userName} className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-gray-400 text-xl font-bold">?</span>
+              )}
+            </div>
+            <div className="flex flex-col">
+              <span className="text-white font-semibold leading-tight">{userName}</span>
+              <span className="text-xs text-gray-400 leading-tight">@{userId}</span>
+              {postedAt && (
+                <span className="text-xs text-gray-500 leading-tight">{new Date(postedAt).toLocaleString('ja-JP', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+              )}
+            </div>
           </div>
-          <div className="flex flex-col">
-            <span className="text-white font-semibold leading-tight">{userName}</span>
-            <span className="text-xs text-gray-400 leading-tight">@{userId}</span>
-            {postedAt && (
-              <span className="text-xs text-gray-500 leading-tight">{new Date(postedAt).toLocaleString('ja-JP', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
-            )}
-          </div>
-        </div>
+        </Link>
         {/* タイトル（説明欄の上） */}
         {title && (
           <div className="text-lg font-bold text-white mb-1 break-words">{title}</div>
@@ -177,7 +182,7 @@ export default function FeedCard({
           ))}
         </div>
         <div className="flex items-center gap-0.5">
-          <LikeButton count={likeCount} onClick={onLike} />
+          <LikeButton count={likeCount} initialLiked={hasLiked} onClick={onLike} />
           <CommentButton count={commentCount} onClick={onComment} />
         </div>
       </div>

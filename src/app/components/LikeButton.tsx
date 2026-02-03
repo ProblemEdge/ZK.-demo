@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 interface LikeButtonProps {
   count: number;
@@ -10,6 +10,11 @@ interface LikeButtonProps {
 export default function LikeButton({ count, initialLiked = false, onClick }: LikeButtonProps) {
   const [liked, setLiked] = useState(initialLiked);
   const [anim, setAnim] = useState(false);
+
+  // initialLiked が変わったときに liked を同期
+  useEffect(() => {
+    setLiked(initialLiked);
+  }, [initialLiked]);
 
   // アニメーション用クラス
   const heartAnim = anim ? "animate-bounce" : "";

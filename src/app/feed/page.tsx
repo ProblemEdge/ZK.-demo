@@ -236,25 +236,39 @@ export default function FeedPage() {
     }
   };
 
+  const [likingPosts, setLikingPosts] = useState<Set<string>>(new Set());
+
   const handleLike = async (postId: string) => {
+    // 処理中なら無視
+    if (likingPosts.has(postId)) return;
+
     const post = allPosts.find(p => p.id === postId);
     if (!post) return;
 
     const wasLiked = post.hasLiked;
 
     try {
+      setLikingPosts(prev => new Set(prev).add(postId));
+      
       const method = wasLiked ? 'DELETE' : 'POST';
       const res = await fetch(`/api/posts/${postId}/likes`, { method, credentials: 'include' });
 
       if (res.ok) {
+        const data = await res.json();
         setAllPosts(prev => prev.map(p => 
           p.id === postId 
-            ? { ...p, hasLiked: !wasLiked, likeCount: (p.likeCount || 0) + (wasLiked ? -1 : 1) }
+            ? { ...p, hasLiked: !wasLiked, likeCount: data.likeCount }
             : p
         ));
       }
     } catch (err) {
       console.error('Like error:', err);
+    } finally {
+      setLikingPosts(prev => {
+        const next = new Set(prev);
+        next.delete(postId);
+        return next;
+      });
     }
   };
 
@@ -415,6 +429,7 @@ export default function FeedPage() {
                   isVoting={isVotingActive}
                   voteCount={post.totalVotes ?? 0}
                   likeCount={post.likeCount ?? 0}
+                  hasLiked={post.hasLiked ?? false}
                   commentCount={post.commentCount ?? 0}
                   onLike={() => handleLike(post.id)}
                   onComment={() => handleToggleComments(post.id)}

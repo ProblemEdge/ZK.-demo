@@ -15,7 +15,7 @@ export default function PostLimitPage({ searchParams }: PostLimitPageProps) {
 
   return (
     <div className="min-h-screen bg-black text-white flex items-center justify-center p-6">
-      <div className="w-full max-w-md bg-[#111827] border border-white/20 rounded-2xl p-6 text-center">
+      <div className="w-full max-w-md bg-[#0B0C0F] border border-white/20 rounded-2xl p-6 text-center">
         <div className="text-2xl font-bold mb-3">本日の投稿上限に達しました</div>
         <p className="text-white/80 mb-4">
           本日の投稿可能回数は{limit}回です。
