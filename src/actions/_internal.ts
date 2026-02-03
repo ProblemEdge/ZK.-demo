@@ -1,7 +1,7 @@
 import { cookies, headers } from 'next/headers';
 
-const getBaseUrl = () => {
-  const headerStore = headers();
+const getBaseUrl = async () => {
+  const headerStore = await headers();
   const host = headerStore.get('host');
   const proto = headerStore.get('x-forwarded-proto') ?? 'http';
 
@@ -12,15 +12,15 @@ const getBaseUrl = () => {
   return `${proto}://${host}`;
 };
 
-const getCookieHeader = () => {
-  const cookieStore = cookies();
+const getCookieHeader = async () => {
+  const cookieStore = await cookies();
   const allCookies = cookieStore.getAll();
   return allCookies.map(cookie => `${cookie.name}=${cookie.value}`).join('; ');
 };
 
 export const authFetch = async (path: string, init: RequestInit = {}) => {
-  const baseUrl = getBaseUrl();
-  const cookieHeader = getCookieHeader();
+  const baseUrl = await getBaseUrl();
+  const cookieHeader = await getCookieHeader();
   const headers = new Headers(init.headers);
 
   if (cookieHeader) {
