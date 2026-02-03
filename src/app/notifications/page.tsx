@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import BottomNav from '../components/BottomNav';
 import NotificationsHeader from '../components/NotificationsHeader';
 import { useAuth } from '../context/AuthContext';
+import { getNotifications, markNotificationsAsRead } from '@/actions/notification';
 
 interface NotificationActor {
   id: string;
@@ -52,25 +53,12 @@ export default function NotificationsPage() {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('/api/notifications', { credentials: 'include' });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        setError(data.error || '通知の取得に失敗しました');
-        setLoading(false);
-        return;
-      }
+      const data = await getNotifications();
+      setNotifications(data as NotificationItem[]);
 
-      const data: NotificationItem[] = await res.json();
-      setNotifications(data);
-
-      const unread = data.filter((n) => !n.isRead).map((n) => n.id);
+      const unread = (data as NotificationItem[]).filter((n) => !n.isRead).map((n) => n.id);
       if (unread.length > 0) {
-        await fetch('/api/notifications', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ ids: unread })
-        });
+        await markNotificationsAsRead(unread);
       }
     } catch (err) {
       setError('ネットワークエラーが発生しました');

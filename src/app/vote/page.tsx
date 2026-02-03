@@ -6,6 +6,15 @@ import BottomNav from '../components/BottomNav';
 import VoteHeader from '../components/VoteHeader';
 import { useReward } from '../context/RewardContext';
 import { useAuth } from '../context/AuthContext';
+import { createVote as createVoteAction, processExpiredVotes as processExpiredVotesAction } from '@/actions/vote';
+import { 
+  getPendingPosts, 
+  likePost, 
+  unlikePost, 
+  createComment, 
+  getComments,
+  deleteComment
+} from '@/actions/post';
 
 interface Post {
   id: string;
@@ -132,7 +141,7 @@ export default function VotePage() {
 
   const processExpiredVotes = async () => {
     try {
-      await fetch('/api/votes/process-expired', { credentials: 'include' });
+      await processExpiredVotesAction();
     } catch (err) {
       console.error('Error processing expired votes:', err);
     }
@@ -140,13 +149,9 @@ export default function VotePage() {
 
   const fetchPendingPosts = async () => {
     try {
-      const res = await fetch('/api/posts/pending', { credentials: 'include' });
-      if (res.ok) {
-        const data = await res.json();
-        // 投票済みIDをフィルタリングして除外
-        const filtered = data.filter((p: Post) => !votedPostIdsRef.current.has(p.id));
-        setPosts(filtered);
-      }
+      const data = await getPendingPosts();
+      const filtered = (data as Post[]).filter((p: Post) => !votedPostIdsRef.current.has(p.id));
+      setPosts(filtered);
     } catch (err) {
       console.error('Error fetching posts:', err);
       setError('投稿の読み込みに失敗しました');
@@ -208,23 +213,10 @@ export default function VotePage() {
         votedPostIdsRef.current.delete(postId);
       }, 30000);
 
-      const res = await fetch('/api/votes/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ postId, voteType }),
-        credentials: 'include'
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        console.error('Vote error:', data.error);
-        return;
-      }
-
-      const data = await res.json();
+      const data = await createVoteAction(postId, voteType);
 
       // 報酬通知を表示
-      if (data.reward) {
+      if (data?.reward) {
         showReward({
           ...data.reward,
           message: '投票に参加しました！'
@@ -234,7 +226,7 @@ export default function VotePage() {
       // 投票した投稿を一覧から削除（同じ投稿が表示されないように）
       setPosts(prev => prev.filter(p => p.id !== postId));
 
-      if (!data.isComplete) {
+      if (!data?.isComplete) {
         await fetchPendingPosts();
       }
 
@@ -305,15 +297,7 @@ export default function VotePage() {
       if (!post) return;
 
       if (post.hasLiked) {
-        const res = await fetch(`/api/posts/${postId}/likes`, {
-          method: 'DELETE',
-          credentials: 'include'
-        });
-
-        if (!res.ok) {
-          console.error('Like delete error');
-          return;
-        }
+        await unlikePost(postId);
 
         setPosts(posts.map(p =>
           p.id === postId
@@ -321,15 +305,7 @@ export default function VotePage() {
             : p
         ));
       } else {
-        const res = await fetch(`/api/posts/${postId}/likes`, {
-          method: 'POST',
-          credentials: 'include'
-        });
-
-        if (!res.ok) {
-          console.error('Like error');
-          return;
-        }
+        await likePost(postId);
 
         setPosts(posts.map(p =>
           p.id === postId
@@ -344,17 +320,7 @@ export default function VotePage() {
 
   const handleComment = async (postId: string, text: string) => {
     try {
-      const res = await fetch(`/api/posts/${postId}/comments`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text }),
-        credentials: 'include'
-      });
-
-      if (!res.ok) {
-        console.error('Comment post error');
-        return;
-      }
+      await createComment(postId, text);
 
       setPosts(posts.map(p =>
         p.id === postId
@@ -382,12 +348,8 @@ export default function VotePage() {
   const fetchComments = async (postId: string) => {
     try {
       setLoadingComments({ ...loadingComments, [postId]: true });
-      const res = await fetch(`/api/posts/${postId}/comments`, { credentials: 'include' });
-
-      if (res.ok) {
-        const data = await res.json();
-        setComments({ ...comments, [postId]: data });
-      }
+      const data = await getComments(postId);
+      setComments({ ...comments, [postId]: data as Comment[] });
     } catch (err) {
       console.error('Fetch comments error:', err);
     } finally {
@@ -399,15 +361,7 @@ export default function VotePage() {
     if (!confirm('コメントを削除しますか？')) return;
 
     try {
-      const res = await fetch(`/api/posts/${postId}/comments/${commentId}`, {
-        method: 'DELETE',
-        credentials: 'include'
-      });
-
-      if (!res.ok) {
-        console.error('Delete comment error');
-        return;
-      }
+      await deleteComment(postId, commentId);
 
       setComments({
         ...comments,

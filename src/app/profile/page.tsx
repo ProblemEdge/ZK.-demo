@@ -7,6 +7,10 @@ import ProfileHeader from '../components/ProfileHeader';
 import QuestOverlayNew from '../components/QuestOverlayNew';
 import Badges, { BadgeData } from '../components/Badges';
 import { useAuth } from '../context/AuthContext';
+import { getMe } from '@/actions/auth';
+import { getMyPosts, resetShotTokens } from '@/actions/post';
+import { getUserBadges } from '@/actions/user';
+import { getTodayQuests } from '@/actions/quest';
 
 interface User {
   id: string;
@@ -87,13 +91,8 @@ function ProfilePageContent() {
 
   const fetchLatestUser = async () => {
     try {
-      const res = await fetch('/api/auth/me', {
-        cache: 'no-store'
-      });
-      if (res.ok) {
-        const userData = await res.json();
-        setUser(userData);
-      }
+      const userData = await getMe();
+      setUser(userData as User);
     } catch (error) {
       console.error('Error fetching latest user:', error);
     }
@@ -101,11 +100,8 @@ function ProfilePageContent() {
 
   const fetchMyPosts = async () => {
     try {
-      const res = await fetch('/api/posts/my-posts');
-      if (res.ok) {
-        const data = await res.json();
-        setPosts(data);
-      }
+      const data = await getMyPosts();
+      setPosts(data as Post[]);
     } catch (error) {
       console.error('Error fetching posts:', error);
     }
@@ -113,14 +109,8 @@ function ProfilePageContent() {
 
   const fetchMyBadges = async (userId: string) => {
     try {
-      const res = await fetch(`/api/users/${userId}/badges`, {
-        cache: 'no-store'
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        setBadges(data);
-      }
+      const data = await getUserBadges(userId);
+      setBadges(data as BadgeData[]);
     } catch (error) {
       console.error('Error fetching badges:', error);
     }
@@ -130,12 +120,8 @@ function ProfilePageContent() {
   const handleResetTokens = async () => {
     setResetLoading(true);
     try {
-      const res = await fetch('/api/posts/shot-tokens/reset', {
-        method: 'POST',
-      });
-      if (res.ok) {
-        window.location.reload();
-      }
+      await resetShotTokens();
+      window.location.reload();
     } catch (error) {
       console.error('Error resetting tokens:', error);
     } finally {
@@ -281,10 +267,9 @@ function ProfilePageContent() {
       <div className="mx-3 mt-6 grid grid-cols-2 gap-4">
         <button
           onClick={() => {
-            fetch('/api/quests/today')
-              .then(res => res.json())
-              .then(data => {
-                if (data.quests) setQuests(data.quests);
+            getTodayQuests()
+              .then((data: any) => {
+                if (data?.quests) setQuests(data.quests);
                 setShowQuestOverlay(true);
               })
               .catch(err => console.error('クエスト取得エラー:', err));

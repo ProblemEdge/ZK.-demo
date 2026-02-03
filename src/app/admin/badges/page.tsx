@@ -2,6 +2,15 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { 
+  verifyAdmin, 
+  getAllBadges, 
+  createBadge, 
+  awardBadge, 
+  revokeBadge, 
+  deleteBadge
+} from '@/actions/badge';
+import { searchUsers } from '@/actions/user';
 
 interface Badge {
   id: string;
@@ -46,33 +55,21 @@ export default function BadgeAdminPage() {
 
   const handleLogin = async () => {
     try {
-      const res = await fetch('/api/admin/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ accessKey })
-      });
-
-      if (res.ok) {
-        setAuthenticated(true);
-        localStorage.setItem('admin-key', accessKey);
-        fetchBadges();
-      } else {
-        alert('アクセスキーが正しくありません');
-      }
+      await verifyAdmin(accessKey);
+      setAuthenticated(true);
+      localStorage.setItem('admin-key', accessKey);
+      fetchBadges();
     } catch (error) {
       console.error('認証エラー:', error);
-      alert('認証に失敗しました');
+      alert('アクセスキーが正しくありません');
     }
   };
 
   const fetchBadges = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/badges');
-      if (res.ok) {
-        const data = await res.json();
-        setBadges(data);
-      }
+      const data = await getAllBadges();
+      setBadges(data as Badge[]);
     } catch (error) {
       console.error('バッジ取得エラー:', error);
     } finally {
@@ -83,20 +80,10 @@ export default function BadgeAdminPage() {
   const handleCreateBadge = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch('/api/badges', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newBadge)
-      });
-
-      if (res.ok) {
-        alert('バッジを作成しました');
-        setNewBadge({ name: '', displayName: '', description: '', imageUrl: '' });
-        fetchBadges();
-      } else {
-        const data = await res.json();
-        alert(`エラー: ${data.error}`);
-      }
+      await createBadge(newBadge);
+      alert('バッジを作成しました');
+      setNewBadge({ name: '', displayName: '', description: '', imageUrl: '' });
+      fetchBadges();
     } catch (error) {
       console.error('バッジ作成エラー:', error);
       alert('バッジの作成に失敗しました');
@@ -106,20 +93,10 @@ export default function BadgeAdminPage() {
   const handleAwardBadge = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch('/api/badges/award', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(awardForm)
-      });
-
-      if (res.ok) {
-        alert('バッジを付与しました');
-        setAwardForm({ userId: '', badgeName: '' });
-        fetchBadges();
-      } else {
-        const data = await res.json();
-        alert(`エラー: ${data.error}`);
-      }
+      await awardBadge(awardForm);
+      alert('バッジを付与しました');
+      setAwardForm({ userId: '', badgeName: '' });
+      fetchBadges();
     } catch (error) {
       console.error('バッジ付与エラー:', error);
       alert('バッジの付与に失敗しました');
@@ -131,20 +108,10 @@ export default function BadgeAdminPage() {
     if (!confirm('本当にバッジをはく奪しますか？')) return;
     
     try {
-      const res = await fetch('/api/badges/award', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(revokeForm)
-      });
-
-      if (res.ok) {
-        alert('バッジをはく奪しました');
-        setRevokeForm({ userId: '', badgeName: '' });
-        fetchBadges();
-      } else {
-        const data = await res.json();
-        alert(`エラー: ${data.error}`);
-      }
+      await revokeBadge(revokeForm);
+      alert('バッジをはく奪しました');
+      setRevokeForm({ userId: '', badgeName: '' });
+      fetchBadges();
     } catch (error) {
       console.error('バッジはく奪エラー:', error);
       alert('バッジのはく奪に失敗しました');
@@ -155,17 +122,9 @@ export default function BadgeAdminPage() {
     if (!confirm(`「${badgeName}」を削除しますか？このバッジを持つすべてのユーザーから削除されます。`)) return;
     
     try {
-      const res = await fetch(`/api/badges/${badgeId}`, {
-        method: 'DELETE'
-      });
-
-      if (res.ok) {
-        alert('バッジを削除しました');
-        fetchBadges();
-      } else {
-        const data = await res.json();
-        alert(`エラー: ${data.error}`);
-      }
+      await deleteBadge(badgeId);
+      alert('バッジを削除しました');
+      fetchBadges();
     } catch (error) {
       console.error('バッジ削除エラー:', error);
       alert('バッジの削除に失敗しました');
@@ -179,11 +138,8 @@ export default function BadgeAdminPage() {
     }
 
     try {
-      const res = await fetch(`/api/users?q=${encodeURIComponent(searchQuery)}`);
-      if (res.ok) {
-        const data = await res.json();
-        setSearchResults(data.slice(0, 10));
-      }
+      const data = await searchUsers(searchQuery);
+      setSearchResults((data as any[]).slice(0, 10));
     } catch (error) {
       console.error('ユーザー検索エラー:', error);
     }
@@ -203,18 +159,14 @@ export default function BadgeAdminPage() {
     const savedKey = localStorage.getItem('admin-key');
     if (savedKey) {
       setAccessKey(savedKey);
-      fetch('/api/admin/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ accessKey: savedKey })
-      }).then(res => {
-        if (res.ok) {
+      verifyAdmin(savedKey)
+        .then(() => {
           setAuthenticated(true);
           fetchBadges();
-        } else {
+        })
+        .catch(() => {
           localStorage.removeItem('admin-key');
-        }
-      });
+        });
     }
   }, []);
 

@@ -5,6 +5,16 @@ import { useRouter, useParams } from 'next/navigation';
 import BottomNav from '../../components/BottomNav';
 import ProfileHeader from '../../components/ProfileHeader';
 import Badges, { BadgeData } from '../../components/Badges';
+import { 
+  getUserProfile,
+  getUserPosts,
+  getUserBadges,
+  getUserFollowers,
+  followUser,
+  unfollowUser,
+  approveRequest,
+  rejectRequest
+} from '@/actions/user';
 
 interface UserProfile {
   id: string;
@@ -67,19 +77,11 @@ export default function UserProfilePage() {
 
   const fetchUser = async () => {
     try {
-      const res = await fetch(`/api/users/${userId}`, {
-        cache: 'no-store'
-      });
-
-      if (!res.ok) {
-        throw new Error('ユーザーが見つかりません');
-      }
-
-      const data = await res.json();
-      setUser(data.user);
-      setIsFriend(data.isFriend);
-      setIsRequestedByMe(data.isRequestedByMe || false);
-      setIsRequestingMe(data.isRequestingMe || false);
+      const data = await getUserProfile(userId);
+      setUser((data as any).user);
+      setIsFriend((data as any).isFriend);
+      setIsRequestedByMe((data as any).isRequestedByMe || false);
+      setIsRequestingMe((data as any).isRequestingMe || false);
     } catch (err) {
       console.error('Error fetching user:', err);
       router.push('/discover');
@@ -90,14 +92,8 @@ export default function UserProfilePage() {
 
   const fetchUserPosts = async () => {
     try {
-      const res = await fetch(`/api/users/${userId}/posts`, {
-        cache: 'no-store'
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        setPosts(data);
-      }
+      const data = await getUserPosts(userId);
+      setPosts(data as Post[]);
     } catch (err) {
       console.error('Error fetching posts:', err);
     }
@@ -105,14 +101,8 @@ export default function UserProfilePage() {
 
   const fetchUserBadges = async () => {
     try {
-      const res = await fetch(`/api/users/${userId}/badges`, {
-        cache: 'no-store'
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        setBadges(data);
-      }
+      const data = await getUserBadges(userId);
+      setBadges(data as BadgeData[]);
     } catch (err) {
       console.error('Error fetching badges:', err);
     }
@@ -120,18 +110,7 @@ export default function UserProfilePage() {
 
   const handleFriendRequest = async () => {
     try {
-      const res = await fetch('/api/follows/follow', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ targetUserId: userId })
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        alert(data.error);
-        return;
-      }
-
+      await followUser(userId);
       setIsFriend(true);
       setIsRequestedByMe(true);
     } catch (err) {
@@ -142,21 +121,9 @@ export default function UserProfilePage() {
 
   const handleRemoveFriend = async () => {
     try {
-      const res = await fetch('/api/follows/unfollow', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ targetUserId: userId })
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        alert(data.error);
-        return;
-      }
-
+      await unfollowUser(userId);
       setIsFriend(false);
       setIsRequestedByMe(false);
-      // 友達数を更新
       if (user) {
         setUser({ ...user, _count: { ...user._count, friends: Math.max(0, user._count.friends - 1) } });
       }
@@ -168,21 +135,9 @@ export default function UserProfilePage() {
 
   const handleApproveRequest = async () => {
     try {
-      const res = await fetch('/api/follows/requests/approve', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ requesterId: userId })
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        alert(data.error || '承認に失敗しました');
-        return;
-      }
-
+      await approveRequest(userId);
       setIsRequestingMe(false);
       setIsFriend(true);
-      // 友達数を更新
       if (user) {
         setUser({ ...user, _count: { ...user._count, friends: user._count.friends + 1 } });
       }
@@ -194,20 +149,8 @@ export default function UserProfilePage() {
 
   const handleRejectRequest = async () => {
     try {
-      const res = await fetch('/api/follows/requests/reject', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ requesterId: userId })
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        alert(data.error || '拒否に失敗しました');
-        return;
-      }
-
+      await rejectRequest(userId);
       setIsRequestingMe(false);
-      // 友達数を更新
       if (user) {
         setUser({ ...user, _count: { ...user._count, friends: Math.max(0, user._count.friends - 1) } });
       }
@@ -220,15 +163,9 @@ export default function UserProfilePage() {
   const fetchFriends = async () => {
     try {
       setFriendsLoading(true);
-      const res = await fetch(`/api/users/${userId}/followers`, {
-        cache: 'no-store'
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        setFriends(data);
-        setShowFriendsModal(true);
-      }
+      const data = await getUserFollowers(userId);
+      setFriends(data as FollowUser[]);
+      setShowFriendsModal(true);
     } catch (err) {
       console.error('Error fetching friends:', err);
       alert('フレンド一覧の取得に失敗しました');
@@ -239,19 +176,7 @@ export default function UserProfilePage() {
 
   const handleFriendRequestFromList = async (targetUserId: string) => {
     try {
-      const res = await fetch('/api/follows/follow', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ targetUserId })
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        alert(data.error);
-        return;
-      }
-
-      // リストを更新
+      await followUser(targetUserId);
       setFriends(friends.map(f => f.id === targetUserId ? { ...f, isFriend: true } : f));
     } catch (err) {
       console.error('Friend request error:', err);
@@ -261,19 +186,7 @@ export default function UserProfilePage() {
 
   const handleRemoveFriendFromList = async (targetUserId: string) => {
     try {
-      const res = await fetch('/api/follows/unfollow', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ targetUserId })
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        alert(data.error);
-        return;
-      }
-
-      // リストを更新
+      await unfollowUser(targetUserId);
       setFriends(friends.filter(f => f.id !== targetUserId));
     } catch (err) {
       console.error('Remove friend error:', err);

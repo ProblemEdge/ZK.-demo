@@ -62,7 +62,7 @@ export default function DiscoverPage() {
     handleUnfollow,
     handleApproveRequest,
     handleRejectRequest,
-  } = useFriendActions(refresh);
+  } = useFriendActions(refresh, setUsers);
 
   // リクエスト取得
   useEffect(() => {
