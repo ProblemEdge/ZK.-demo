@@ -467,12 +467,6 @@ export default function DiscoverPage() {
               <StatButton 
                 type="gem" 
                 label="ジェム" 
-                onClick={() => setRankingType('level')}
-                active={rankingType === 'level'}
-              />
-              <StatButton 
-                type="gem" 
-                label="ジェム" 
                 onClick={() => setRankingType('gems')}
                 active={rankingType === 'gems'}
               />

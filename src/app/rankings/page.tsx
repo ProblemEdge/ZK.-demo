@@ -92,6 +92,22 @@ export default function RankingsPage() {
     }
   };
 
+  const rankingTabs: { type: RankingType; label: string; icon: string }[] = [
+    { type: 'level', label: 'LV', icon: '📈' },
+    { type: 'gems', label: 'ジェム', icon: '💎' },
+    { type: 'votes', label: 'もらった投票', icon: '🗳️' },
+    { type: 'voted', label: '投票した数', icon: '✅' },
+    { type: 'likes', label: 'いいね数', icon: '❤️' },
+    { type: 'quest-speed', label: 'クエスト速度', icon: '⚡' }
+  ];
+
+  const uniqueRankingTabs = rankingTabs.filter((item, index, self) => {
+    const firstMatchIndex = self.findIndex(
+      tab => tab.type === item.type || tab.label === item.label
+    );
+    return firstMatchIndex === index;
+  });
+
   return (
     <div className="min-h-screen bg-gray-900 pb-24" style={{ paddingBottom: 'calc(6rem + var(--safe-area-bottom))' }}>
       <div className="fixed left-0 right-0 top-0 z-40" style={{ paddingTop: 'var(--safe-area-top)' }}>
@@ -106,16 +122,7 @@ export default function RankingsPage() {
       {/* ランキングタイプ選択 */}
       <div className="pt-36 px-3 pb-3">
         <div className="grid grid-cols-3 gap-2">
-          {(
-            [
-              { type: 'level' as RankingType, label: 'LV', icon: '📈' },
-              { type: 'gems' as RankingType, label: 'ジェム', icon: '💎' },
-              { type: 'votes' as RankingType, label: 'もらった投票', icon: '🗳️' },
-              { type: 'voted' as RankingType, label: '投票した数', icon: '✅' },
-              { type: 'likes' as RankingType, label: 'いいね数', icon: '❤️' },
-              { type: 'quest-speed' as RankingType, label: 'クエスト速度', icon: '⚡' }
-            ]
-          ).map(item => (
+          {uniqueRankingTabs.map(item => (
             <button
               key={item.type}
               onClick={() => {
