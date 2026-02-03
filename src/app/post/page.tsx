@@ -1,21 +1,27 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import QuestOverlayNew from '../components/QuestOverlayNew';
 
-interface Quest {
-  id: number;
-  title: string;
-}
+// 型とヘルパーのインポート
+import type { Quest, VisibilityScope, VisibilityDuration } from './_types';
+import { dataUrlToFile, hasEdits as checkHasEdits, confirmLeave } from './_helpers';
 
-interface ShotTokens {
-  remaining: number;
-  total: number;
-}
+// カスタムフックのインポート
+import { useCamera } from './_hooks/useCamera';
+import { useLocation } from './_hooks/useLocation';
+import { useTokens } from './_hooks/useTokens';
+import { usePostSubmit } from './_hooks/usePostSubmit';
+import { useSwipeSubmit } from './_hooks/useSwipeSubmit';
+
+// コンポーネントのインポート
+import CameraView from './_components/CameraView';
 
 export default function NewPostPage() {
   const router = useRouter();
+  
+  // 基本的なステート
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState('');
   const [imageDataUrl, setImageDataUrl] = useState('');
@@ -24,30 +30,11 @@ export default function NewPostPage() {
   const [caption, setCaption] = useState('');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [customTagInput, setCustomTagInput] = useState('');
-  const [visibilityScope, setVisibilityScope] = useState<'PUBLIC' | 'FRIENDS'>('PUBLIC');
-  const [visibilityDuration, setVisibilityDuration] = useState<number | 'unlimited'>(1440);
-  const [latitude, setLatitude] = useState<number | null>(null);
-  const [longitude, setLongitude] = useState<number | null>(null);
-  const [locationName, setLocationName] = useState('');
-  const [locating, setLocating] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [visibilityScope, setVisibilityScope] = useState<VisibilityScope>('PUBLIC');
+  const [visibilityDuration, setVisibilityDuration] = useState<VisibilityDuration>(1440);
   const [showImageModal, setShowImageModal] = useState(false);
   const [showTagModal, setShowTagModal] = useState(false);
-  const [isSwiping, setIsSwiping] = useState(false);
-  const [swipeStartY, setSwipeStartY] = useState(0);
-  const [swipeProgress, setSwipeProgress] = useState(0);
-  const [isSending, setIsSending] = useState(false);
-  const [sendingProgress, setSendingProgress] = useState(0);
-  const [showPlane, setShowPlane] = useState(false);
-  const submitDoneRef = useRef(false);
-  const submitAbortRef = useRef<AbortController | null>(null);
-  
-  // カメラ関連
   const [isPhotoConfirmed, setIsPhotoConfirmed] = useState(false);
-  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // クエスト関連
   const [isQuestMode, setIsQuestMode] = useState(false);
@@ -55,16 +42,53 @@ export default function NewPostPage() {
   const [selectedQuestId, setSelectedQuestId] = useState<string | null>(null);
   const [showQuestSelector, setShowQuestSelector] = useState(false);
 
-  // ショットトークン
-  const [tokens, setTokens] = useState<ShotTokens | null>(null);
-  const [isLimitReached, setIsLimitReached] = useState(false);
-  const [limitInfo, setLimitInfo] = useState<{ limit: number; resetAt?: string } | null>(null);
-
-  const redirectToLimit = useCallback((limit?: number, resetAt?: string) => {
-    const limitValue = limit ?? 5;
-    const resetAtParam = resetAt ? encodeURIComponent(resetAt) : '';
-    router.replace(`/post/limit?limit=${limitValue}&resetAt=${resetAtParam}`);
-  }, [router]);
+  // カスタムフックの使用
+  const { tokens, isLimitReached, limitInfo, redirectToLimit } = useTokens();
+  const { 
+    videoRef, 
+    canvasRef, 
+    fileInputRef, 
+    toggleFacingMode, 
+    stopStream 
+  } = useCamera(isPhotoConfirmed, isLimitReached);
+  const { 
+    latitude, 
+    longitude, 
+    locationName, 
+    locating, 
+    setLocationName, 
+    handleUseCurrentLocation 
+  } = useLocation();
+  const {
+    isSending,
+    sendingProgress,
+    showPlane,
+    loading,
+    submitPost,
+    handleCancelSending,
+  } = usePostSubmit({
+    imageFile,
+    title,
+    caption,
+    selectedTags,
+    visibilityScope,
+    visibilityDuration,
+    latitude,
+    longitude,
+    locationName,
+    isQuestMode,
+    selectedQuestId,
+    limitInfo,
+  });
+  const {
+    isSwiping,
+    swipeProgress,
+    handleSwipeStart,
+    handleSwipeMove,
+    handleSwipeEnd,
+    setIsSwiping,
+    setSwipeProgress,
+  } = useSwipeSubmit();
 
   // クエスト取得
   useEffect(() => {
@@ -75,63 +99,6 @@ export default function NewPostPage() {
       })
       .catch(err => console.error('クエスト取得エラー:', err));
   }, []);
-
-  // ショットトークン取得と上限チェック
-  useEffect(() => {
-    fetch('/api/posts/shot-tokens')
-      .then(res => res.json())
-      .then(data => {
-        if (data.remaining !== undefined) {
-          const limit = data.limit ?? 5;
-          setTokens({ remaining: data.remaining, total: limit });
-          setLimitInfo({ limit, resetAt: data.resetAt });
-          setIsLimitReached(data.remaining === 0);
-
-          // 上限に達している場合は写真撮影画面に入れない
-          if (data.remaining === 0) {
-            redirectToLimit(limit, data.resetAt);
-          }
-        }
-      })
-      .catch(err => console.error('トークン取得エラー:', err));
-  }, [redirectToLimit]);
-
-  const startCamera = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode }
-      });
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
-    } catch (err) {
-      console.error('カメラアクセスエラー:', err);
-    }
-  };
-
-  const stopStream = useCallback(() => {
-    if (videoRef.current?.srcObject) {
-      const stream = videoRef.current.srcObject as MediaStream;
-      stream.getTracks().forEach(track => track.stop());
-      videoRef.current.srcObject = null;
-    }
-  }, []);
-
-  // カメラ起動
-  useEffect(() => {
-    if (isLimitReached) {
-      stopStream();
-      return;
-    }
-    if (!isPhotoConfirmed) {
-      startCamera();
-    } else {
-      stopStream();
-    }
-    return () => {
-      stopStream();
-    };
-  }, [facingMode, isPhotoConfirmed, stopStream]);
 
   const handleCapture = useCallback(() => {
     if (isLimitReached) {
@@ -206,196 +173,22 @@ export default function NewPostPage() {
     setIsPhotoConfirmed(false);
   };
 
-  const handleUseCurrentLocation = () => {
-    // すでに位置情報が設定されている場合はオフにする
-    if (latitude !== null && longitude !== null) {
-      setLatitude(null);
-      setLongitude(null);
-      setLocationName('');
-      return;
-    }
-
-    // 位置情報を取得
-    if (!navigator.geolocation) {
-      alert('位置情報がサポートされていません');
-      return;
-    }
-    setLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setLatitude(position.coords.latitude);
-        setLongitude(position.coords.longitude);
-        setLocating(false);
-      },
-      (error) => {
-        console.error('位置情報取得エラー:', error);
-        alert('位置情報の取得に失敗しました');
-        setLocating(false);
-      }
-    );
-  };
-
-  const submitPost = async () => {
-    if (!imageFile || isSending) return;
-    if (isLimitReached) {
-      redirectToLimit(limitInfo?.limit, limitInfo?.resetAt);
-      return;
-    }
-
-    const limitRes = await fetch('/api/posts/shot-tokens');
-    if (limitRes.ok) {
-      const limitData = await limitRes.json();
-      if (limitData?.remaining !== undefined) {
-        const limit = limitData.limit ?? 5;
-        setTokens({ remaining: limitData.remaining, total: limit });
-        setLimitInfo({ limit, resetAt: limitData.resetAt });
-        if (limitData.remaining === 0) {
-          setIsLimitReached(true);
-          redirectToLimit(limit, limitData.resetAt);
-          return;
-        }
-      }
-    }
-
-    submitDoneRef.current = false;
-    setIsSending(true);
-    setSendingProgress(0);
-    setShowPlane(false);
-    setLoading(true);
-    const controller = new AbortController();
-    submitAbortRef.current = controller;
-    try {
-      const uploadData = new FormData();
-      uploadData.append('image', imageFile);
-      const uploadRes = await fetch('/api/upload/post', {
-        method: 'POST',
-        body: uploadData,
-        signal: controller.signal
-      });
-      if (!uploadRes.ok) throw new Error('画像アップロード失敗');
-      const uploadJson = await uploadRes.json();
-
-      const postData: any = {
-        imageUrl: uploadJson.imageUrl,
-        title: title || undefined,
-        caption,
-        tags: selectedTags.join(','),
-        visibilityScope,
-        visibilityDuration: visibilityDuration === 'unlimited' ? null : visibilityDuration
-      };
-
-      if (latitude !== null && longitude !== null) {
-        postData.latitude = latitude;
-        postData.longitude = longitude;
-        if (locationName) postData.locationName = locationName;
-      }
-
-      if (isQuestMode && selectedQuestId) {
-        postData.questId = selectedQuestId;
-      }
-
-      console.log('投稿データ:', postData);
-      console.log('isQuestMode:', isQuestMode, 'selectedQuestId:', selectedQuestId);
-
-      const res = await fetch('/api/posts/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(postData),
-        signal: controller.signal
-      });
-
-      const responseData = await res.json();
-      console.log('API レスポンス:', responseData, '状態:', res.status);
-
-      if (!res.ok) throw new Error(responseData.error || '投稿作成失敗');
-
-      submitDoneRef.current = true;
-      setSendingProgress(100);
-      setShowPlane(true);
-      setTimeout(() => {
-        router.push('/feed');
-      }, 900);
-    } catch (err) {
-      if ((err as Error).name === 'AbortError') {
-        // 中止時は何もしない
-      } else {
-        console.error(err);
-        alert('投稿に失敗しました');
-      }
-      setIsSending(false);
-      setSendingProgress(0);
-      setShowPlane(false);
-    } finally {
-      setLoading(false);
-      submitAbortRef.current = null;
-    }
-  };
-
-  const handleCancelSending = () => {
-    submitAbortRef.current?.abort();
-    submitAbortRef.current = null;
-    submitDoneRef.current = false;
-    setIsSwiping(false);
-    setSwipeProgress(0);
-    setIsSending(false);
-    setSendingProgress(0);
-    setShowPlane(false);
-    setLoading(false);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    await submitPost();
-  };
-
-  useEffect(() => {
-    if (!isSending) return;
-    const interval = window.setInterval(() => {
-      setSendingProgress((prev) => {
-        const cap = submitDoneRef.current ? 100 : 90;
-        if (prev >= cap) return prev;
-        return Math.min(prev + 6, cap);
-      });
-    }, 120);
-
-    return () => window.clearInterval(interval);
-  }, [isSending]);
-
-  const dataUrlToFile = (dataUrl: string, filename: string) => {
-    const arr = dataUrl.split(',');
-    if (arr.length < 2) return null;
-    const mimeMatch = arr[0].match(/:(.*?);/);
-    const mime = mimeMatch ? mimeMatch[1] : 'image/jpeg';
-    const bstr = atob(arr[1]);
-    let n = bstr.length;
-    const u8arr = new Uint8Array(n);
-    while (n--) {
-      u8arr[n] = bstr.charCodeAt(n);
-    }
-    return new File([u8arr], filename, { type: mime });
-  };
-
-  const hasEdits = Boolean(
-    imageDataUrl ||
-      title ||
-      caption ||
-      selectedTags.length ||
-      visibilityScope !== 'PUBLIC' ||
-      visibilityDuration !== 1440 ||
-      latitude !== null ||
-      longitude !== null ||
-      locationName ||
-      isQuestMode ||
-      selectedQuestId
-  );
-
-  const confirmLeave = () => {
-    if (!hasEdits) return true;
-    return window.confirm('編集中の内容は破棄されます。よろしいですか？');
-  };
+  const hasEditsValue = checkHasEdits({
+    imageDataUrl,
+    title,
+    caption,
+    selectedTags,
+    visibilityScope,
+    visibilityDuration,
+    latitude,
+    longitude,
+    locationName,
+    isQuestMode,
+    selectedQuestId,
+  });
 
   const handleCancelFromCamera = () => {
-    if (!confirmLeave()) return;
+    if (!confirmLeave(hasEditsValue)) return;
     if (lastImageDataUrl) {
       setImageDataUrl(lastImageDataUrl);
       setImagePreview(lastImageDataUrl);
@@ -409,33 +202,13 @@ export default function NewPostPage() {
   };
 
   const handleCancelFromEdit = () => {
-    if (!confirmLeave()) return;
+    if (!confirmLeave(hasEditsValue)) return;
     router.back();
   };
 
-  const handleSwipeStart = (clientY: number) => {
-    if (isSending) return;
-    setIsSwiping(true);
-    setSwipeStartY(clientY);
-    setSwipeProgress(0);
-  };
-
-  const handleSwipeMove = (clientY: number) => {
-    if (!isSwiping) return;
-    const delta = swipeStartY - clientY;
-    const maxDistance = 240;
-    const progress = Math.max(0, Math.min(delta / maxDistance, 1));
-    setSwipeProgress(progress);
-  };
-
-  const handleSwipeEnd = () => {
-    if (!isSwiping) return;
-    setIsSwiping(false);
-    if (swipeProgress >= 1) {
-      submitPost();
-    } else {
-      setSwipeProgress(0);
-    }
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await submitPost(isLimitReached);
   };
 
   const hideNonPostUi = isSwiping || swipeProgress > 0;
@@ -443,106 +216,29 @@ export default function NewPostPage() {
   return (
     <div className="min-h-screen bg-black">
       {!isPhotoConfirmed ? (
-        <div className="relative w-full h-[100vh] bg-black overflow-hidden">
-          <video
-            ref={videoRef}
-            autoPlay
-            playsInline
-            muted
-            className="absolute inset-0 w-full h-full object-cover"
-          />
-
-          <canvas ref={canvasRef} className="hidden" />
-
-          {/* オーバーレイ */}
-          <div className="absolute inset-0 pointer-events-none">
-            <div className="absolute left-4 top-4" style={{ paddingTop: 'var(--safe-area-top)' }}>
-              <button
-                type="button"
-                onClick={handleCancelFromCamera}
-                className="pointer-events-auto"
-                aria-label="キャンセル"
-              >
-                <img src="/icon/cancel.svg" alt="キャンセル" className="w-6 h-6" />
-              </button>
-            </div>
-            <div className="absolute right-4 top-4" style={{ paddingTop: 'var(--safe-area-top)' }}>
-              <div className="pointer-events-auto bg-[#4b5563] rounded-md px-1 py-1">
-                <div className="flex gap-1">
-                  {Array.from({ length: 5 }).map((_, i) => {
-                    const remaining = tokens?.remaining ?? 0;
-                    return (
-                      <div
-                        key={i}
-                        className={`h-3 w-6 rounded-sm ${i < remaining ? 'bg-[#22c55e]' : 'bg-[#0B0C0F]'}`}
-                      />
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* モード切替 */}
-          <div className="absolute bottom-[140px] left-0 right-0 flex flex-col items-center gap-2 pointer-events-auto">
-            <button
-              type="button"
-              onClick={() => {
-                setIsQuestMode(prev => {
-                  const next = !prev;
-                  if (!next) {
-                    setSelectedQuestId(null);
-                    setShowQuestSelector(false);
-                  } else {
-                    setShowQuestSelector(true);
-                  }
-                  return next;
-                });
-              }}
-              className="flex items-center justify-center"
-              aria-label="投稿モード切替"
-            >
-              <img
-                src={isQuestMode ? '/icon/button_quest_post.svg' : '/icon/button_normal_post.svg'}
-                alt={isQuestMode ? 'クエスト投稿' : '通常投稿'}
-                className="h-9"
-              />
-            </button>
-            <div className="text-white text-sm font-semibold">
-              {isQuestMode ? (quests.find(q => q.id.toString() === selectedQuestId)?.title || '') : '松本を撮ろう！'}
-            </div>
-          </div>
-
-          {/* 下部ボタン */}
-          <div className="absolute bottom-8 left-0 right-0 flex items-center justify-center pointer-events-auto">
-            <div className="relative flex items-center justify-center w-full">
-              <button
-                type="button"
-                onClick={() => setFacingMode(prev => (prev === 'environment' ? 'user' : 'environment'))}
-                className="absolute left-10"
-                aria-label="カメラ反転"
-              >
-                <img src="/icon/Refresh cw.svg" alt="反転" className="w-7 h-7" />
-              </button>
-              <button
-                type="button"
-                onClick={handleCapture}
-                className="w-20 h-20 rounded-full border-4 border-white bg-white/10"
-                aria-label="撮影"
-              />
-            </div>
-          </div>
-
-          {/* フォールバック */}
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            capture="environment"
-            onChange={handleImageChange}
-            className="hidden"
-          />
-        </div>
+        <CameraView
+          videoRef={videoRef}
+          canvasRef={canvasRef}
+          fileInputRef={fileInputRef}
+          tokens={tokens}
+          quests={quests}
+          isQuestMode={isQuestMode}
+          selectedQuestId={selectedQuestId}
+          onCapture={handleCapture}
+          onToggleFacingMode={toggleFacingMode}
+          onCancel={handleCancelFromCamera}
+          onToggleQuestMode={() => {
+            setIsQuestMode(prev => {
+              const next = !prev;
+              if (!next) {
+                setSelectedQuestId(null);
+                setShowQuestSelector(false);
+              }
+              return next;
+            });
+          }}
+          onOpenQuestSelector={() => setShowQuestSelector(true)}
+        />
       ) : (
         <div className="min-h-screen bg-gradient-to-b from-[#0b0c0f] to-[#0f0f0f] px-4 pb-10" style={{ paddingTop: 'calc(1.5rem + var(--safe-area-top))' }}>
           {/* 左上の×ボタン */}
@@ -570,18 +266,18 @@ export default function NewPostPage() {
                 transition: isSwiping ? 'none' : isSending ? 'transform 0.9s ease-out' : 'transform 200ms ease',
                 opacity: isSending && showPlane ? 0 : 1
               }}
-              onTouchStart={(e) => handleSwipeStart(e.touches[0].clientY)}
+              onTouchStart={(e) => handleSwipeStart(e.touches[0].clientY, isSending)}
               onTouchMove={(e) => {
                 handleSwipeMove(e.touches[0].clientY);
               }}
-              onTouchEnd={handleSwipeEnd}
-              onMouseDown={(e) => handleSwipeStart(e.clientY)}
+              onTouchEnd={() => handleSwipeEnd(() => submitPost(isLimitReached))}
+              onMouseDown={(e) => handleSwipeStart(e.clientY, isSending)}
               onMouseMove={(e) => {
                 if (!isSwiping) return;
                 handleSwipeMove(e.clientY);
               }}
-              onMouseUp={handleSwipeEnd}
-              onMouseLeave={handleSwipeEnd}
+              onMouseUp={() => handleSwipeEnd(() => submitPost(isLimitReached))}
+              onMouseLeave={() => handleSwipeEnd(() => submitPost(isLimitReached))}
             >
               <div className="relative">
                 <img 
