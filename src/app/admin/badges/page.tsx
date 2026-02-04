@@ -9,8 +9,8 @@ import {
   awardBadge, 
   revokeBadge, 
   deleteBadge,
-  type Badge,
 } from '@/domains/badges/hooks';
+import type { Badge } from '@/domains/badges/schema';
 import { useUserSearch } from '@/domains/user/hooks';
 
 export default function BadgeAdminPage() {
@@ -370,7 +370,7 @@ export default function BadgeAdminPage() {
                     <p className="text-sm text-[#bfbdbd] mb-2">{badge.description}</p>
                   )}
                   <div className="flex items-center justify-between">
-                    <p className="text-xs text-[#00e676]">{badge._count.users}人が所持</p>
+                    <p className="text-xs text-[#00e676]">{badge._count?.users ?? 0}人が所持</p>
                     <button
                       onClick={() => handleDeleteBadge(badge.id, badge.displayName)}
                       className="px-3 py-1 bg-red-600/20 hover:bg-red-600/30 text-red-400 text-xs font-bold rounded border border-red-600/50 transition"

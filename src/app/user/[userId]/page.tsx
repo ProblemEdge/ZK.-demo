@@ -257,13 +257,13 @@ export default function UserProfilePage() {
             className="flex items-center gap-2 hover:opacity-80 transition"
           >
             <div>
-              <p className="text-[20px] font-bold text-white leading-none">{user._count.friends}</p>
+              <p className="text-[20px] font-bold text-white leading-none">{user._count?.friends ?? user.friendCount ?? 0}</p>
               <p className="text-[10px] text-[#bfbdbd] mt-0.5">友達</p>
             </div>
           </button>
           <div className="flex items-center gap-2">
             <div>
-              <p className="text-[20px] font-bold text-white leading-none">{user._count.posts}</p>
+              <p className="text-[20px] font-bold text-white leading-none">{user._count?.posts ?? user.postCount ?? 0}</p>
               <p className="text-[10px] text-[#bfbdbd] mt-0.5">投稿</p>
             </div>
           </div>
