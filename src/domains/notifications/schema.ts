@@ -9,10 +9,18 @@ export const notificationSchema = z.object({
   type: z.enum(['LIKE', 'COMMENT', 'FOLLOW', 'FRIEND_REQUEST', 'BADGE_AWARDED', 'QUEST_COMPLETED', 'POST_APPROVED', 'POST_REJECTED']),
   title: z.string(),
   message: z.string(),
+  body: z.string().nullable().optional(), // Alias for message for backward compat
   isRead: z.boolean(),
   createdAt: z.string().datetime(),
   relatedUserId: z.string().uuid().nullable().optional(),
   relatedPostId: z.string().uuid().nullable().optional(),
+  link: z.string().nullable().optional(),
+  actor: z.object({
+    id: z.string().uuid(),
+    username: z.string(),
+    displayName: z.string().nullable(),
+    avatarUrl: z.string().nullable(),
+  }).nullable().optional(),
   relatedUser: z.object({
     id: z.string().uuid(),
     username: z.string(),
