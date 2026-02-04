@@ -29,7 +29,7 @@ export function useCurrentUser() {
 }
 
 /**
- * 特定ユーザーのプロフィールを取得
+ * 特定ユーザーのプロフィールを取得（関係性情報含む）
  */
 export function useUserProfile(userId: string | null) {
   const { data, error, mutate, isLoading } = useSWR(
@@ -41,13 +41,23 @@ export function useUserProfile(userId: string | null) {
   );
 
   let user: User | null = null;
-  if (data) {
-    const parsed = userSchema.safeParse(data);
+  let isFriend = false;
+  let isRequestedByMe = false;
+  let isRequestingMe = false;
+
+  if (data?.user) {
+    const parsed = userSchema.safeParse(data.user);
     user = parsed.success ? parsed.data : null;
+    isFriend = data.isFriend || false;
+    isRequestedByMe = data.isRequestedByMe || false;
+    isRequestingMe = data.isRequestingMe || false;
   }
 
   return {
     user,
+    isFriend,
+    isRequestedByMe,
+    isRequestingMe,
     error,
     mutate,
     isLoading,

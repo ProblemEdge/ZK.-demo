@@ -10,12 +10,16 @@ export const userSchema = z.object({
   bio: z.string().max(500).nullable(),
   avatarUrl: z.string().url().nullable(),
   createdAt: z.string().datetime(),
-  postCount: z.number().int().min(0),
-  friendCount: z.number().int().min(0),
+  postCount: z.number().int().min(0).optional(),
+  friendCount: z.number().int().min(0).optional(),
   level: z.number().int().min(1),
   gems: z.number().int().min(0),
   experience: z.number().int().min(0),
-  completedQuestsCount: z.number().int().min(0),
+  completedQuestsCount: z.number().int().min(0).optional(),
+  _count: z.object({
+    posts: z.number().int().min(0),
+    friends: z.number().int().min(0),
+  }).optional(),
 });
 
 export type User = z.infer<typeof userSchema>;
