@@ -30,7 +30,7 @@ export default function FeedHeader({ tab, viewTab, onTabChange, onViewTabChange 
         onClick={handleLogoClick}
         className="flex items-center h-full cursor-pointer hover:opacity-80 transition"
       >
-        <img src="/icon_only_text.svg" alt="ZK Logo" className="h-10 w-auto" style={{ maxWidth: 120 }} />
+        <img src="/icon_only_text.svg" alt="ZK Logo" className="h-7 w-auto" style={{ maxWidth: 90 }} />
       </Link>
       
       {/* 右側のボタン群 */}
