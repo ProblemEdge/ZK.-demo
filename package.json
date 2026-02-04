@@ -25,7 +25,8 @@
     "react-leaflet": "^4.2.1",
     "react-pull-to-refresh": "^2.0.1",
     "swr": "^2.3.8",
-    "web-push": "^3.6.7"
+    "web-push": "^3.6.7",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
