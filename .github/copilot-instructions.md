@@ -24,18 +24,18 @@
 
 ## Project layout (重要)
 - ルート設定
-  - [package.json](package.json): スクリプト/依存
-  - [next.config.ts](next.config.ts): Next.js設定
-  - [eslint.config.mjs](eslint.config.mjs): ESLint設定
-  - [tsconfig.json](tsconfig.json): TS設定
-- Prisma
-  - [prisma/schema.prisma](prisma/schema.prisma): DBスキーマ
-  - [prisma/migrations](prisma/migrations): マイグレーション
-- ソースコード
-  - [src/app](src/app): App Router（ページ/ルート）
-  - [src/actions](src/actions): サーバーアクション
-  - [src/components](src/components): 共有コンポーネント
-  - [src/lib](src/lib): Prismaクライアント等
+  - [package.json](../package.json): スクリプト/依存
+  - [next.config.ts](../next.config.ts): Next.js設定
+  - [eslint.config.mjs](../eslint.config.mjs): ESLint設定
+  - [tsconfig.json](../tsconfig.json): TS設定
+Prisma
+  - [prisma/schema.prisma](../prisma/schema.prisma): DBスキーマ
+  - [prisma/migrations](../prisma/migrations): マイグレーション
+ソースコード
+  - [src/app](../src/app): App Router（ページ/ルート）
+  - [src/actions](../src/actions): サーバーアクション
+  - [src/components](../src/components): 共有コンポーネント
+  - [src/lib](../src/lib): Prismaクライアント等
 
 ## Agent guidance
 - まずこのファイルの指示を信頼すること。記載が不足/不明確な場合のみ検索する。
