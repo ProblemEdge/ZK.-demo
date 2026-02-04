@@ -51,6 +51,7 @@ export default function DiscoverPage() {
     rankingLoading,
     hasMoreRanking,
     fetchRanking,
+    setRankingLoading,
   } = useRanking(mainTab, rankingType, period, mode);
 
   const {
@@ -198,7 +199,7 @@ export default function DiscoverPage() {
                 <option value="year" className="bg-[#0b0c0f] text-white">今年</option>
               </select>
               <button
-                onClick={() => { setRankingLoading(true); setMode(mode === 'world' ? 'following' : 'world'); }}
+                onClick={() => { setMode(mode === 'world' ? 'following' : 'world'); }}
                 className="flex-1 h-[31px] border border-white rounded-[12px] flex items-center justify-center gap-2 text-white"
               >
                 <img src="/icon/Refresh cw.svg" alt="" className="w-5 h-5" />

@@ -58,5 +58,6 @@ export const useRanking = (mainTab: string, rankingType: RankingType, period: Pe
     rankingLoading,
     hasMoreRanking,
     fetchRanking,
+    setRankingLoading,
   };
 };
