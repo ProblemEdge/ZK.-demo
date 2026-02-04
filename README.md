@@ -1,3 +1,20 @@
+
+## コマンドスクリプトの整理について
+
+2026年2月、ルート直下にあった運用・管理用コマンド（.mjs/.js）は `scripts/` ディレクトリに移動しました。
+
+### 移動済みコマンド一覧
+
+- scripts/delete-all-posts.mjs
+- scripts/delete-base64-posts.mjs
+- scripts/delete-post.mjs
+- scripts/generate-vapid-keys.js
+- scripts/migrate-add-level-gems.mjs
+- scripts/reset-dev.mjs
+
+今後は scripts/ 配下から実行してください。
+
+---
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
