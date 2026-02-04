@@ -61,6 +61,18 @@ interface Comment {
   };
 }
 
+type VoteResponse = {
+  reward?: {
+    gems?: number;
+    exp?: number;
+    currentExp?: number;
+    expToNextLevel?: number;
+    level?: number;
+    message?: string;
+  };
+  isComplete?: boolean;
+};
+
 export default function VotePage() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
@@ -213,7 +225,7 @@ export default function VotePage() {
         votedPostIdsRef.current.delete(postId);
       }, 30000);
 
-      const data = await createVoteAction(postId, voteType);
+      const data = await createVoteAction(postId, voteType) as VoteResponse | null;
 
       // 報酬通知を表示
       if (data?.reward) {
