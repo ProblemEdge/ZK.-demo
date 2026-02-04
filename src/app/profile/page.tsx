@@ -5,58 +5,28 @@ import { useRouter } from 'next/navigation';
 import BottomNav from '../components/BottomNav';
 import ProfileHeader from '../components/ProfileHeader';
 import QuestOverlayNew from '../components/QuestOverlayNew';
-import Badges, { BadgeData } from '../components/Badges';
+import Badges from '../components/Badges';
 import { useAuth } from '../context/AuthContext';
-import { getMe } from '@/actions/auth';
-import { getMyPosts, resetShotTokens } from '@/actions/post';
-import { getUserBadges } from '@/actions/user';
-import { getTodayQuests } from '@/actions/quest';
-
-interface User {
-  id: string;
-  username: string;
-  displayName: string | null;
-  bio: string | null;
-  avatarUrl: string | null;
-  createdAt: string;
-  postCount: number;
-  friendCount: number;
-  level: number;
-  gems: number;
-  experience: number;
-  completedQuestsCount: number;
-}
-
-interface Post {
-  id: string;
-  imageUrl: string;
-  caption: string;
-  tags: string;
-  postedAt: string;
-  rejectedAt: string | null;
-  isApproved: boolean;
-  visibilityScope: 'PUBLIC' | 'FRIENDS';
-  visibilityDurationMinutes: number | null;
-  questId?: string | null;
-  quest?: {
-    id: string;
-    title: string;
-    description: string;
-    date: string;
-  } | null;
-}
+import { useTodayQuests } from '@/domains/quests/hooks';
+import { useMyPosts, resetShotTokens } from '@/domains/posts/hooks';
+import { useUserBadges } from '@/domains/badges/hooks';
+import type { UserBadge } from '@/domains/badges/schema';
+import type { Post } from '@/domains/posts/schema';
+import type { Quest } from '@/domains/quests/schema';
+import type { User } from '@/domains/user/schema';
 
 function ProfilePageContent() {
-  const [user, setUser] = useState<User | null>(null);
-  const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [resetLoading, setResetLoading] = useState(false);
   const [showQuestOverlay, setShowQuestOverlay] = useState(false);
-  const [quests, setQuests] = useState<any[]>([]);
-  const [badges, setBadges] = useState<BadgeData[]>([]);
   const router = useRouter();
-  const { user: authUser, status, refresh } = useAuth();
+  const { user, status, refresh } = useAuth();
+
+  // ドメイン層のフックを使用
+  const { posts, mutate: mutatePosts } = useMyPosts();
+  const { badges, mutate: mutateBadges } = useUserBadges(user?.id || null);
+  const { quests } = useTodayQuests();
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -69,10 +39,9 @@ function ProfilePageContent() {
       if (isInitialLoad) {
         // 初期ロード時は待機
         refresh().then(() => {
-          fetchLatestUser();
-          fetchMyPosts();
-          if (authUser?.id) {
-            fetchMyBadges(authUser.id);
+          mutatePosts();
+          if (user?.id) {
+            mutateBadges();
           }
           setLoading(false);
           setIsInitialLoad(false);
@@ -80,42 +49,13 @@ function ProfilePageContent() {
       } else {
         // タブ切り替え時はバックグラウンドで更新（ローディング状態は表示しない）
         refresh();
-        fetchLatestUser();
-        fetchMyPosts();
-        if (authUser?.id) {
-          fetchMyBadges(authUser.id);
+        mutatePosts();
+        if (user?.id) {
+          mutateBadges();
         }
       }
     }
-  }, [status]);
-
-  const fetchLatestUser = async () => {
-    try {
-      const userData = await getMe();
-      setUser(userData as User);
-    } catch (error) {
-      console.error('Error fetching latest user:', error);
-    }
-  };
-
-  const fetchMyPosts = async () => {
-    try {
-      const data = await getMyPosts();
-      setPosts(data as Post[]);
-    } catch (error) {
-      console.error('Error fetching posts:', error);
-    }
-  };
-
-  const fetchMyBadges = async (userId: string) => {
-    try {
-      const data = await getUserBadges(userId);
-      setBadges(data as BadgeData[]);
-    } catch (error) {
-      console.error('Error fetching badges:', error);
-    }
-  };
-
+  }, [status, user?.id, refresh, mutatePosts, mutateBadges, isInitialLoad, router]);
 
   const handleResetTokens = async () => {
     setResetLoading(true);
@@ -266,14 +206,7 @@ function ProfilePageContent() {
       {/* Quest and Shop Buttons */}
       <div className="mx-3 mt-6 grid grid-cols-2 gap-4">
         <button
-          onClick={() => {
-            getTodayQuests()
-              .then((data: any) => {
-                if (data?.quests) setQuests(data.quests);
-                setShowQuestOverlay(true);
-              })
-              .catch(err => console.error('クエスト取得エラー:', err));
-          }}
+          onClick={() => setShowQuestOverlay(true)}
           className="bg-[#14161a] border border-white rounded-2xl p-4 flex items-center gap-3 hover:bg-white/5 transition"
         >
           <img src="/icon/Compass_big.svg" alt="Quest" className="w-12 h-12" />

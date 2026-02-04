@@ -4,12 +4,13 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useUnreadNotificationCount } from '@/domains/notifications/hooks';
 
 export default function BottomNav() {
   const pathname = usePathname();
-  const [notificationCount, setNotificationCount] = useState(0);
   const [isClient, setIsClient] = useState(false);
   const { user } = useAuth();
+  const { count: notificationCount } = useUnreadNotificationCount();
 
   const imgFeedIcon = '/icon/feed_icon.svg';
   const imgPostIcon = '/icon/post_icon.svg';
@@ -30,33 +31,6 @@ export default function BottomNav() {
 
   useEffect(() => {
     setIsClient(true);
-  }, []);
-
-  useEffect(() => {
-    const fetchCount = async () => {
-      try {
-        if (document.visibilityState !== 'visible') return;
-        const res = await fetch('/api/notifications/unread-count');
-        if (!res.ok) return;
-        const data = await res.json();
-        setNotificationCount(data.count || 0);
-      } catch {
-        // noop
-      }
-    };
-
-    // タブを表示したときのみ取得（ポーリング廃止）
-    const handleVisibility = () => {
-      if (document.visibilityState === 'visible') {
-        fetchCount();
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibility);
-
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibility);
-    };
   }, []);
 
   const getLinkClasses = (href: string) =>

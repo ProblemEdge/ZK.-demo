@@ -2,30 +2,20 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { verifyAdmin } from '@/actions/badge';
 import { 
-  verifyAdmin, 
-  getAllBadges, 
+  useBadges, 
   createBadge, 
   awardBadge, 
   revokeBadge, 
-  deleteBadge
-} from '@/actions/badge';
-import { searchUsers } from '@/actions/user';
-
-interface Badge {
-  id: string;
-  name: string;
-  displayName: string;
-  description: string | null;
-  imageUrl: string;
-  _count: { users: number };
-}
+  deleteBadge,
+} from '@/domains/badges/hooks';
+import type { Badge } from '@/domains/badges/schema';
+import { useUserSearch } from '@/domains/user/hooks';
 
 export default function BadgeAdminPage() {
   const [authenticated, setAuthenticated] = useState(false);
   const [accessKey, setAccessKey] = useState('');
-  const [badges, setBadges] = useState<Badge[]>([]);
-  const [loading, setLoading] = useState(false);
   
   // バッジ作成フォーム
   const [newBadge, setNewBadge] = useState({
@@ -43,7 +33,6 @@ export default function BadgeAdminPage() {
 
   // ユーザー検索
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<any[]>([]);
 
   // バッジはく奪フォーム
   const [revokeForm, setRevokeForm] = useState({
@@ -53,27 +42,19 @@ export default function BadgeAdminPage() {
 
   const router = useRouter();
 
+  // ドメイン層のフックを使用
+  const { badges, mutate: mutateBadges, isLoading: loading } = useBadges();
+  const { users: searchResults } = useUserSearch(searchQuery);
+
   const handleLogin = async () => {
     try {
       await verifyAdmin(accessKey);
       setAuthenticated(true);
       localStorage.setItem('admin-key', accessKey);
-      fetchBadges();
+      mutateBadges();
     } catch (error) {
       console.error('認証エラー:', error);
       alert('アクセスキーが正しくありません');
-    }
-  };
-
-  const fetchBadges = async () => {
-    try {
-      setLoading(true);
-      const data = await getAllBadges();
-      setBadges(data as Badge[]);
-    } catch (error) {
-      console.error('バッジ取得エラー:', error);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -83,7 +64,7 @@ export default function BadgeAdminPage() {
       await createBadge(newBadge);
       alert('バッジを作成しました');
       setNewBadge({ name: '', displayName: '', description: '', imageUrl: '' });
-      fetchBadges();
+      mutateBadges();
     } catch (error) {
       console.error('バッジ作成エラー:', error);
       alert('バッジの作成に失敗しました');
@@ -96,7 +77,7 @@ export default function BadgeAdminPage() {
       await awardBadge(awardForm);
       alert('バッジを付与しました');
       setAwardForm({ userId: '', badgeName: '' });
-      fetchBadges();
+      mutateBadges();
     } catch (error) {
       console.error('バッジ付与エラー:', error);
       alert('バッジの付与に失敗しました');
@@ -111,7 +92,7 @@ export default function BadgeAdminPage() {
       await revokeBadge(revokeForm);
       alert('バッジをはく奪しました');
       setRevokeForm({ userId: '', badgeName: '' });
-      fetchBadges();
+      mutateBadges();
     } catch (error) {
       console.error('バッジはく奪エラー:', error);
       alert('バッジのはく奪に失敗しました');
@@ -124,24 +105,10 @@ export default function BadgeAdminPage() {
     try {
       await deleteBadge(badgeId);
       alert('バッジを削除しました');
-      fetchBadges();
+      mutateBadges();
     } catch (error) {
       console.error('バッジ削除エラー:', error);
       alert('バッジの削除に失敗しました');
-    }
-  };
-
-  const handleSearchUsers = async () => {
-    if (!searchQuery.trim()) {
-      setSearchResults([]);
-      return;
-    }
-
-    try {
-      const data = await searchUsers(searchQuery);
-      setSearchResults((data as any[]).slice(0, 10));
-    } catch (error) {
-      console.error('ユーザー検索エラー:', error);
     }
   };
 
@@ -151,8 +118,7 @@ export default function BadgeAdminPage() {
     } else {
       setAwardForm({ ...awardForm, userId });
     }
-    setSearchQuery(username);
-    setSearchResults([]);
+    setSearchQuery('');
   };
 
   useEffect(() => {
@@ -162,12 +128,14 @@ export default function BadgeAdminPage() {
       verifyAdmin(savedKey)
         .then(() => {
           setAuthenticated(true);
-          fetchBadges();
+          mutateBadges();
         })
         .catch(() => {
           localStorage.removeItem('admin-key');
         });
     }
+    // mutateBadges is stable from SWR, no need to include in deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (!authenticated) {
@@ -222,14 +190,7 @@ export default function BadgeAdminPage() {
                 <input
                   type="text"
                   value={searchQuery}
-                  onChange={(e) => {
-                    setSearchQuery(e.target.value);
-                    if (e.target.value.length >= 2) {
-                      handleSearchUsers();
-                    } else {
-                      setSearchResults([]);
-                    }
-                  }}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="ユーザー名で検索..."
                   className="w-full px-4 py-2 bg-[#0b0c0f] text-white border border-white rounded-lg focus:outline-none focus:border-[#00e676]"
                 />
@@ -411,7 +372,7 @@ export default function BadgeAdminPage() {
                     <p className="text-sm text-[#bfbdbd] mb-2">{badge.description}</p>
                   )}
                   <div className="flex items-center justify-between">
-                    <p className="text-xs text-[#00e676]">{badge._count.users}人が所持</p>
+                    <p className="text-xs text-[#00e676]">{badge._count?.users ?? 0}人が所持</p>
                     <button
                       onClick={() => handleDeleteBadge(badge.id, badge.displayName)}
                       className="px-3 py-1 bg-red-600/20 hover:bg-red-600/30 text-red-400 text-xs font-bold rounded border border-red-600/50 transition"

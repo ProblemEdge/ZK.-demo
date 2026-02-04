@@ -1,35 +1,25 @@
 'use client';
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import type { User } from '@/domains/user/schema';
 
-export interface AuthUser {
-  id: string;
-  username: string;
-  displayName: string | null;
-  bio: string | null;
-  avatarUrl: string | null;
-  createdAt: string;
-  postCount: number;
-  friendCount: number;
-  level: number;
-  gems: number;
-  experience: number;
-  completedQuestsCount: number;
-}
+// Export User type for backward compatibility
+export type { User };
+export type AuthUser = User;
 
 type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated';
 
 interface AuthContextValue {
-  user: AuthUser | null;
+  user: User | null;
   status: AuthStatus;
   refresh: () => Promise<void>;
-  setUser: (user: AuthUser | null) => void;
+  setUser: (user: User | null) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [status, setStatus] = useState<AuthStatus>('loading');
 
   const refresh = useCallback(async () => {

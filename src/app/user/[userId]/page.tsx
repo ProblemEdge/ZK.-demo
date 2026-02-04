@@ -4,40 +4,11 @@ import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import BottomNav from '../../components/BottomNav';
 import ProfileHeader from '../../components/ProfileHeader';
-import Badges, { BadgeData } from '../../components/Badges';
-import { 
-  getUserProfile,
-  getUserPosts,
-  getUserBadges,
-  getUserFollowers,
-  followUser,
-  unfollowUser,
-  approveRequest,
-  rejectRequest
-} from '@/actions/user';
-
-interface UserProfile {
-  id: string;
-  username: string;
-  displayName: string | null;
-  avatarUrl: string | null;
-  bio: string | null;
-  createdAt: string;
-  level: number;
-  gems: number;
-  experience: number;
-  _count: {
-    posts: number;
-    friends: number;
-  };
-}
-
-interface Post {
-  id: string;
-  imageUrl: string;
-  caption: string;
-  postedAt: string;
-}
+import Badges from '../../components/Badges';
+import { useUserProfile, useUserFollowers, followUser, unfollowUser } from '@/domains/user/hooks';
+import { useUserPosts } from '@/domains/posts/hooks';
+import { useUserBadges } from '@/domains/badges/hooks';
+import { approveRequest, rejectRequest } from '@/actions/user';
 
 interface FollowUser {
   id: string;
@@ -53,13 +24,6 @@ interface FollowUser {
 }
 
 export default function UserProfilePage() {
-  const [user, setUser] = useState<UserProfile | null>(null);
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [isFriend, setIsFriend] = useState(false);
-  const [isRequestedByMe, setIsRequestedByMe] = useState(false);
-  const [isRequestingMe, setIsRequestingMe] = useState(false);
-  const [badges, setBadges] = useState<BadgeData[]>([]);
   const [showFriendsModal, setShowFriendsModal] = useState(false);
   const [friends, setFriends] = useState<FollowUser[]>([]);
   const [friendsLoading, setFriendsLoading] = useState(false);
@@ -67,52 +31,16 @@ export default function UserProfilePage() {
   const params = useParams();
   const userId = params.userId as string;
 
-  useEffect(() => {
-    if (userId) {
-      fetchUser();
-      fetchUserPosts();
-      fetchUserBadges();
-    }
-  }, [userId]);
-
-  const fetchUser = async () => {
-    try {
-      const data = await getUserProfile(userId);
-      setUser((data as any).user);
-      setIsFriend((data as any).isFriend);
-      setIsRequestedByMe((data as any).isRequestedByMe || false);
-      setIsRequestingMe((data as any).isRequestingMe || false);
-    } catch (err) {
-      console.error('Error fetching user:', err);
-      router.push('/discover');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchUserPosts = async () => {
-    try {
-      const data = await getUserPosts(userId);
-      setPosts(data as Post[]);
-    } catch (err) {
-      console.error('Error fetching posts:', err);
-    }
-  };
-
-  const fetchUserBadges = async () => {
-    try {
-      const data = await getUserBadges(userId);
-      setBadges(data as BadgeData[]);
-    } catch (err) {
-      console.error('Error fetching badges:', err);
-    }
-  };
+  // ドメイン層のフックを使用
+  const { user, isFriend, isRequestedByMe, isRequestingMe, mutate: mutateUser } = useUserProfile(userId);
+  const { posts } = useUserPosts(userId);
+  const { badges } = useUserBadges(userId);
+  const { followers } = useUserFollowers(userId);
 
   const handleFriendRequest = async () => {
     try {
       await followUser(userId);
-      setIsFriend(true);
-      setIsRequestedByMe(true);
+      mutateUser();
     } catch (err) {
       console.error('Friend request error:', err);
       alert('フレンド申請に失敗しました');
@@ -122,11 +50,7 @@ export default function UserProfilePage() {
   const handleRemoveFriend = async () => {
     try {
       await unfollowUser(userId);
-      setIsFriend(false);
-      setIsRequestedByMe(false);
-      if (user) {
-        setUser({ ...user, _count: { ...user._count, friends: Math.max(0, user._count.friends - 1) } });
-      }
+      mutateUser();
     } catch (err) {
       console.error('Remove friend error:', err);
       alert('フレンド解除に失敗しました');
@@ -136,11 +60,7 @@ export default function UserProfilePage() {
   const handleApproveRequest = async () => {
     try {
       await approveRequest(userId);
-      setIsRequestingMe(false);
-      setIsFriend(true);
-      if (user) {
-        setUser({ ...user, _count: { ...user._count, friends: user._count.friends + 1 } });
-      }
+      mutateUser();
     } catch (err) {
       console.error('Approve friend request error:', err);
       alert('承認に失敗しました');
@@ -150,10 +70,7 @@ export default function UserProfilePage() {
   const handleRejectRequest = async () => {
     try {
       await rejectRequest(userId);
-      setIsRequestingMe(false);
-      if (user) {
-        setUser({ ...user, _count: { ...user._count, friends: Math.max(0, user._count.friends - 1) } });
-      }
+      mutateUser();
     } catch (err) {
       console.error('Reject friend request error:', err);
       alert('拒否に失敗しました');
@@ -163,8 +80,16 @@ export default function UserProfilePage() {
   const fetchFriends = async () => {
     try {
       setFriendsLoading(true);
-      const data = await getUserFollowers(userId);
-      setFriends(data as FollowUser[]);
+      // Map followers to FollowUser format
+      setFriends(followers.map(f => ({
+        id: f.id,
+        username: f.username,
+        displayName: f.displayName,
+        avatarUrl: f.avatarUrl,
+        bio: null,
+        _count: { posts: 0, friends: 0 },
+        isFriend: false,
+      })));
       setShowFriendsModal(true);
     } catch (err) {
       console.error('Error fetching friends:', err);
@@ -340,13 +265,13 @@ export default function UserProfilePage() {
             className="flex items-center gap-2 hover:opacity-80 transition"
           >
             <div>
-              <p className="text-[20px] font-bold text-white leading-none">{user._count.friends}</p>
+              <p className="text-[20px] font-bold text-white leading-none">{user._count?.friends ?? 0}</p>
               <p className="text-[10px] text-[#bfbdbd] mt-0.5">友達</p>
             </div>
           </button>
           <div className="flex items-center gap-2">
             <div>
-              <p className="text-[20px] font-bold text-white leading-none">{user._count.posts}</p>
+              <p className="text-[20px] font-bold text-white leading-none">{user._count?.posts ?? 0}</p>
               <p className="text-[10px] text-[#bfbdbd] mt-0.5">投稿</p>
             </div>
           </div>
