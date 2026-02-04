@@ -25,12 +25,12 @@ export default function FeedHeader({ tab, viewTab, onTabChange, onViewTabChange 
   return (
     <div className="bg-[#0b0c0f] border-b-4 border-white px-4 h-[65px] flex items-center justify-between">
       {/* ロゴ */}
-      <Link 
-        href="/feed" 
+      <Link
+        href="/feed"
         onClick={handleLogoClick}
-        className="text-white text-[32px] font-bold cursor-pointer hover:opacity-80 transition"
+        className="flex items-center h-full cursor-pointer hover:opacity-80 transition"
       >
-        ZK.
+        <img src="/icon_only_text.svg" alt="ZK Logo" className="h-10 w-auto" style={{ maxWidth: 120 }} />
       </Link>
       
       {/* 右側のボタン群 */}

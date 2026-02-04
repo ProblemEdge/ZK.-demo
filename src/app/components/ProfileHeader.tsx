@@ -17,7 +17,9 @@ export default function ProfileHeader() {
 
   return (
     <header className="bg-[#0b0c0f] border-b-4 border-white h-[65px] sticky top-0 z-50 flex items-center justify-between px-4">
-      <Link href="/feed" onClick={handleLogoClick} className="text-2xl font-bold text-white cursor-pointer hover:opacity-80 transition">ZK.</Link>
+      <Link href="/feed" onClick={handleLogoClick} className="flex items-center h-full cursor-pointer hover:opacity-80 transition">
+        <img src="/icon_only_text.svg" alt="ZK Logo" className="h-10 w-auto" style={{ maxWidth: 120 }} />
+      </Link>
       <h1 className="absolute left-1/2 transform -translate-x-1/2 text-2xl font-bold text-white">プロフィール</h1>
       <button
         type="button"

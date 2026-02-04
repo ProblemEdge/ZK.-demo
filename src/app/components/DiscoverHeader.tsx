@@ -21,7 +21,9 @@ export default function DiscoverHeader({ mainTab }: DiscoverHeaderProps) {
 
   return (
     <div className="px-4 h-[65px] border-b-4 border-white relative flex items-center">
-      <Link href="/feed" onClick={handleLogoClick} className="text-white text-[32px] font-bold cursor-pointer hover:opacity-80 transition">ZK.</Link>
+      <Link href="/feed" onClick={handleLogoClick} className="flex items-center h-full cursor-pointer hover:opacity-80 transition">
+        <img src="/icon_only_text.svg" alt="ZK Logo" className="h-10 w-auto" style={{ maxWidth: 120 }} />
+      </Link>
       <div className="absolute left-1/2 -translate-x-1/2 text-white text-[32px] font-bold whitespace-nowrap">
         {mainTab === 'search' ? '人々' : 'ランキング'}
       </div>

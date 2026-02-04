@@ -42,7 +42,7 @@ export default function RegisterPage() {
   return (
     <div className="relative min-h-0 min-h-svh h-svh w-full bg-gradient-to-b from-[#0b0c0f] to-[#0f0f0f] flex flex-col items-center justify-center overflow-hidden">
       <div className="mb-4 flex items-center justify-center z-10">
-        <span className="text-white text-[64px] font-bold select-none">ZK.</span>
+        <img src="/icon_only_text.svg" alt="ZK Logo" className="h-16 w-auto select-none" style={{ maxWidth: 200 }} />
       </div>
       <div className="w-full max-w-[352px] h-auto bg-gradient-to-b from-[rgba(20,22,26,0.2)] to-[rgba(102,105,110,0.2)] border-2 border-[#0e4b7f] rounded-[24px] shadow-[0px_8px_4px_0px_rgba(0,0,0,0.25)] flex items-center justify-center px-[21px] py-[25px] overflow-auto mx-auto">
         <div className="w-full flex flex-col items-center gap-[48px]">
