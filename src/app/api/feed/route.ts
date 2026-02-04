@@ -50,7 +50,7 @@ export async function GET(request: Request) {
       ]
     };
 
-    let votingWhereClause: any = {
+    const votingWhereClause: any = {
       isApproved: false
     };
 

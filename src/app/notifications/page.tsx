@@ -46,7 +46,7 @@ export default function NotificationsPage() {
     if (status === 'authenticated') {
       void fetchNotifications();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [status]);
 
   const fetchNotifications = async () => {
