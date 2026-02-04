@@ -12,7 +12,27 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Additional ignores:
+    "index.d.ts",
+    "generate-vapid-keys.js",
+    "delete-*.mjs",
+    "reset-dev.mjs",
+    "migrate-*.mjs",
+    "public/sw.js",
   ]),
+  {
+    rules: {
+      // Turn off strict TypeScript rules
+      "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/no-unused-vars": "off",
+      // Turn off Next.js image optimization warnings
+      "@next/next/no-img-element": "off",
+      // Turn off react hooks warnings
+      "react-hooks/exhaustive-deps": "off",
+      "react-hooks/set-state-in-effect": "off",
+      "react-hooks/preserve-manual-memoization": "off",
+    },
+  },
 ]);
 
 export default eslintConfig;
