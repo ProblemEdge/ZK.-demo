@@ -14,8 +14,11 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Additional ignores:
     "index.d.ts",
-    "*.mjs",
-    "*.js",
+    "generate-vapid-keys.js",
+    "delete-*.mjs",
+    "reset-dev.mjs",
+    "migrate-*.mjs",
+    "public/sw.js",
   ]),
   {
     rules: {
