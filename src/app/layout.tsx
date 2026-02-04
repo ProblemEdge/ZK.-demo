@@ -18,7 +18,7 @@ export const metadata: Metadata = {
   title: "ZK.",
   description: "ZK.",
   icons: {
-    icon: '/favicon.ico',
+    icon: '/favicon_new.ico',
   }
 };
 
