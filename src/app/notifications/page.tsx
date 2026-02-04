@@ -33,9 +33,12 @@ export default function NotificationsPage() {
   }, [status, unreadIds, router, mutate]);
 
   const handleOpen = (notification: Notification) => {
-    // Notifications don't have a link property in our schema, but we can construct one based on type
-    // For now, just keep it as placeholder
-    router.push('/feed');
+    // Navigate to the link if available, otherwise go to feed
+    if (notification.link) {
+      router.push(notification.link);
+    } else {
+      router.push('/feed');
+    }
   };
 
   return (

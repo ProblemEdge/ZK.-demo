@@ -134,7 +134,9 @@ export default function BadgeAdminPage() {
           localStorage.removeItem('admin-key');
         });
     }
-  }, [mutateBadges]);
+    // mutateBadges is stable from SWR, no need to include in deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (!authenticated) {
     return (

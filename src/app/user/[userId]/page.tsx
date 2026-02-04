@@ -80,8 +80,16 @@ export default function UserProfilePage() {
   const fetchFriends = async () => {
     try {
       setFriendsLoading(true);
-      // followersはすでにフックから取得しているので、それを使う
-      setFriends(followers as unknown as FollowUser[]);
+      // Map followers to FollowUser format
+      setFriends(followers.map(f => ({
+        id: f.id,
+        username: f.username,
+        displayName: f.displayName,
+        avatarUrl: f.avatarUrl,
+        bio: null,
+        _count: { posts: 0, friends: 0 },
+        isFriend: false,
+      })));
       setShowFriendsModal(true);
     } catch (err) {
       console.error('Error fetching friends:', err);
@@ -257,13 +265,13 @@ export default function UserProfilePage() {
             className="flex items-center gap-2 hover:opacity-80 transition"
           >
             <div>
-              <p className="text-[20px] font-bold text-white leading-none">{user._count?.friends ?? user.friendCount ?? 0}</p>
+              <p className="text-[20px] font-bold text-white leading-none">{user._count?.friends ?? 0}</p>
               <p className="text-[10px] text-[#bfbdbd] mt-0.5">友達</p>
             </div>
           </button>
           <div className="flex items-center gap-2">
             <div>
-              <p className="text-[20px] font-bold text-white leading-none">{user._count?.posts ?? user.postCount ?? 0}</p>
+              <p className="text-[20px] font-bold text-white leading-none">{user._count?.posts ?? 0}</p>
               <p className="text-[10px] text-[#bfbdbd] mt-0.5">投稿</p>
             </div>
           </div>
