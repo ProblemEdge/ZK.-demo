@@ -31,7 +31,8 @@ export default function RootLayout({
     <html lang="ja" className="bg-gray-900">
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-        <link rel="manifest" href="/manifest.json" />
+          <link rel="manifest" href="/manifest.json?v=20260205" />
+          <link rel="icon" href="/favicon_new.ico?v=20260205" />
         <meta name="theme-color" content="#0B0C0F" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
