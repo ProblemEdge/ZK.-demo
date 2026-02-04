@@ -19,7 +19,7 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
-        source: '/favicon.ico',
+        source: '/favicon_new.ico',
         headers: [
           {
             key: 'Cache-Control',
