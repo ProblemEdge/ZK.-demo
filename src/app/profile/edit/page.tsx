@@ -114,8 +114,8 @@ export default function EditProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900">
-      <header className="bg-gradient-to-r from-gray-900 to-gray-800 border-b border-gray-700 p-4 shadow-md">
+    <div className="min-h-screen bg-[#0b0c0f]">
+      <header className="bg-[#0b0c0f] border-b-4 border-white p-4 shadow-md">
         <div className="flex items-center justify-between">
           <button
             onClick={() => router.back()}
@@ -137,7 +137,7 @@ export default function EditProfilePage() {
           )}
 
           {/* アバター画像 */}
-          <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
+          <div className="bg-[#0b0c0f] rounded-lg p-6 border border-gray-700">
             <label className="block text-sm font-medium text-white mb-4">
               プロフィール画像
             </label>
@@ -171,7 +171,7 @@ export default function EditProfilePage() {
           </div>
 
           {/* 表示名 */}
-          <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
+          <div className="bg-[#0b0c0f] rounded-lg p-6 border border-gray-700">
             <label className="block text-sm font-medium text-white mb-2">
               表示名
             </label>
@@ -189,7 +189,7 @@ export default function EditProfilePage() {
           </div>
 
           {/* 自己紹介 */}
-          <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
+          <div className="bg-[#0b0c0f] rounded-lg p-6 border border-gray-700">
             <label className="block text-sm font-medium text-white mb-2">
               自己紹介
             </label>
@@ -207,7 +207,7 @@ export default function EditProfilePage() {
           </div>
 
           {/* ユーザー名（変更不可） */}
-          <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
+          <div className="bg-[#0b0c0f] rounded-lg p-6 border border-gray-700">
             <label className="block text-sm font-medium text-white mb-2">
               ユーザー名（変更不可）
             </label>
@@ -242,7 +242,7 @@ export default function EditProfilePage() {
                 className={`w-full py-3 rounded-lg font-semibold transition border ${
                   permission === 'granted'
                     ? 'bg-green-600/20 text-green-300 border-green-600/50 cursor-default'
-                    : 'bg-blue-600 hover:bg-blue-500 text-white border-blue-500 shadow-lg shadow-blue-600/30'
+                    : 'bg-green-600 hover:bg-green-500 text-white border-green-500 shadow-lg shadow-green-600/30'
                 }`}
                 disabled={permission === 'granted'}
               >
