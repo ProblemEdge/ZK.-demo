@@ -46,6 +46,27 @@ export async function POST(request: Request) {
       }
     });
 
+    // --- 自動バッジ付与: early-access-badge ---
+    try {
+      const badge = await prisma.badge.findUnique({ where: { name: 'early-access-badge' } });
+      if (badge) {
+        const badgeWindowEnd = new Date(badge.createdAt.getTime() + 7 * 24 * 60 * 60 * 1000);
+        const cutoff = new Date('2026-02-13T23:59:59Z');
+
+        // 登録日時がバッジ公開から1週間以内、または2026-02-13までに登録された場合に付与
+        const registeredAt = user.createdAt;
+        if (registeredAt <= badgeWindowEnd || registeredAt <= cutoff) {
+          await prisma.userBadge.createMany({
+            data: [{ userId: user.id, badgeId: badge.id }],
+            skipDuplicates: true
+          });
+        }
+      }
+    } catch (err) {
+      // バッジ付与失敗は登録自体を失敗にしない（ログのみ）
+      console.error('Auto-award badge error:', err);
+    }
+
     return NextResponse.json({
       message: '登録成功',
       userId: user.id
