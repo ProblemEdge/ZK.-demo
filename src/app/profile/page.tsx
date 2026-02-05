@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import BottomNav from '../components/BottomNav';
 import ProfileHeader from '../components/ProfileHeader';
+import PostViewer from '../components/PostViewer';
 import QuestOverlayNew from '../components/QuestOverlayNew';
 import Badges, { BadgeData } from '../components/Badges';
 import { useAuth } from '../context/AuthContext';
@@ -56,6 +57,8 @@ function ProfilePageContent() {
   const [showQuestOverlay, setShowQuestOverlay] = useState(false);
   const [quests, setQuests] = useState<any[]>([]);
   const [badges, setBadges] = useState<BadgeData[]>([]);
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [viewerIndex, setViewerIndex] = useState(0);
   const router = useRouter();
   const { user: authUser, status, refresh } = useAuth();
 
@@ -305,7 +308,7 @@ function ProfilePageContent() {
         <p className="text-2xl font-bold text-white">あなたの投稿</p>
       </div>
 
-      {posts.length === 0 ? (
+        {posts.length === 0 ? (
         <div className="mx-4 bg-[#14161a] rounded-2xl p-8 text-center border border-white">
           <p className="text-[#bfbdbd]">まだ投稿がありません</p>
           <button
@@ -317,22 +320,21 @@ function ProfilePageContent() {
         </div>
       ) : (
         <div className="px-4 grid grid-cols-3 gap-2 mb-6">
-          {posts.map((post) => (
-            <div
-              key={post.id}
-              className="aspect-square bg-[#14161a] rounded-xl overflow-hidden border border-white relative group"
-            >
-              {post.imageUrl ? (
-                <img
-                  src={post.imageUrl}
-                  alt={post.caption}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-[#bfbdbd] text-2xl">
-                  📸
-                </div>
-              )}
+          {posts.map((post, i) => (
+            <div key={post.id} className="bg-[#14161a] rounded-xl overflow-hidden border border-white relative group">
+              <div style={{ position: 'relative', width: '100%', paddingTop: '140%' }}>
+                {post.imageUrl ? (
+                  <img
+                    src={post.imageUrl}
+                    alt={post.caption}
+                    className="absolute inset-0 w-full h-full object-cover"
+                    style={{ top: 0, left: 0 }}
+                    onClick={() => { setViewerIndex(i); setViewerOpen(true); }}
+                  />
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center text-[#bfbdbd] text-2xl">📸</div>
+                )}
+              </div>
               <button
                 onClick={() => handleDeletePost(post.id)}
                 className="absolute top-2 right-2 bg-black/60 text-white px-2 py-1 rounded hover:bg-red-600/80 transition"
@@ -348,6 +350,9 @@ function ProfilePageContent() {
       )}
 
       <BottomNav />
+      {viewerOpen && (
+        <PostViewer posts={posts} initialIndex={viewerIndex} onClose={() => setViewerOpen(false)} />
+      )}
       
       {/* クエストオーバーレイ */}
       <QuestOverlayNew
@@ -362,3 +367,5 @@ function ProfilePageContent() {
 export default function ProfilePage() {
   return <ProfilePageContent />;
 }
+
+  // viewer state for the page (placed after export to avoid moving large component)
