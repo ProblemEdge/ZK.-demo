@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useState } from "react";
+import { useAuth } from "../context/AuthContext";
 import Link from "next/link";
 import SimpleTag from "./SimpleTag";
 import { VoteOkButton, VoteNgButton } from "./VoteOkNgButton";
@@ -33,6 +34,7 @@ interface FeedCardProps {
   onVoteOk?: () => void;
   onVoteNg?: () => void;
   onDelete?: () => void;
+  authorId?: string;
   children?: React.ReactNode;
 }
 
@@ -93,9 +95,11 @@ export default function FeedCard({
   onVoteOk,
   onVoteNg,
   onDelete,
+  authorId,
   children,
 }: FeedCardProps) {
   const [isImageExpanded, setIsImageExpanded] = useState(false);
+  const { user: authUser } = useAuth();
 
   return (
     <>
@@ -119,8 +123,8 @@ export default function FeedCard({
                 <QuestTag>{questTag}</QuestTag>
               </div>
             )}
-            {/* 右上（削除ボタン） */}
-            {onDelete && (
+            {/* 右上（削除ボタン）: 投稿者が現在のユーザーでかつ onDelete が渡されているときのみ表示 */}
+            {onDelete && authorId && authUser?.id === authorId && (
               <button
                 onClick={(e) => { e.stopPropagation(); onDelete(); }}
                 className="absolute right-2 top-12 bg-black/60 text-white px-2 py-1 rounded hover:bg-red-600/80 transition"

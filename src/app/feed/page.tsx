@@ -207,6 +207,7 @@ export default function FeedPage() {
                   imageUrl={post.imageUrl}
                   userName={post.user.displayName || post.user.username}
                   userId={post.user.username}
+                  authorId={post.userId}
                   postedAt={post.postedAt}
                   title={shouldHideTitle ? undefined : post.title}
                   tags={post.tags ? post.tags.split(',').map((t: string) => t.trim()) : []}
