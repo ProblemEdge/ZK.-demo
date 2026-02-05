@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import type { User } from '../_types';
 import {
   followUser,
@@ -19,7 +19,7 @@ export const useFriendActions = (
   const [receivedRequests, setReceivedRequests] = useState<User[]>([]);
   const [requestsLoading, setRequestsLoading] = useState(false);
 
-  const fetchReceivedRequests = async () => {
+  const fetchReceivedRequests = useCallback(async () => {
     try {
       setRequestsLoading(true);
       const data = await getReceivedRequests();
@@ -30,7 +30,7 @@ export const useFriendActions = (
     } finally {
       setRequestsLoading(false);
     }
-  };
+  }, []);
 
   const handleFollow = async (targetUserId: string, e: React.MouseEvent) => {
     e.stopPropagation();
