@@ -145,7 +145,8 @@ export default function CommentModal({
                   value={commentText}
                   onChange={(event) => onCommentTextChange(event.target.value)}
                   placeholder="コメントを書く"
-                  className="flex-1 h-[42px] bg-[#14161A] border border-white rounded-[8px] px-3 text-white text-[14px] placeholder:text-white/40"
+                  className="flex-1 h-[42px] bg-[#14161A] border border-white rounded-[8px] px-3 text-white text-[16px] placeholder:text-white/40"
+                  // iOS Safari zooms to inputs with font-size < 16px; keep at least 16px to prevent auto-zoom
                 />
                 <button
                   type="submit"
