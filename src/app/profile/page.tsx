@@ -8,6 +8,7 @@ import QuestOverlayNew from '../components/QuestOverlayNew';
 import Badges, { BadgeData } from '../components/Badges';
 import { useAuth } from '../context/AuthContext';
 import { getMe } from '@/actions/auth';
+import { deletePost } from '@/actions/post';
 import { getMyPosts, resetShotTokens } from '@/actions/post';
 import { getUserBadges } from '@/actions/user';
 import { getTodayQuests } from '@/actions/quest';
@@ -132,6 +133,17 @@ function ProfilePageContent() {
   const handleLogout = () => {
     document.cookie = 'auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
     router.push('/login');
+  };
+
+  const handleDeletePost = async (postId: string) => {
+    if (!confirm('この投稿を削除してもよろしいですか？')) return;
+    try {
+      await deletePost(postId);
+      setPosts(prev => prev.filter(p => p.id !== postId));
+    } catch (err) {
+      console.error('投稿削除エラー:', err);
+      alert('削除に失敗しました');
+    }
   };
 
   if (!user) {
@@ -321,6 +333,13 @@ function ProfilePageContent() {
                   📸
                 </div>
               )}
+              <button
+                onClick={() => handleDeletePost(post.id)}
+                className="absolute top-2 right-2 bg-black/60 text-white px-2 py-1 rounded hover:bg-red-600/80 transition"
+                aria-label="投稿を削除"
+              >
+                🗑
+              </button>
             </div>
           ))}
         </div>

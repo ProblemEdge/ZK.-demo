@@ -32,6 +32,7 @@ interface FeedCardProps {
   onComment?: () => void;
   onVoteOk?: () => void;
   onVoteNg?: () => void;
+  onDelete?: () => void;
   children?: React.ReactNode;
 }
 
@@ -112,11 +113,21 @@ export default function FeedCard({
             </div>
           )}
           {/* 右上: QuestTag（クエストがある場合のみ表示） */}
-          {questTag && (
-            <div className="absolute right-2 top-2">
-              <QuestTag>{questTag}</QuestTag>
-            </div>
-          )}
+            {questTag && (
+              <div className="absolute right-2 top-2">
+                <QuestTag>{questTag}</QuestTag>
+              </div>
+            )}
+            {/* 右上（削除ボタン） */}
+            {onDelete && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onDelete(); }}
+                className="absolute right-2 top-12 bg-black/60 text-white px-2 py-1 rounded hover:bg-red-600/80 transition"
+                aria-label="投稿を削除"
+              >
+                🗑
+              </button>
+            )}
           {/* 左下: VoteStatusLabel */}
           {voteStatusType !== undefined && (
             <div className="absolute left-2 bottom-2">

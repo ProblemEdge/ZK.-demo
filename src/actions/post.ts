@@ -61,3 +61,10 @@ export const resetShotTokens = async () => {
   });
   return parseJsonOrThrow(res);
 };
+
+export const deletePost = async (postId: string) => {
+  const res = await authFetch(`/api/posts/${postId}`, {
+    method: 'DELETE'
+  });
+  return parseJsonOrThrow(res);
+};

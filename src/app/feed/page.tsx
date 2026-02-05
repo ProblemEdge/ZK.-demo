@@ -225,6 +225,17 @@ export default function FeedPage() {
                   onComment={() => handleToggleComments(post.id)}
                   onVoteOk={() => handleVote(post.id, 'approve', setAllPosts)}
                   onVoteNg={() => handleVote(post.id, 'reject', setAllPosts)}
+                  onDelete={async () => {
+                    if (!confirm('この投稿を削除してもよろしいですか？')) return;
+                    try {
+                      await (await import('@/actions/post')).deletePost(post.id);
+                      // 全投稿リストから削除
+                      setAllPosts(prev => prev.filter(p => p.id !== post.id));
+                    } catch (err) {
+                      console.error('投稿削除エラー:', err);
+                      alert('削除に失敗しました');
+                    }
+                  }}
                 >
                   {post.caption}
                 </FeedCard>
