@@ -21,14 +21,10 @@ export async function GET(request: Request) {
       userId: string;
     };
 
-    // 自分の投稿を取得（承認済み + 却下済み）
+    // 自分の投稿を取得（承認済み・却下済み・投票中を含む）
     const posts = await prisma.post.findMany({
       where: {
-        userId: decoded.userId,
-        OR: [
-          { isApproved: true },
-          { rejectedAt: { not: null } }
-        ]
+        userId: decoded.userId
       },
       select: {
         id: true,
@@ -53,7 +49,7 @@ export async function GET(request: Request) {
       orderBy: {
         postedAt: 'desc'
       },
-      take: 50 // 最新50件
+      take: 10 // 最新10件
     });
 
     const now = Date.now();
@@ -74,10 +70,9 @@ export async function GET(request: Request) {
         return withinDuration;
       }
 
-      return false;
+      // 上記以外は投票中（承認も却下もされていない）→オーナー自身のため表示する
+      return true;
     });
-
-    return NextResponse.json(filteredPosts);
 
     return NextResponse.json(filteredPosts);
 
