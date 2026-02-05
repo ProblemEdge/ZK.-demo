@@ -55,6 +55,9 @@ export default function FeedPage() {
     handleToggleComments,
     handleComment,
     handleDeleteComment,
+    fetchComments,
+    loadMoreComments,
+    commentsMeta,
   } = useComments();
   const { handleVote, processExpiredVotes } = useVotes();
   const { handleLike } = useLikes();
@@ -261,6 +264,11 @@ export default function FeedPage() {
         onCommentTextChange={setCommentText}
         onSubmit={handleSubmitComment}
         onDeleteComment={handleDeleteCommentWrapper}
+        onLoadMore={async () => {
+          if (!expandedPostId) return false;
+          return await loadMoreComments(expandedPostId);
+        }}
+        hasMore={expandedPostId ? (commentsMeta[expandedPostId]?.hasMore ?? false) : false}
       />
 
       {!expandedPostId && <BottomNav />}

@@ -11,6 +11,12 @@ export async function GET(
   try {
     const { postId } = await params;
 
+    const url = new URL(request.url);
+    const limitParam = url.searchParams.get('limit');
+    const offsetParam = url.searchParams.get('offset');
+    const limit = limitParam ? Math.max(1, Math.min(100, parseInt(limitParam, 10) || 10)) : 10;
+    const offset = offsetParam ? Math.max(0, parseInt(offsetParam, 10) || 0) : 0;
+
     const comments = await prisma.comment.findMany({
       where: { postId },
       include: {
@@ -25,7 +31,9 @@ export async function GET(
       },
       orderBy: {
         createdAt: 'desc'
-      }
+      },
+      take: limit,
+      skip: offset
     });
 
     return NextResponse.json(comments);

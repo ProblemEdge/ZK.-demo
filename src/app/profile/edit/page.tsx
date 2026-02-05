@@ -220,7 +220,7 @@ export default function EditProfilePage() {
           </div>
 
           {/* 通知設定 */}
-          <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
+          <div className="bg-[#0b0c0f] rounded-lg p-6 border border-gray-700">
             <label className="block text-sm font-medium text-white mb-2">
               通知設定
             </label>

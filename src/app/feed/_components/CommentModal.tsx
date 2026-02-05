@@ -1,3 +1,4 @@
+import React, { useRef, useEffect } from 'react';
 import type { Comment, User } from '../_types';
 
 interface CommentModalProps {
@@ -12,6 +13,8 @@ interface CommentModalProps {
   onCommentTextChange: (text: string) => void;
   onSubmit: (e: React.FormEvent) => void;
   onDeleteComment?: (commentId: string) => void;
+  onLoadMore?: () => Promise<boolean>;
+  hasMore?: boolean;
 }
 
 /**
@@ -29,9 +32,50 @@ export default function CommentModal({
   onCommentTextChange,
   onSubmit,
   onDeleteComment,
+  onLoadMore,
+  hasMore,
 }: CommentModalProps) {
   if (!isOpen) return null;
 
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const prevScrollHeightRef = useRef<number>(0);
+  const prevCommentsLengthRef = useRef<number>(comments.length);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    // 初回オープン時は下にスクロールして最新を表示
+    el.scrollTop = el.scrollHeight;
+    prevScrollHeightRef.current = el.scrollHeight;
+    prevCommentsLengthRef.current = comments.length;
+  }, [isOpen]);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const prevLen = prevCommentsLengthRef.current;
+    const newLen = comments.length;
+    const newScrollHeight = el.scrollHeight;
+    // コメントが prepend（上に追加）された場合、スクロール位置を維持する
+    if (newLen > prevLen) {
+      const added = newLen - prevLen;
+      const diff = newScrollHeight - prevScrollHeightRef.current;
+      if (diff > 0) {
+        el.scrollTop = el.scrollTop + diff;
+      }
+    }
+    prevCommentsLengthRef.current = newLen;
+    prevScrollHeightRef.current = newScrollHeight;
+  }, [comments]);
+
+  const handleScroll = async (e: React.UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    if (el.scrollTop < 60 && hasMore && onLoadMore && !loading) {
+      const prevHeight = el.scrollHeight;
+      await onLoadMore();
+      // loadMore により prepend されたら、scroll position は useEffect で調整されます
+    }
+  };
   return (
     <div
       className="fixed inset-0 z-[60] flex items-end justify-center bg-black/60"
@@ -50,7 +94,7 @@ export default function CommentModal({
           </svg>
         </div>
 
-        <div className="mt-4 space-y-3 flex-1 overflow-y-auto pr-1">
+        <div ref={containerRef} onScroll={handleScroll} className="mt-4 space-y-3 flex-1 overflow-y-auto pr-1">
           {loading ? (
             <p className="text-white/70 text-sm text-center">読み込み中...</p>
           ) : comments.length === 0 ? (
