@@ -18,7 +18,7 @@ export default function VoteHeader() {
   return (
     <div className="bg-[#0b0c0f] border-b-4 border-white px-4 h-[65px] grid grid-cols-3 items-center">
       <Link href="/feed" onClick={handleLogoClick} className="flex items-center h-full cursor-pointer hover:opacity-80 transition">
-        <img src="/icon_only_text.svg" alt="ZK Logo" className="h-10 w-auto" style={{ maxWidth: 120 }} />
+        <img src="/icon_only_text.svg" alt="ZK Logo" className="h-7 w-auto" style={{ maxWidth: 90 }} />
       </Link>
       <div className="text-white text-[32px] font-bold text-center">投票</div>
       <div className="flex justify-end">
