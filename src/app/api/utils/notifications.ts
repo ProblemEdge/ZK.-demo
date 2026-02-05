@@ -3,10 +3,15 @@ import { NotificationType } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 
 // VAPID設定
+const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+if (!VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) {
+  console.warn('[Notification] Missing VAPID keys. Push may fail.');
+}
+
 webpush.setVapidDetails(
   'mailto:your-email@example.com',
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
-  process.env.VAPID_PRIVATE_KEY!
+  VAPID_PUBLIC_KEY || '',
+  process.env.VAPID_PRIVATE_KEY || ''
 );
 
 export async function sendNotificationToUser(

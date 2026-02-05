@@ -36,6 +36,17 @@ export function useNotifications() {
       const registration = await navigator.serviceWorker.register('/sw.js');
       await navigator.serviceWorker.ready;
 
+      const existing = await registration.pushManager.getSubscription();
+      if (existing) {
+        // Re-send existing subscription to server to ensure it's stored/updated
+        await fetch('/api/notifications/subscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ subscription: existing.toJSON() })
+        });
+        return;
+      }
+
       const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(
