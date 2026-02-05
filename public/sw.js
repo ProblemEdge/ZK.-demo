@@ -1,9 +1,9 @@
-const CACHE_VERSION = 'v2';
+const CACHE_VERSION = 'v3';
 const CACHE_NAME = `site-static-${CACHE_VERSION}`;
 const URLS_TO_CACHE = [
   '/',
   '/manifest.json',
-  '/favicon.ico?v=2',
+  '/favicon.ico?v=3',
   '/icon-192x192.png',
   '/badge-72x72.png',
   '/sw.js'

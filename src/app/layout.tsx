@@ -18,7 +18,7 @@ export const metadata: Metadata = {
   title: "ZK.",
   description: "ZK.",
   icons: {
-    icon: '/favicon.ico?v=2',
+    icon: '/favicon.ico?v=3',
   }
 };
 
@@ -37,7 +37,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="ZK." />
         <meta name="mobile-web-app-capable" content="yes" />
-        <link rel="icon" href="/favicon.ico?v=2" />
+        <link rel="icon" href="/favicon.ico?v=3" />
         <style>{`
           :root {
             --safe-area-top: env(safe-area-inset-top, 0px);
