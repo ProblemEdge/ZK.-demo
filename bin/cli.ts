@@ -64,7 +64,9 @@ async function main() {
     process.exit(1);
   }
 
-  const output = await cmd.handler(parsedInput.data);
+  const output = await (cmd.handler as (arg: unknown) => Promise<unknown>)(
+    parsedInput.data
+  );
 
   const parsedOutput = OutputSchema.safeParse(output);
   if (!parsedOutput.success) {
