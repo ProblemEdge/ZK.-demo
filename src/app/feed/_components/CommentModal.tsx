@@ -100,23 +100,35 @@ export default function CommentModal({
           ) : comments.length === 0 ? (
             <p className="text-white/70 text-sm text-center">最初のコメントを投稿しよう</p>
           ) : (
-            comments.map((comment) => {
+            comments.map((comment, index) => {
               const isOwn = comment.user.id === currentUserId;
+              const prev = index > 0 ? comments[index - 1] : null;
+              const isConsecutiveSameUser = !!prev && prev.user.id === comment.user.id;
+              const showMeta = !isConsecutiveSameUser; // show avatar and username only when not consecutive
+              const wrapperTopMargin = index === 0 ? 'mt-0' : isConsecutiveSameUser ? 'mt-1' : 'mt-3';
+
               return (
-                <div key={comment.id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
+                <div key={comment.id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'} ${wrapperTopMargin}`}>
                   <div className={`flex items-end gap-2 ${isOwn ? 'flex-row-reverse' : ''}`}>
-                    <div className="w-8 h-8 rounded-full overflow-hidden bg-[#2a2d33] border border-white/40 flex items-center justify-center">
-                      {comment.user.avatarUrl ? (
-                        <img src={comment.user.avatarUrl} alt={comment.user.username} className="w-full h-full object-cover" />
-                      ) : (
-                        <span className="text-white text-[10px] font-bold">?</span>
-                      )}
-                    </div>
-                    <div className="max-w-[70%]">
-                      <div className={`text-[10px] text-white/70 mb-1 ${isOwn ? 'text-right' : ''}`}>
-                        @{comment.user.username}
+                    {showMeta ? (
+                      <div className="w-8 h-8 rounded-full overflow-hidden bg-[#2a2d33] border border-white/40 flex items-center justify-center">
+                        {comment.user.avatarUrl ? (
+                          <img src={comment.user.avatarUrl} alt={comment.user.username} className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-white text-[10px] font-bold">?</span>
+                        )}
                       </div>
-                      <div className="bg-[#1a1d22] border border-white/30 rounded-[12px] px-3 py-2 text-white text-[13px] whitespace-pre-wrap">
+                    ) : (
+                      // placeholder to keep alignment when avatar omitted
+                      <div className="w-8 h-8" />
+                    )}
+                    <div className="max-w-[70%]">
+                      {showMeta && (
+                        <div className={`text-[10px] text-white/70 mb-1 ${isOwn ? 'text-right' : ''}`}>
+                          @{comment.user.username}
+                        </div>
+                      )}
+                      <div className={`bg-[#1a1d22] border border-white/30 rounded-[12px] px-3 py-2 text-white text-[13px] whitespace-pre-wrap ${isConsecutiveSameUser ? 'mt-1' : ''}`}>
                         {comment.text}
                       </div>
                     </div>
