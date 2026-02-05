@@ -92,6 +92,7 @@ export default function FeedCard({
   onComment,
   onVoteOk,
   onVoteNg,
+  onDelete,
   children,
 }: FeedCardProps) {
   const [isImageExpanded, setIsImageExpanded] = useState(false);
