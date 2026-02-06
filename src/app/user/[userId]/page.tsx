@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import BottomNav from '../../components/BottomNav';
 import ProfileHeader from '../../components/ProfileHeader';
+import PostViewer from '../../components/PostViewer';
 import Badges, { BadgeData } from '../../components/Badges';
 import { 
   getUserProfile,
@@ -62,6 +63,8 @@ export default function UserProfilePage() {
   const [showFriendsModal, setShowFriendsModal] = useState(false);
   const [friends, setFriends] = useState<FollowUser[]>([]);
   const [friendsLoading, setFriendsLoading] = useState(false);
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [viewerIndex, setViewerIndex] = useState(0);
   const router = useRouter();
   const params = useParams();
   const userId = params.userId as string;
@@ -364,11 +367,11 @@ export default function UserProfilePage() {
           </div>
         ) : (
           <div className="grid grid-cols-3 gap-2">
-            {posts.map((post) => (
+            {posts.map((post, i) => (
               <div
                 key={post.id}
                 className="bg-gray-800 rounded-lg overflow-hidden border border-gray-700 hover:border-green-500 transition cursor-pointer aspect-square"
-                onClick={() => router.push(`/feed?postId=${post.id}`)}
+                onClick={() => { setViewerIndex(i); setViewerOpen(true); }}
               >
                 <img
                   src={post.imageUrl}
@@ -465,6 +468,9 @@ export default function UserProfilePage() {
       )}
 
       <BottomNav />
+      {viewerOpen && (
+        <PostViewer posts={posts} initialIndex={viewerIndex} onClose={() => setViewerOpen(false)} />
+      )}
     </div>
   );
 }
