@@ -221,8 +221,8 @@ export async function GET(request: Request) {
           commentCount: post._count.comments
         } as any;
 
-        // 投票中は匿名、終了後は実ユーザーを表示
-        if (!isVotingClosed) {
+        // 投票中は匿名表示にするが、投稿の所有者自身には本来のユーザーを表示する
+        if (!isVotingClosed && post.userId !== decoded.userId) {
           base.user = { id: 'anonymous', username: 'anonymous', displayName: null, avatarUrl: null } as any;
         }
 
