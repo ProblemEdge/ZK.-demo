@@ -7,6 +7,7 @@ import ProfileHeader from '../components/ProfileHeader';
 import PostViewer from '../components/PostViewer';
 import QuestOverlayNew from '../components/QuestOverlayNew';
 import Badges, { BadgeData } from '../components/Badges';
+import MoreButton from '../components/MoreButton';
 import { useAuth } from '../context/AuthContext';
 import { getMe } from '@/actions/auth';
 import { deletePost } from '@/actions/post';
@@ -338,7 +339,7 @@ function ProfilePageContent() {
                   <div className="absolute inset-0 flex items-center justify-center text-[#bfbdbd] text-2xl">📸</div>
                 )}
               </div>
-              {/* 'more' メニューは一旦削除 */}
+              <MoreButton authorId={user.id} authUser={authUser} onDelete={() => handleDeletePost(post.id)} />
             </div>
           ))}
         </div>
