@@ -1,8 +1,10 @@
 import { OutputSchema } from "./shared/schema";
+import type { ZodIssue } from "zod";
 
 import * as sampleFunction from "./commands/sample";
 import * as calcFunction from "./commands/calc";
 import * as rpsFunction from "./commands/rps";
+import * as skillFunction from "./commands/skill/index";
 
 //
 // 1. Register Commands
@@ -19,6 +21,10 @@ const commands = {
   rps: {
     input: rpsFunction.rpsInput,
     handler: rpsFunction.rpsHandler,
+  },
+  skill: {
+    input: skillFunction.skillInput,
+    handler: skillFunction.skillHandler,
   },
 } as const;
 
@@ -57,7 +63,7 @@ async function main() {
 
   if (!parsedInput.success) {
     const message = parsedInput.error.issues
-      .map((e) => `${e.path.join(".")}: ${e.message}`)
+      .map((e: ZodIssue) => `${e.path.join(".")}: ${e.message}`)
       .join("\n");
 
     console.error(message);
@@ -83,7 +89,7 @@ async function main() {
   }
 }
 
-main().catch((err) => {
+main().catch((err: unknown) => {
   console.error(String(err));
   process.exit(1);
 });
