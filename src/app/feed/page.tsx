@@ -213,6 +213,7 @@ export default function FeedPage() {
                   title={shouldHideTitle ? undefined : post.title}
                   tags={post.tags ? post.tags.split(',').map((t: string) => t.trim()) : []}
                   postStatus={postStatus}
+                  rangeScope={(post as any).visibilityScope === 'FRIENDS' ? 'friend' : 'global'}
                   questTag={post.quest?.title}
                   voteStatusType={voteStatusType}
                   approvedCount={post.approveCount}
