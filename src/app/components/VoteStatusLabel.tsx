@@ -66,9 +66,6 @@ export default function VoteStatusLabel({ type, percent, approvedCount, rejected
     );
   }
   // Figma準拠: approvedCount/rejectedCountからゲージ幅を自動計算
-  const approved = typeof approvedCount === 'number' ? approvedCount : 0;
-  const rejected = typeof rejectedCount === 'number' ? rejectedCount : 0;
-  const total = approved + rejected;
   // ゲージ全体幅（px）
   const gaugeTotal = 135 - 4; // 2px padding左右
   // 承認・否定の幅を数値比率で決定
