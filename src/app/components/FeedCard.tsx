@@ -85,6 +85,7 @@ export default function FeedCard({
   voteStatusType,
   approvedCount,
   rejectedCount,
+  votingExpired,
   isVotingOpen,
   isVoting,
   voteCount,
@@ -137,7 +138,7 @@ export default function FeedCard({
           {/* 左下: VoteStatusLabel */}
           {voteStatusType !== undefined && (
             <div className="absolute left-2 bottom-2">
-              <VoteStatusLabel type={voteStatusType} approvedCount={approvedCount} rejectedCount={rejectedCount} />
+              <VoteStatusLabel type={voteStatusType} approvedCount={approvedCount} rejectedCount={rejectedCount} votingExpired={votingExpired} />
             </div>
           )}
           {/* 右下: 投票ボタン */}
