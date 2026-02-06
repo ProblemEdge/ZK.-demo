@@ -216,6 +216,7 @@ export default function FeedPage() {
                   voteStatusType={voteStatusType}
                   approvedCount={post.approveCount}
                   rejectedCount={post.rejectCount}
+                  votingExpired={votingClosed}
                   isVotingOpen={isVotingOpen}
                   isVoting={isVotingActive}
                   voteCount={post.totalVotes ?? 0}
