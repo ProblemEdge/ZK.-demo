@@ -68,3 +68,8 @@ export const deletePost = async (postId: string) => {
   });
   return parseJsonOrThrow(res);
 };
+
+export const processExpiredPosts = async () => {
+  const res = await authFetch('/api/posts/process-expired');
+  return parseJsonOrThrow(res);
+};

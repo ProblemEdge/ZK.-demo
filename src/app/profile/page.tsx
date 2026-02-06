@@ -11,7 +11,7 @@ import MoreButton from '../components/MoreButton';
 import { useAuth } from '../context/AuthContext';
 import { getMe } from '@/actions/auth';
 import { deletePost } from '@/actions/post';
-import { getMyPosts, resetShotTokens } from '@/actions/post';
+import { getMyPosts, resetShotTokens, processExpiredPosts } from '@/actions/post';
 import { getUserBadges } from '@/actions/user';
 import { getTodayQuests } from '@/actions/quest';
 
@@ -106,6 +106,12 @@ function ProfilePageContent() {
 
   const fetchMyPosts = async () => {
     try {
+      // 期限切れ投稿をサーバー側で完全削除してから取得
+      try {
+        await processExpiredPosts();
+      } catch (e) {
+        console.warn('processExpiredPosts failed', e);
+      }
       const data = await getMyPosts();
       setPosts(data as Post[]);
     } catch (error) {
