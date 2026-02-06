@@ -207,30 +207,7 @@ function ProfilePageContent() {
           <p className="text-xs text-[#bfbdbd] text-center">@{user.username}</p>
           <p className="text-[10px] text-[#bfbdbd] text-center">
             登録日 {new Date(user.createdAt).toLocaleDateString('ja-JP')}
-              <button
-                onClick={(e) => { e.stopPropagation(); e.nativeEvent.stopImmediatePropagation(); setMenuOpenId(post.id); }}
-                className="absolute top-2 right-2 bg-black/40 text-white p-1 rounded-full hover:bg-white/10 transition"
-                aria-label="詳細"
-              >
-                <img src="/icon/More_horizontal.svg" alt="more" className="w-6 h-6" />
-              </button>
-
-              {menuOpenId === post.id && (
-                <div onClick={(e) => e.stopPropagation()} className="absolute top-10 right-2 bg-[#14161a] border border-white rounded-lg overflow-hidden z-20">
-                  <button
-                    onClick={() => { setMenuOpenId(null); router.push(`/post?editId=${post.id}`); }}
-                    className="block w-full px-4 py-2 text-left text-sm text-white hover:bg-white/5"
-                  >
-                    編集
-                  </button>
-                  <button
-                    onClick={() => { setMenuOpenId(null); handleDeletePost(post.id); }}
-                    className="block w-full px-4 py-2 text-left text-sm text-white hover:bg-red-600/20"
-                  >
-                    削除
-                  </button>
-                </div>
-              )}
+              
         </div>
 
         {/* Level and Gems */}
