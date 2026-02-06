@@ -27,11 +27,10 @@ export async function GET(
       }
     }
 
-    // ユーザーの承認済み投稿を取得（表示条件はサーバー側でフィルタリング）
+    // ユーザーの投稿を取得（承認状態に関係なく取得し、表示条件はサーバー側でフィルタリング）
     const posts = await prisma.post.findMany({
       where: {
-        userId,
-        isApproved: true
+        userId
       },
       select: {
         id: true,
@@ -39,7 +38,9 @@ export async function GET(
         caption: true,
         postedAt: true,
         visibilityScope: true,
-        visibilityDurationMinutes: true
+        visibilityDurationMinutes: true,
+        isApproved: true,
+        rejectedAt: true
       },
       orderBy: {
         postedAt: 'desc'
@@ -64,9 +65,19 @@ export async function GET(
     const now = Date.now();
     const filtered = posts.filter(post => {
       const duration: number | null = (post as any).visibilityDurationMinutes;
-      // 期間指定なし => 常に表示（owner/公開の意味合いに合わせる）
-      const withinDuration = duration == null || (new Date(post.postedAt).getTime() >= (now - duration * 60 * 1000));
-      if (!withinDuration) return false;
+
+      // 却下済み投稿は表示期間内のみ表示
+      if (post.rejectedAt) {
+        if (duration == null) return false;
+        const withinDuration = new Date(post.postedAt).getTime() >= (now - duration * 60 * 1000);
+        if (!withinDuration) return false;
+      }
+
+      // 表示期間の判定（期間なしは無制限表示）
+      if (duration != null) {
+        const withinDuration = new Date(post.postedAt).getTime() >= (now - duration * 60 * 1000);
+        if (!withinDuration) return false;
+      }
 
       // FRIENDS公開は閲覧者がフレンドか本人のみ表示
       if ((post as any).visibilityScope === 'FRIENDS') {

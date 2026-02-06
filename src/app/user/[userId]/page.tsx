@@ -356,7 +356,7 @@ export default function UserProfilePage() {
 
       {/* 投稿セクション */}
       <div className="p-4">
-        <h2 className="text-xl font-bold text-white mb-4">承認された投稿</h2>
+        <h2 className="text-xl font-bold text-white mb-4">投稿</h2>
           
         {posts.length === 0 ? (
           <div className="bg-gray-800 rounded-lg p-8 text-center border border-gray-700">
