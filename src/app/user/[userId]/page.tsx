@@ -374,7 +374,7 @@ export default function UserProfilePage() {
                 onClick={() => { setViewerIndex(i); setViewerOpen(true); }}
               >
                 <img
-                  src={`/api/posts/${post.id}/image`}
+                  src={`/api/posts/${post.id}/signed-image`}
                   alt={post.caption}
                   className="w-full h-full object-cover"
                 />

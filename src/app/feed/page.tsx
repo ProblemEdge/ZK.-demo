@@ -204,7 +204,7 @@ export default function FeedPage() {
               return (
                 <FeedCard
                   key={post.id}
-                  imageUrl={`/api/posts/${post.id}/image`}
+                  imageUrl={`/api/posts/${post.id}/signed-image`}
                     postId={post.id}
                   userName={post.user.displayName || post.user.username}
                   userId={post.user.username}

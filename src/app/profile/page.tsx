@@ -335,7 +335,7 @@ function ProfilePageContent() {
               <div style={{ position: 'relative', width: '100%', paddingTop: '140%' }}>
                 {post.imageUrl ? (
                   <img
-                    src={`/api/posts/${post.id}/image`}
+                    src={`/api/posts/${post.id}/signed-image`}
                     alt={post.caption}
                     className="absolute inset-0 w-full h-full object-cover"
                     style={{ top: 0, left: 0 }}

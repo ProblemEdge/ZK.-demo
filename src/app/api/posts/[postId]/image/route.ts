@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import { prisma } from '@/lib/prisma';
 import fs from 'fs/promises';
 import path from 'path';
+import crypto from 'crypto';
 
 export async function GET(
   request: Request,
@@ -10,6 +11,30 @@ export async function GET(
 ) {
   try {
     const { postId } = await params;
+
+    // トークン付きURLでアクセスされた場合の検証
+    const reqUrl = new URL(request.url);
+    const tokenParam = reqUrl.searchParams.get('token');
+    let tokenValidated = false;
+    if (tokenParam) {
+      try {
+        const [expiresStr, sig] = tokenParam.split('.');
+        const expires = Number(expiresStr);
+        if (Number.isNaN(expires) || expires < Math.floor(Date.now() / 1000)) {
+          return NextResponse.json({ error: '署名が期限切れです' }, { status: 401 });
+        }
+        const secret = process.env.SIGNED_URL_SECRET || '';
+        const h = crypto.createHmac('sha256', secret).update(`${postId}:${expires}`).digest('hex');
+        if (!crypto.timingSafeEqual(Buffer.from(h, 'hex'), Buffer.from(sig, 'hex'))) {
+          return NextResponse.json({ error: '署名が不正です' }, { status: 401 });
+        }
+        // 署名検証成功 -> トークン認証として扱う
+        tokenValidated = true;
+      } catch (e) {
+        console.error('Token validation failed', e);
+        return NextResponse.json({ error: '署名検証に失敗しました' }, { status: 401 });
+      }
+    }
 
     const post = await prisma.post.findUnique({
       where: { id: postId },
@@ -39,17 +64,20 @@ export async function GET(
 
     // FRIENDS 公開は本人またはフレンドのみ
     if (post.visibilityScope === 'FRIENDS') {
-      if (!viewerId) return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
-      if (viewerId !== post.userId) {
-        const rel = await prisma.friend.findFirst({
-          where: {
-            OR: [
-              { userId: post.userId, friendId: viewerId },
-              { userId: viewerId, friendId: post.userId }
-            ]
-          }
-        });
-        if (!rel) return NextResponse.json({ error: '権限がありません' }, { status: 403 });
+      // トークン検証が成功していれば認可済みとみなす
+      if (!tokenValidated) {
+        if (!viewerId) return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
+        if (viewerId !== post.userId) {
+          const rel = await prisma.friend.findFirst({
+            where: {
+              OR: [
+                { userId: post.userId, friendId: viewerId },
+                { userId: viewerId, friendId: post.userId }
+              ]
+            }
+          });
+          if (!rel) return NextResponse.json({ error: '権限がありません' }, { status: 403 });
+        }
       }
     }
 
