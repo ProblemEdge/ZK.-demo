@@ -335,7 +335,7 @@ function ProfilePageContent() {
               <div style={{ position: 'relative', width: '100%', paddingTop: '140%' }}>
                 {post.imageUrl ? (
                   <img
-                    src={post.imageUrl}
+                    src={`/api/posts/${post.id}/image`}
                     alt={post.caption}
                     className="absolute inset-0 w-full h-full object-cover"
                     style={{ top: 0, left: 0 }}
@@ -355,7 +355,7 @@ function ProfilePageContent() {
 
       <BottomNav />
       {viewerOpen && (
-        <PostViewer posts={posts} initialIndex={viewerIndex} onClose={() => setViewerOpen(false)} />
+        <PostViewer posts={posts.map(p => ({ ...p, imageUrl: `/api/posts/${p.id}/image` }))} initialIndex={viewerIndex} onClose={() => setViewerOpen(false)} />
       )}
       
       {/* クエストオーバーレイ */}

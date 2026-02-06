@@ -503,7 +503,7 @@ export default function VotePage() {
                   style={{ transform: `translateX(${dragX}px)`, transition: isDragging ? 'none' : 'transform 200ms ease' }}
                 >
                   <div className="h-[240px] w-full overflow-hidden rounded-t-[16px] cursor-pointer" onClick={() => setIsImageExpanded(true)}>
-                    <img src={currentPost.imageUrl} alt={currentPost.caption} className="w-full h-full object-cover" />
+                    <img src={`/api/posts/${currentPost.id}/image`} alt={currentPost.caption} className="w-full h-full object-cover" />
                   </div>
                   <div className="bg-[#1a1d22] border-t-4 border-white px-3 py-2">
                     <p className="text-white text-[18px] font-bold text-center">{currentPost.title || ''}</p>
@@ -577,7 +577,7 @@ export default function VotePage() {
           >
             <div className="relative max-w-full max-h-full" onClick={(e) => e.stopPropagation()}>
               <img
-                src={currentPost.imageUrl}
+                src={`/api/posts/${currentPost.id}/image`}
                 alt="投稿画像（拡大）"
                 className="max-w-full max-h-[90vh] object-contain"
               />

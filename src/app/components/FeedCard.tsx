@@ -117,7 +117,7 @@ export default function FeedCard({
         {/* 画像エリア */}
         <div className="relative w-full h-[320px] bg-gray-200 cursor-pointer" onClick={() => setIsImageExpanded(true)}>
           <img
-            src={imageUrl}
+            src={postId ? `/api/posts/${postId}/image` : imageUrl}
             alt="投稿画像"
             className="object-cover w-full h-full rounded-tl-[16px] rounded-tr-[16px]"
           />
@@ -217,7 +217,7 @@ export default function FeedCard({
         >
           <div className="relative max-w-full max-h-full" onClick={(e) => e.stopPropagation()}>
             <img
-              src={imageUrl}
+              src={postId ? `/api/posts/${postId}/image` : imageUrl}
               alt="投稿画像（拡大）"
               className="max-w-full max-h-[90vh] object-contain"
             />

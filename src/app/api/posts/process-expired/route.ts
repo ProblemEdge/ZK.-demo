@@ -39,12 +39,18 @@ export async function GET(request: Request) {
         if (post.imageUrl) {
           if (post.imageUrl.includes('res.cloudinary.com')) {
             try {
-              const idx = post.imageUrl.indexOf('/upload/');
+              const urlNoQuery = post.imageUrl.split('?')[0];
+              const idx = urlNoQuery.indexOf('/upload/');
               if (idx !== -1) {
-                let after = post.imageUrl.substring(idx + '/upload/'.length);
-                after = after.replace(/^v\d+\//, '');
+                let after = urlNoQuery.substring(idx + '/upload/'.length);
+                const vm = after.match(/\/v\d+\//);
+                if (vm && vm.index !== undefined) {
+                  after = after.substring(vm.index + vm[0].length);
+                }
                 const publicId = after.replace(/\.[^/.]+$/, '');
-                await cloudinary.uploader.destroy(publicId, { resource_type: 'image' });
+                console.log('Cloudinary: deleting publicId=', publicId);
+                const result = await cloudinary.uploader.destroy(publicId, { resource_type: 'image' });
+                console.log('Cloudinary destroy result:', result);
               }
             } catch (err) {
               console.warn('Cloudinary delete failed', err);

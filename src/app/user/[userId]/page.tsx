@@ -374,7 +374,7 @@ export default function UserProfilePage() {
                 onClick={() => { setViewerIndex(i); setViewerOpen(true); }}
               >
                 <img
-                  src={post.imageUrl}
+                  src={`/api/posts/${post.id}/image`}
                   alt={post.caption}
                   className="w-full h-full object-cover"
                 />
@@ -469,7 +469,7 @@ export default function UserProfilePage() {
 
       <BottomNav />
       {viewerOpen && (
-        <PostViewer posts={posts} initialIndex={viewerIndex} onClose={() => setViewerOpen(false)} />
+        <PostViewer posts={posts.map(p => ({ ...p, imageUrl: `/api/posts/${p.id}/image` }))} initialIndex={viewerIndex} onClose={() => setViewerOpen(false)} />
       )}
     </div>
   );

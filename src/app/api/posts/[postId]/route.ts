@@ -52,17 +52,24 @@ export async function DELETE(
 
     // 可能であれば画像ファイルも削除（Cloudinary または public/uploads 内）
     try {
-      if (post.imageUrl) {
+        if (post.imageUrl) {
         // Cloudinary にアップロードされたものなら public_id を推定して削除
         if (post.imageUrl.includes('res.cloudinary.com')) {
           try {
-            const idx = post.imageUrl.indexOf('/upload/');
+            // クエリパラメータを除去
+            const urlNoQuery = post.imageUrl.split('?')[0];
+            const idx = urlNoQuery.indexOf('/upload/');
             if (idx !== -1) {
-              let after = post.imageUrl.substring(idx + '/upload/'.length);
-              // v{number}/ を取り除く
-              after = after.replace(/^v\d+\//, '');
+              let after = urlNoQuery.substring(idx + '/upload/'.length);
+              // /v{digits}/ があればそれ以降を public id とする（変換パラメータを飛ばすため）
+              const vm = after.match(/\/v\d+\//);
+              if (vm && vm.index !== undefined) {
+                after = after.substring(vm.index + vm[0].length);
+              }
               const publicId = after.replace(/\.[^/.]+$/, '');
-              await cloudinary.uploader.destroy(publicId, { resource_type: 'image' });
+              console.log('Cloudinary: deleting publicId=', publicId);
+              const result = await cloudinary.uploader.destroy(publicId, { resource_type: 'image' });
+              console.log('Cloudinary destroy result:', result);
             }
           } catch (err) {
             console.warn('Cloudinary画像削除失敗', err);
