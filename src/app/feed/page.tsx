@@ -205,6 +205,7 @@ export default function FeedPage() {
                 <FeedCard
                   key={post.id}
                   imageUrl={post.imageUrl}
+                    postId={post.id}
                   userName={post.user.displayName || post.user.username}
                   userId={post.user.username}
                   authorId={post.userId}

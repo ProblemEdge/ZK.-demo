@@ -59,7 +59,6 @@ function ProfilePageContent() {
   const [badges, setBadges] = useState<BadgeData[]>([]);
   const [viewerOpen, setViewerOpen] = useState(false);
   const [viewerIndex, setViewerIndex] = useState(0);
-  const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const router = useRouter();
   const { user: authUser, status, refresh } = useAuth();
 
@@ -150,11 +149,7 @@ function ProfilePageContent() {
     }
   };
 
-  useEffect(() => {
-    const onDocClick = () => setMenuOpenId(null);
-    document.addEventListener('click', onDocClick);
-    return () => document.removeEventListener('click', onDocClick);
-  }, []);
+  
 
   if (!user) {
     return (
@@ -342,30 +337,7 @@ function ProfilePageContent() {
                   <div className="absolute inset-0 flex items-center justify-center text-[#bfbdbd] text-2xl">📸</div>
                 )}
               </div>
-              <button
-                onClick={(e) => { e.stopPropagation(); e.nativeEvent.stopImmediatePropagation(); setMenuOpenId(post.id); }}
-                className="absolute top-2 right-2 bg-black/40 text-white p-1 rounded-full hover:bg-white/10 transition"
-                aria-label="詳細"
-              >
-                <img src="/icon/More_horizontal.svg" alt="more" className="w-6 h-6" />
-              </button>
-
-              {menuOpenId === post.id && (
-                <div onClick={(e) => e.stopPropagation()} className="absolute top-10 right-2 bg-[#14161a] border border-white rounded-lg overflow-hidden z-20">
-                  <button
-                    onClick={() => { setMenuOpenId(null); router.push(`/post?editId=${post.id}`); }}
-                    className="block w-full px-4 py-2 text-left text-sm text-white hover:bg-white/5"
-                  >
-                    編集
-                  </button>
-                  <button
-                    onClick={() => { setMenuOpenId(null); handleDeletePost(post.id); }}
-                    className="block w-full px-4 py-2 text-left text-sm text-white hover:bg-red-600/20"
-                  >
-                    削除
-                  </button>
-                </div>
-              )}
+              {/* 'more' メニューは一旦削除 */}
             </div>
           ))}
         </div>
