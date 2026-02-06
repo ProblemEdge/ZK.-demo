@@ -3,9 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { RewardProvider } from "./context/RewardContext";
 import { AuthProvider } from "./context/AuthContext";
-import dynamic from 'next/dynamic';
-
-const Splash = dynamic(() => import('./components/Splash'), { ssr: false });
+import Splash from './components/Splash';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
