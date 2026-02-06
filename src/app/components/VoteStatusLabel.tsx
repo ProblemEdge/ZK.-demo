@@ -13,6 +13,30 @@ interface VoteStatusLabelProps {
 }
 
 export default function VoteStatusLabel({ type, percent, approvedCount, rejectedCount, votingExpired }: VoteStatusLabelProps) {
+  // vote 集計
+  const approved = typeof approvedCount === 'number' ? approvedCount : 0;
+  const rejected = typeof rejectedCount === 'number' ? rejectedCount : 0;
+  const total = approved + rejected;
+
+  // 投票期限が経過しており、かつ票がゼロの場合は自動的に novote 表示にする
+  if (votingExpired && total === 0) {
+    const phrases = [
+      "空っぽみたい...",
+      "風が吹いてます",
+      "閑古鳥鳴いてます",
+      "誰にも否定されてないよ！",
+      "みんな遅すぎ",
+      "0%...?",
+      "静寂の勝利",
+    ];
+    const text = React.useMemo(() => phrases[Math.floor(Math.random() * phrases.length)], []);
+    return (
+      <div className="flex items-center justify-center rounded-full bg-gray-800/80 border border-gray-600 min-w-[80px] min-h-[28px] px-3 py-1">
+        <span className="text-white text-sm font-bold">{text}</span>
+      </div>
+    );
+  }
+
   // アイコンとラベル色・背景色を状態ごとに切り替え
   if (type === "question") {
     // 投票前: テキストなし、アイコン中央（大きく表示）
@@ -22,42 +46,7 @@ export default function VoteStatusLabel({ type, percent, approvedCount, rejected
       </div>
     );
   }
-  if (type === "novote") {
-    // novote は「経過時間後に票が入った」場合に使うタグ。
-    // 票がゼロの場合は従来通り question 表示へフォールバックする。
-    const approved = typeof approvedCount === 'number' ? approvedCount : 0;
-    const rejected = typeof rejectedCount === 'number' ? rejectedCount : 0;
-    const total = approved + rejected;
-
-    // novote は「投票時間（例: 5分）経過」かつ「票が1つも入っていない」場合に表示
-    if (total === 0) {
-      if (votingExpired) {
-        const phrases = [
-          "空っぽみたい...",
-          "風が吹いてます",
-          "閑古鳥鳴いてます",
-          "誰にも否定されてないよ！",
-          "みんな遅すぎ",
-          "0%...?",
-          "静寂の勝利",
-        ];
-        const text = React.useMemo(() => phrases[Math.floor(Math.random() * phrases.length)], []);
-        return (
-          <div className="flex items-center justify-center rounded-full bg-gray-800/80 border border-gray-600 min-w-[80px] min-h-[28px] px-3 py-1">
-            <span className="text-white text-sm font-bold">{text}</span>
-          </div>
-        );
-      }
-
-      // 投票がゼロだが期限前なら従来の question 表示へフォールバック
-      return (
-        <div className="flex items-center justify-center rounded-full bg-gray-800/80 border border-gray-600 min-w-[80px] min-h-[28px]">
-          <img src="/icon/secret.svg" alt="?" className="w-32 h-8 mx-auto" />
-        </div>
-      );
-    }
-    // total > 0 の場合は下側のゲージ表示ロジックにフォールスルー
-  }
+  // (novote は自動判定するため、ここで個別処理は不要)
   if (type === "ultimate") {
     // 投票10個かつ100%
     return (
