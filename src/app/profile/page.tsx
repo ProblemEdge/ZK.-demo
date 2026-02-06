@@ -207,7 +207,7 @@ function ProfilePageContent() {
           <p className="text-xs text-[#bfbdbd] text-center">@{user.username}</p>
           <p className="text-[10px] text-[#bfbdbd] text-center">
             登録日 {new Date(user.createdAt).toLocaleDateString('ja-JP')}
-              
+          </p>
         </div>
 
         {/* Level and Gems */}
