@@ -2,6 +2,7 @@ import FeedCard from "../components/FeedCard";
 import TagSamplePreview from "../components/TagSamplePreview";
 import VoteStatusLabelSample from "../components/VoteStatusLabelSample";
 import PostStatusTag from "../components/PostStatusTag";
+import RangeTag from "../components/RangeTag";
 import QuestTag from "../components/QuestTag";
 import SimpleTag from "../components/SimpleTag";
 import CommentButton from "../components/CommentButton";
@@ -21,6 +22,8 @@ export default function TagSamplePage() {
           <PostStatusTag status="voting" />
           <PostStatusTag status="approved" />
           <PostStatusTag status="rejected" />
+          <RangeTag scope="friend" />
+          <RangeTag scope="global" />
           <SimpleTag label="松本城" />
           <CommentButton count={23} />
           <LikeButton count={15} />

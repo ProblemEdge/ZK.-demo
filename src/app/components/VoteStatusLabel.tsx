@@ -28,6 +28,10 @@ export default function VoteStatusLabel({ type, percent, approvedCount, rejected
       "みんな遅すぎ",
       "0%...?",
       "静寂の勝利",
+      "まだ誰にもバレていないようです",
+      "投票される準備は出来てるよ！",
+      "僕のことを見て、、、",
+      "こっちみてーー！！！",
     ];
     const text = React.useMemo(() => phrases[Math.floor(Math.random() * phrases.length)], []);
     return (

@@ -9,6 +9,7 @@ import { VoteOkButton, VoteNgButton } from "./VoteOkNgButton";
 import LikeButton from "./LikeButton";
 import CommentButton from "./CommentButton";
 import PostStatusTag, { PostStatus } from "./PostStatusTag";
+import RangeTag, { RangeScope } from "./RangeTag";
 import QuestTag from "./QuestTag";
 import VoteStatusLabel, { VoteStatusType } from "./VoteStatusLabel";
 
@@ -21,6 +22,7 @@ interface FeedCardProps {
   title?: string;   // 投稿タイトル
   tags: string[];
   postStatus?: PostStatus;
+  rangeScope?: RangeScope;
   questTag?: string;
   voteStatusType?: VoteStatusType;
   approvedCount?: number;
@@ -84,6 +86,7 @@ export default function FeedCard({
   title,
   tags,
   postStatus,
+  rangeScope,
   questTag,
   voteStatusType,
   approvedCount,
@@ -120,8 +123,9 @@ export default function FeedCard({
           />
           {/* 左上: PostStatusTag */}
           {postStatus !== undefined && (
-            <div className="absolute left-2 top-2">
+            <div className="absolute left-2 top-2 flex items-center gap-2">
               <PostStatusTag status={postStatus} />
+              {rangeScope && <RangeTag scope={rangeScope} size={24} />}
             </div>
           )}
           {/* 右上: QuestTag（クエストがある場合のみ表示） */}
