@@ -456,17 +456,17 @@ export default function NewPostPage() {
                         paddingRight: '24px'
                       }}
                     >
-                      <option value={5}>5分</option>
-                      <option value={10}>10分</option>
-                      <option value={30}>30分</option>
-                      <option value={60}>1時間</option>
-                      <option value={120}>2時間</option>
-                      <option value={180}>3時間</option>
-                      <option value={360}>6時間</option>
-                      <option value={720}>12時間</option>
-                      <option value={1440}>24時間</option>
-                      <option value={2880}>48時間</option>
-                      <option value={10080}>7日間</option>
+                      <option value={10}>5分</option>
+                      <option value={15}>10分</option>
+                      <option value={35}>30分</option>
+                      <option value={65}>1時間</option>
+                      <option value={125}>2時間</option>
+                      <option value={185}>3時間</option>
+                      <option value={365}>6時間</option>
+                      <option value={725}>12時間</option>
+                      <option value={1445}>24時間</option>
+                      <option value={2885}>48時間</option>
+                      <option value={10085}>7日間</option>
                       <option value="unlimited">無制限</option>
                     </select>
                   </div>
