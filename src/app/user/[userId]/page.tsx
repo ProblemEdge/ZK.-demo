@@ -7,7 +7,6 @@ import ProfileHeader from '../../components/ProfileHeader';
 import Badges, { BadgeData } from '../../components/Badges';
 import { 
   getUserProfile,
-  getUserPosts,
   getUserBadges,
   getUserFollowers,
   followUser,
@@ -92,7 +91,9 @@ export default function UserProfilePage() {
 
   const fetchUserPosts = async () => {
     try {
-      const data = await getUserPosts(userId);
+      const res = await fetch(`/api/users/${userId}/posts`, { cache: 'no-store', credentials: 'include' });
+      if (!res.ok) throw new Error('投稿の取得に失敗しました');
+      const data = await res.json();
       setPosts(data as Post[]);
     } catch (err) {
       console.error('Error fetching posts:', err);
