@@ -38,14 +38,22 @@ export async function GET(
       }
     }
 
+    // 必須環境変数の検証
+    const secret = process.env.SIGNED_URL_SECRET;
+    if (!secret) {
+      console.error('SIGNED_URL_SECRET is not configured');
+      return NextResponse.json({ error: 'server misconfiguration' }, { status: 500 });
+    }
+
     // 署名を作成して image エンドポイントに渡す短命URLを生成
     const ttlSeconds = Number(process.env.SIGNED_URL_TTL_SECONDS || '300');
     const expires = Math.floor(Date.now() / 1000) + ttlSeconds;
-    const secret = process.env.SIGNED_URL_SECRET || '';
     const sig = crypto.createHmac('sha256', secret).update(`${postId}:${expires}`).digest('hex');
     const tokenParam = `${expires}.${sig}`;
 
-    const url = `/api/posts/${postId}/image?token=${tokenParam}`;
+    // 絶対URLにしてリダイレクト（環境によって相対パスの動作が異なるため）
+    const origin = new URL(request.url).origin;
+    const url = `${origin}/api/posts/${postId}/image?token=${tokenParam}`;
     return NextResponse.redirect(url);
   } catch (error) {
     console.error('Signed image error:', error);
