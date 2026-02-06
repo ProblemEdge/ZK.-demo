@@ -23,6 +23,7 @@ interface FeedCardProps {
   voteStatusType?: VoteStatusType;
   approvedCount?: number;
   rejectedCount?: number;
+  votingExpired?: boolean;
   isVotingOpen?: boolean;
   isVoting?: boolean;
   voteCount: number;
