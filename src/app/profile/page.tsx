@@ -343,7 +343,7 @@ function ProfilePageContent() {
                 )}
               </div>
               <button
-                onClick={(e) => { e.stopPropagation(); setMenuOpenId(post.id); }}
+                onClick={(e) => { e.stopPropagation(); e.nativeEvent.stopImmediatePropagation(); setMenuOpenId(post.id); }}
                 className="absolute top-2 right-2 bg-black/40 text-white p-1 rounded-full hover:bg-white/10 transition"
                 aria-label="詳細"
               >
