@@ -4,7 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import Link from "next/link";
 import { useRouter } from 'next/navigation';
 import SimpleTag from "./SimpleTag";
-import MoreButton from "./MoreButton";
+import MoreButton from "./MoreButton.tsx";
 import { VoteOkButton, VoteNgButton } from "./VoteOkNgButton";
 import LikeButton from "./LikeButton";
 import CommentButton from "./CommentButton";
