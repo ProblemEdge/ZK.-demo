@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import ImageWithPlaceholder from '@/app/components/ImageWithPlaceholder';
 
 export default function BottomNav() {
   const pathname = usePathname();
@@ -82,11 +83,19 @@ export default function BottomNav() {
             {item.type === 'profile' && (
               <span className="relative inline-flex items-center justify-center w-[48px] h-[48px]">
                 {isClient && user?.avatarUrl ? (
-                  <img
-                    src={user.avatarUrl}
-                    alt={user.displayName || user.username}
-                    className="w-full h-full rounded-full object-cover border-2 border-white"
-                  />
+                  (() => {
+                    const filename = user.avatarUrl.split('/').pop()?.split('?')[0];
+                    const fallback = filename ? `/uploads/avatars/${filename}` : undefined;
+                    return (
+                      <ImageWithPlaceholder
+                        src={user.avatarUrl}
+                        alt={user.displayName || user.username}
+                        className="w-full h-full rounded-full object-cover border-2 border-white"
+                        fallbackInitial={(user.displayName || user.username)[0].toUpperCase()}
+                        fallbackSrc={fallback}
+                      />
+                    );
+                  })()
                 ) : (
                   <img src={imgProfileIcon} alt="プロフィール" className="w-full h-full" />
                 )}

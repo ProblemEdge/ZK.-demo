@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import BottomNav from '../../components/BottomNav';
 import ProfileHeader from '../../components/ProfileHeader';
+import ImageWithPlaceholder from '@/app/components/ImageWithPlaceholder';
 import PostViewer from '../../components/PostViewer';
 import Badges, { BadgeData } from '../../components/Badges';
 import { 
@@ -235,11 +236,19 @@ export default function UserProfilePage() {
           {/* Avatar */}
           <div className="w-[64px] h-[64px] bg-[#bfbdbd] rounded-full overflow-hidden flex-shrink-0 border-2 border-white">
             {user.avatarUrl ? (
-              <img
-                src={user.avatarUrl}
-                alt={user.username}
-                className="w-full h-full object-cover"
-              />
+              (() => {
+                const filename = user.avatarUrl.split('/').pop()?.split('?')[0];
+                const fallback = filename ? `/uploads/avatars/${filename}` : undefined;
+                return (
+                  <ImageWithPlaceholder
+                    src={user.avatarUrl}
+                    alt={user.username}
+                    className="w-full h-full object-cover rounded-full"
+                    fallbackInitial={user.username[0].toUpperCase()}
+                    fallbackSrc={fallback}
+                  />
+                );
+              })()
             ) : (
               <span className="flex items-center justify-center w-full h-full text-2xl font-bold text-[#14161a]">
                 {user.username[0].toUpperCase()}
@@ -416,11 +425,19 @@ export default function UserProfilePage() {
                     >
                       <div className="w-10 h-10 bg-gray-700 rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center border border-gray-600">
                         {friend.avatarUrl ? (
-                          <img
-                            src={friend.avatarUrl}
-                            alt={friend.username}
-                            className="w-full h-full object-cover"
-                          />
+                          (() => {
+                            const filename = friend.avatarUrl.split('/').pop()?.split('?')[0];
+                            const fallback = filename ? `/uploads/avatars/${filename}` : undefined;
+                            return (
+                              <ImageWithPlaceholder
+                                src={friend.avatarUrl}
+                                alt={friend.username}
+                                className="w-full h-full object-cover"
+                                fallbackInitial={friend.username[0].toUpperCase()}
+                                fallbackSrc={fallback}
+                              />
+                            );
+                          })()
                         ) : (
                           <span className="text-sm font-bold text-gray-400">
                             {friend.username[0].toUpperCase()}

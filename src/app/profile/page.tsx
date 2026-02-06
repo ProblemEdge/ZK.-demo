@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import BottomNav from '../components/BottomNav';
 import ProfileHeader from '../components/ProfileHeader';
+import ImageWithPlaceholder from '@/app/components/ImageWithPlaceholder';
 import PostViewer from '../components/PostViewer';
 import QuestOverlayNew from '../components/QuestOverlayNew';
 import Badges, { BadgeData } from '../components/Badges';
@@ -203,7 +204,19 @@ function ProfilePageContent() {
         <div className="flex flex-col items-center gap-1 mb-6 mt-6">
           <div className="w-[72px] h-[72px] rounded-full bg-white border-2 border-white overflow-hidden flex-shrink-0 flex items-center justify-center">
             {user.avatarUrl ? (
-              <img src={user.avatarUrl} alt={user.username} className="w-full h-full object-cover" />
+              (() => {
+                const filename = user.avatarUrl.split('/').pop()?.split('?')[0];
+                const fallback = filename ? `/uploads/avatars/${filename}` : undefined;
+                return (
+                  <ImageWithPlaceholder
+                    src={user.avatarUrl}
+                    alt={user.username}
+                    className="w-full h-full object-cover rounded-full"
+                    fallbackInitial={user.username[0].toUpperCase()}
+                    fallbackSrc={fallback}
+                  />
+                );
+              })()
             ) : (
               <div className="w-full h-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-2xl font-bold">
                 {user.username[0].toUpperCase()}

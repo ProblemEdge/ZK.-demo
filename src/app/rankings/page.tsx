@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import BottomNav from '../components/BottomNav';
 import RankingsHeader from '../components/RankingsHeader';
+import ImageWithPlaceholder from '@/app/components/ImageWithPlaceholder';
 
 interface RankingUser {
   id: string;
@@ -173,11 +174,19 @@ export default function RankingsPage() {
                 {/* ユーザー情報 */}
                 <div className="w-9 h-9 bg-gray-700 rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center border border-gray-600">
                   {user.avatarUrl ? (
-                    <img
-                      src={user.avatarUrl}
-                      alt={user.username}
-                      className="w-full h-full object-cover"
-                    />
+                    (() => {
+                      const filename = user.avatarUrl.split('/').pop()?.split('?')[0];
+                      const fallback = filename ? `/uploads/avatars/${filename}` : undefined;
+                      return (
+                        <ImageWithPlaceholder
+                          src={user.avatarUrl}
+                          alt={user.username}
+                          className="w-full h-full object-cover"
+                          fallbackInitial={user.username[0].toUpperCase()}
+                          fallbackSrc={fallback}
+                        />
+                      );
+                    })()
                   ) : (
                     <span className="text-xs font-bold text-gray-400">
                       {user.username[0].toUpperCase()}
