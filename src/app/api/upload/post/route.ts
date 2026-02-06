@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import jwt from 'jsonwebtoken';
 import { v2 as cloudinary } from 'cloudinary';
 
 // Cloudinary設定
@@ -11,20 +10,7 @@ cloudinary.config({
 
 export async function POST(request: Request) {
   try {
-    const cookieHeader = request.headers.get('cookie');
-    const token = cookieHeader
-      ?.split('; ')
-      .find(row => row.startsWith('auth-token='))
-      ?.split('=')[1];
-
-    if (!token) {
-      return NextResponse.json(
-        { error: '認証が必要です' },
-        { status: 401 }
-      );
-    }
-
-    jwt.verify(token, process.env.JWT_SECRET!);
+    // 認証不要: 公開アップロード（Cloudinary 側で unsigned preset を使う場合はクライアント側で設定してください）
 
     const formData = await request.formData();
     const file = formData.get('image') as File;
