@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from 'react';
+import ImageWithPlaceholder from './ImageWithPlaceholder';
 
 interface Post {
   id: string;
@@ -66,12 +67,13 @@ export default function PostViewer({ posts, initialIndex = 0, onClose }: { posts
           onDoubleClick={toggleZoom}
           style={{ maxWidth: '100%', maxHeight: '100%' }}
         >
-          <img
-            src={posts[index]?.imageUrl}
-            alt={posts[index]?.caption || ''}
-            style={{ transform: `scale(${scale})`, transition: 'transform 200ms ease' }}
-            className="max-w-full max-h-[90vh] object-contain rounded-lg"
-          />
+          <div style={{ transform: `scale(${scale})`, transition: 'transform 200ms ease' }} className="max-w-full max-h-[90vh]">
+            <ImageWithPlaceholder
+              src={posts[index]?.imageUrl}
+              alt={posts[index]?.caption || ''}
+              className="max-w-full max-h-[90vh] object-contain rounded-lg"
+            />
+          </div>
         </div>
 
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 text-center text-white max-w-[90%]">
