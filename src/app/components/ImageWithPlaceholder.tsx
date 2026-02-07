@@ -55,7 +55,8 @@ export default function ImageWithPlaceholder({
   };
 
   return (
-    <div className={`relative flex items-center justify-center bg-black ${className}`} style={style}>
+    // 親コンテキストで背景色を制御できるように、デフォルトの黒背景を除去
+    <div className={`relative flex items-center justify-center ${className}`} style={style}>
       {!loaded && !showInitials && showRandomText && (
         <div className="w-full h-full flex items-center justify-center text-white text-lg">
           <div className="p-4 text-center">

@@ -107,7 +107,7 @@ export default function DiscoverPage() {
                 mainTab === 'search' ? 'bg-[#00e676] text-white' : 'bg-[#475467] text-white'
               }`}
             >
-              <img src="/icon/User_icon.svg" alt="ユーザー" className="w-5 h-5" />
+              <img src="/icon/User_icon.svg" alt="ユーザー" className="w-5 h-5 rounded-full object-cover" />
               <span className="text-[20px] font-bold leading-none">ユーザー検索</span>
             </button>
             <button
@@ -116,7 +116,7 @@ export default function DiscoverPage() {
                 mainTab === 'ranking' ? 'bg-[#00e676] text-white' : 'bg-[#475467] text-white'
               }`}
             >
-              <img src="/icon/Award_icon.svg" alt="ランキング" className="w-5 h-5" />
+              <img src="/icon/Award_icon.svg" alt="ランキング" className="w-5 h-5 rounded-full object-cover" />
               <span className="text-[20px] font-bold leading-none">ランキング</span>
             </button>
           </div>
@@ -202,7 +202,7 @@ export default function DiscoverPage() {
                 onClick={() => { setMode(mode === 'world' ? 'following' : 'world'); }}
                 className="flex-1 h-[31px] border border-white rounded-[12px] flex items-center justify-center gap-2 text-white"
               >
-                <img src="/icon/Refresh cw.svg" alt="" className="w-5 h-5" />
+                <img src="/icon/Refresh cw.svg" alt="" className="w-5 h-5 rounded-full object-cover" />
                 <span className="text-[20px] font-bold">{mode === 'world' ? '世界' : '友達'}</span>
               </button>
             </div>

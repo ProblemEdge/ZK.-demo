@@ -28,7 +28,7 @@ export default function DiscoverFilterTabs({
               : 'bg-[#475467] text-white hover:bg-[#556578]'
           }`}
         >
-          <img src={tab.icon} alt={tab.label} className="w-5 h-5" />
+          <img src={tab.icon} alt={tab.label} className="w-5 h-5 rounded-full object-cover" />
           <span className="text-sm">{tab.label}</span>
         </button>
       ))}
