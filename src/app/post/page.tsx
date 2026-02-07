@@ -14,6 +14,7 @@ import { useLocation } from './_hooks/useLocation';
 import { useTokens } from './_hooks/useTokens';
 import { usePostSubmit } from './_hooks/usePostSubmit';
 import { useSwipeSubmit } from './_hooks/useSwipeSubmit';
+import { useBottomNav } from '../../context/BottomNavContext';
 
 // コンポーネントのインポート
 import CameraView from './_components/CameraView';
@@ -80,6 +81,13 @@ export default function NewPostPage() {
     selectedQuestId,
     limitInfo,
   });
+
+  // ボトムナビを非表示にする（投稿画面内では常に非表示）
+  const { setVisible: setBottomNavVisible } = useBottomNav();
+  useEffect(() => {
+    setBottomNavVisible(false);
+    return () => setBottomNavVisible(true);
+  }, [setBottomNavVisible]);
   const {
     isSwiping,
     swipeProgress,
