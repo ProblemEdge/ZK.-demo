@@ -96,6 +96,14 @@ export default function EditProfilePage() {
 
       alert('プロフィールを更新しました');
       await refresh();
+      try {
+        // 自分のアバター更新を反映するためのキャッシュバスターを保存
+        if (user?.id) {
+          localStorage.setItem(`avatar_v_${user.id}`, String(Date.now()));
+        }
+      } catch {
+        // noop
+      }
       router.push('/profile?updated=' + Date.now()); // クエリパラメータで再取得をトリガー
 
     } catch (err: any) {

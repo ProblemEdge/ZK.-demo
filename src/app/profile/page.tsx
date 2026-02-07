@@ -10,7 +10,6 @@ import QuestOverlayNew from '../components/QuestOverlayNew';
 import Badges, { BadgeData } from '../components/Badges';
 import MoreButton from '../components/MoreButton';
 import { useAuth } from '../context/AuthContext';
-import { getMe } from '@/actions/auth';
 import { deletePost } from '@/actions/post';
 import { getMyPosts, resetShotTokens, processExpiredPosts } from '@/actions/post';
 import { getUserBadges } from '@/actions/user';
@@ -72,38 +71,21 @@ function ProfilePageContent() {
     }
 
     if (status === 'authenticated') {
-      // 初期ロード時のみローディング状態を表示
+      // 初回ロード時は AuthContext のユーザを使う（AuthProvider で既に取得済み）
       if (isInitialLoad) {
-        // 初期ロード時は待機
-        refresh().then(() => {
-          fetchLatestUser();
-          fetchMyPosts();
-          if (authUser?.id) {
-            fetchMyBadges(authUser.id);
-          }
-          setLoading(false);
-          setIsInitialLoad(false);
-        });
+        if (authUser) setUser(authUser);
+        // 投稿とバッジだけ取得
+        fetchMyPosts();
+        if (authUser?.id) fetchMyBadges(authUser.id);
+        setLoading(false);
+        setIsInitialLoad(false);
       } else {
         // タブ切り替え時はバックグラウンドで更新（ローディング状態は表示しない）
-        refresh();
-        fetchLatestUser();
         fetchMyPosts();
-        if (authUser?.id) {
-          fetchMyBadges(authUser.id);
-        }
+        if (authUser?.id) fetchMyBadges(authUser.id);
       }
     }
-  }, [status]);
-
-  const fetchLatestUser = async () => {
-    try {
-      const userData = await getMe();
-      setUser(userData as User);
-    } catch (error) {
-      console.error('Error fetching latest user:', error);
-    }
-  };
+  }, [status, authUser]);
 
   const fetchMyPosts = async () => {
     try {
@@ -207,9 +189,17 @@ function ProfilePageContent() {
               (() => {
                 const filename = user.avatarUrl.split('/').pop()?.split('?')[0];
                 const fallback = filename ? `/uploads/avatars/${filename}` : undefined;
+                // 自分のプロフィールならキャッシュバスターを付与
+                let src = user.avatarUrl;
+                try {
+                  if (authUser && user.id === authUser.id) {
+                    const vb = localStorage.getItem(`avatar_v_${user.id}`);
+                    if (vb) src = `${src}${src.includes('?') ? '&' : '?'}v=${vb}`;
+                  }
+                } catch {}
                 return (
                   <ImageWithPlaceholder
-                    src={user.avatarUrl}
+                    src={src}
                     alt={user.username}
                     className="w-full h-full object-cover rounded-full"
                     fallbackInitial={user.username[0].toUpperCase()}

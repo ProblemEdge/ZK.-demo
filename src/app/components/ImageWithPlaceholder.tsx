@@ -9,6 +9,7 @@ export default function ImageWithPlaceholder({
   style,
   fallbackSrc,
   fallbackInitial,
+  showRandomText,
 }: {
   src: string | undefined | null;
   alt?: string;
@@ -16,6 +17,7 @@ export default function ImageWithPlaceholder({
   style?: React.CSSProperties;
   fallbackSrc?: string;
   fallbackInitial?: string;
+  showRandomText?: boolean;
 }) {
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState(false);
@@ -25,8 +27,10 @@ export default function ImageWithPlaceholder({
 
   useEffect(() => {
     // ランダムテキストを決定（srcごとに再生成）
-    const samples = ['matsu', 'now', 'kaze', 'sora', 'niko', 'はやく', 'ぽすと', 'ランダム'];
-    seed.current = samples[Math.floor(Math.random() * samples.length)];
+    if (showRandomText) {
+      const samples = ['matsu', 'now', 'kaze', 'sora', 'niko', 'はやく', 'ぽすと', 'ランダム'];
+      seed.current = samples[Math.floor(Math.random() * samples.length)];
+    }
   }, [src]);
 
   useEffect(() => {
@@ -52,7 +56,7 @@ export default function ImageWithPlaceholder({
 
   return (
     <div className={`relative flex items-center justify-center bg-black ${className}`} style={style}>
-      {!loaded && !showInitials && (
+      {!loaded && !showInitials && showRandomText && (
         <div className="w-full h-full flex items-center justify-center text-white text-lg">
           <div className="p-4 text-center">
             <div className="text-2xl font-medium">{seed.current}</div>

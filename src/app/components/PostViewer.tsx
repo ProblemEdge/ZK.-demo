@@ -71,6 +71,7 @@ export default function PostViewer({ posts, initialIndex = 0, onClose }: { posts
             <ImageWithPlaceholder
               src={posts[index]?.imageUrl}
               alt={posts[index]?.caption || ''}
+              showRandomText={true}
               className="max-w-full max-h-[90vh] object-contain rounded-lg"
             />
           </div>

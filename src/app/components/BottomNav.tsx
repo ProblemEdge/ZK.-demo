@@ -86,9 +86,14 @@ export default function BottomNav() {
                   (() => {
                     const filename = user.avatarUrl.split('/').pop()?.split('?')[0];
                     const fallback = filename ? `/uploads/avatars/${filename}` : undefined;
+                    let src = user.avatarUrl;
+                    try {
+                      const vb = localStorage.getItem(`avatar_v_${user.id}`);
+                      if (vb) src = `${src}${src.includes('?') ? '&' : '?'}v=${vb}`;
+                    } catch {}
                     return (
                       <ImageWithPlaceholder
-                        src={user.avatarUrl}
+                        src={src}
                         alt={user.displayName || user.username}
                         className="w-full h-full rounded-full object-cover border-2 border-white"
                         fallbackInitial={(user.displayName || user.username)[0].toUpperCase()}
