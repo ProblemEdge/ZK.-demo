@@ -117,12 +117,34 @@ export default function NewPostPage() {
     const canvas = canvasRef.current;
     if (!video || !canvas) return;
 
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+    // Display 上で見えている範囲を切り取って保存する
+    // video の実際の解像度 (video.videoWidth/Height) と表示サイズ (getBoundingClientRect) の差を吸収する
+    const rect = video.getBoundingClientRect();
+    const displayW = rect.width;
+    const displayH = rect.height;
+
+    const vidW = video.videoWidth;
+    const vidH = video.videoHeight;
+    if (!vidW || !vidH) return;
+
+    // object-fit: cover 相当のスケーリングでソース矩形を決める
+    const scale = Math.max(vidW / displayW, vidH / displayH);
+    const srcW = displayW * scale;
+    const srcH = displayH * scale;
+    const srcX = Math.max(0, Math.floor((vidW - srcW) / 2));
+    const srcY = Math.max(0, Math.floor((vidH - srcH) / 2));
+
+    // 出力は表示ピクセル数に devicePixelRatio を掛けて充分な解像度で作る
+    const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
+    const outW = Math.round(displayW * dpr);
+    const outH = Math.round(displayH * dpr);
+
+    canvas.width = outW;
+    canvas.height = outH;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    ctx.drawImage(video, 0, 0);
+    ctx.drawImage(video, srcX, srcY, srcW, srcH, 0, 0, outW, outH);
     const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
     canvas.toBlob((blob) => {
       if (blob) {
