@@ -38,6 +38,9 @@ interface Post {
   imageUrl: string;
   caption?: string;
   postedAt?: string;
+  votingEndedAt?: string | null;
+  isApproved?: boolean;
+  rejectedAt?: string | null;
 }
 
 interface FollowUser {
@@ -91,7 +94,23 @@ export default function UserProfilePage() {
       const res = await fetch(`/api/users/${userId}/posts`, { cache: 'no-store', credentials: 'include' });
       if (!res.ok) return;
       const data = await res.json();
-      setPosts((data as Post[]) || []);
+      try {
+        const now = Date.now();
+        const postsData = (data as Post[]) || [];
+        const visible = postsData.filter(p => {
+          const isRejected = !!p.rejectedAt;
+          const isApproved = !!p.isApproved;
+          const votingEndsAt = p.votingEndedAt ? new Date(p.votingEndedAt).getTime() : null;
+          const postedAtMs = p.postedAt ? new Date(p.postedAt).getTime() : 0;
+          const postedTimeoutExpired = now >= (postedAtMs + 5 * 60 * 1000);
+          const isVotingOpen = (!isRejected && !isApproved) && (votingEndsAt == null || now < votingEndsAt) && !postedTimeoutExpired;
+          if (isVotingOpen && authUser?.id !== userId) return false;
+          return true;
+        });
+        setPosts(visible);
+      } catch (e) {
+        setPosts((data as Post[]) || []);
+      }
     } catch (err) {
       console.error(err);
     }
