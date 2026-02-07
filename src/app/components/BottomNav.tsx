@@ -50,8 +50,9 @@ export default function BottomNav() {
       try {
         const detail: any = (e as CustomEvent).detail;
         if (!detail || !detail.userId) return;
-        if (detail.userId === user?.id) {
-          const vb = localStorage.getItem(`avatar_v_${user.id}`) || null;
+        const myId = user?.id || null;
+        if (detail.userId === myId) {
+          const vb = myId ? localStorage.getItem(`avatar_v_${myId}`) : null;
           setAvatarVersion(vb);
         }
       } catch {}
