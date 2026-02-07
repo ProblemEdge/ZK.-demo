@@ -97,11 +97,50 @@ export async function GET(
 
     const friendCount = user._count.friendsAsUser;
 
+    // プロフィールに表示すべき投稿数を計算（投票期間中の投稿は投稿者本人以外には見せない）
+    const now = new Date();
+    let visiblePostsCount = 0;
+    if (currentUserId === userId) {
+      // オーナーは全投稿を見られる（既存の挙動を維持）
+      visiblePostsCount = await prisma.post.count({ where: { userId } });
+    } else {
+      // 投票中の投稿を除外する条件:
+      // - isApproved が true → 表示
+      // - rejectedAt が not null → 表示期間次第（ここは count では表示対象外としない。既存の挙動に合わせるため表示扱いとする）
+      // - 未承認かつ未却下 の場合、votingEndedAt が null (投票中) または 将来 の場合は非表示
+      const votingClosedCondition = {
+        OR: [
+          { isApproved: true },
+          { rejectedAt: { not: null } },
+          {
+            AND: [
+              { isApproved: false },
+              { rejectedAt: null },
+              { votingEndedAt: { not: null, lte: now } }
+            ]
+          }
+        ]
+      };
+
+      // visibilityScope: FRIENDS は viewer がフレンドでなければ除外
+      const visibilityCondition: any = { userId };
+      if (!isFriend) {
+        visibilityCondition.visibilityScope = 'PUBLIC';
+      }
+
+      visiblePostsCount = await prisma.post.count({
+        where: {
+          AND: [visibilityCondition, votingClosedCondition]
+        }
+      });
+    }
+
     return NextResponse.json({
       user: {
         ...user,
+        _Count: undefined,
         _count: {
-          posts: user._count.posts,
+          posts: visiblePostsCount,
           friends: friendCount
         }
       },
