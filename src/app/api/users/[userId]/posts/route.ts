@@ -57,6 +57,24 @@ export async function GET(
       grouped.forEach(g => { voteCountsMap[g.postId] = g._count.id; });
     }
 
+    // --- デバッグログ: viewerId と各投稿の投票状態を出力（要検証時のみ） ---
+    try {
+      posts.forEach(post => {
+        const totalVotes = voteCountsMap[post.id] || 0;
+        const votingEndsAt = (post as any).votingEndedAt ? new Date((post as any).votingEndedAt).toISOString() : null;
+        const postedAt = (post as any).postedAt ? new Date((post as any).postedAt).toISOString() : null;
+        const isRejected = !!post.rejectedAt;
+        const isApproved = !!post.isApproved;
+        const postedAtMs = post.postedAt ? new Date(post.postedAt).getTime() : 0;
+        const postedTimeoutExpired = Date.now() >= (postedAtMs + 5 * 60 * 1000);
+        const votingClosed = (totalVotes >= 10) || (votingEndsAt != null && new Date(votingEndsAt).getTime() <= Date.now()) || postedTimeoutExpired;
+        const isVotingOpen = (!isRejected && !isApproved) && !votingClosed;
+        console.log(`[user-posts-debug] viewer=${viewerId} post=${post.id} totalVotes=${totalVotes} votingEndedAt=${votingEndsAt} postedAt=${postedAt} isApproved=${isApproved} rejectedAt=${post.rejectedAt} isVotingOpen=${isVotingOpen}`);
+      });
+    } catch (e) {
+      console.warn('user-posts-debug logging failed', e);
+    }
+
     // 閲覧者が対象ユーザーのフレンドかどうかを判定（FRIENDS公開の取扱い用）
     let isViewerFriend = false;
     if (viewerId && viewerId !== userId) {
