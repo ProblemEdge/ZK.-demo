@@ -74,6 +74,41 @@ export default function FeedPage() {
 
   useRewardCheck(status);
 
+  // Map タブ用の投稿を取得
+  useEffect(() => {
+    let mounted = true;
+    if (viewTab !== 'map') return;
+    setMapLoading(true);
+
+    fetch('/api/feed/map', { cache: 'no-store', credentials: 'include' })
+      .then(async (res) => {
+        if (!res.ok) throw new Error('マップ投稿の取得に失敗しました');
+        const data = await res.json();
+        if (!mounted) return;
+        const posts = (data.posts || []).map((p: any) => ({
+          id: p.id,
+          imageUrl: p.imageUrl,
+          caption: p.caption,
+          latitude: p.latitude,
+          longitude: p.longitude,
+          locationName: p.locationName,
+          postedAt: p.postedAt,
+          questId: p.questId,
+          _count: p._count,
+          user: p.user,
+        }));
+        setMapPosts(posts);
+      })
+      .catch((err) => {
+        console.error('Map posts fetch error:', err);
+      })
+      .finally(() => {
+        if (mounted) setMapLoading(false);
+      });
+
+    return () => { mounted = false; };
+  }, [viewTab]);
+
   // コメントテキストのリセット
   useEffect(() => {
     setCommentText('');
