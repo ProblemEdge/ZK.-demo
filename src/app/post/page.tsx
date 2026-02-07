@@ -613,7 +613,12 @@ export default function NewPostPage() {
           </div>
           <button
             type="button"
-            onClick={handleCancelSending}
+            onClick={() => {
+              handleCancelSending();
+              // スワイプ状態を解除してカードを元に戻す
+              setIsSwiping(false);
+              setSwipeProgress(0);
+            }}
             className="px-6 py-2 rounded-full border-2 border-white text-white font-bold"
           >
             送信を中止
