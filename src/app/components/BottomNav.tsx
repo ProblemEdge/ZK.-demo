@@ -10,6 +10,7 @@ export default function BottomNav() {
   const pathname = usePathname();
   const [notificationCount, setNotificationCount] = useState(0);
   const [isClient, setIsClient] = useState(false);
+  const [avatarVersion, setAvatarVersion] = useState<string | null>(null);
   const { user } = useAuth();
 
   const imgFeedIcon = '/icon/feed_icon.svg';
@@ -31,6 +32,38 @@ export default function BottomNav() {
 
   useEffect(() => {
     setIsClient(true);
+    try {
+      if (typeof window !== 'undefined' && user?.id) {
+        const vb = localStorage.getItem(`avatar_v_${user.id}`) || null;
+        setAvatarVersion(vb);
+      }
+    } catch {}
+
+    const onStorage = (e: StorageEvent) => {
+      try {
+        if (!user) return;
+        if (e.key === `avatar_v_${user.id}`) setAvatarVersion(e.newValue);
+      } catch {}
+    };
+
+    const onAvatarUpdated = (e: Event) => {
+      try {
+        const detail: any = (e as CustomEvent).detail;
+        if (!detail || !detail.userId) return;
+        if (detail.userId === user?.id) {
+          const vb = localStorage.getItem(`avatar_v_${user.id}`) || null;
+          setAvatarVersion(vb);
+        }
+      } catch {}
+    };
+
+    window.addEventListener('storage', onStorage);
+    window.addEventListener('avatar-updated', onAvatarUpdated as EventListener);
+
+    return () => {
+      window.removeEventListener('storage', onStorage);
+      window.removeEventListener('avatar-updated', onAvatarUpdated as EventListener);
+    };
   }, []);
 
   useEffect(() => {
@@ -88,8 +121,7 @@ export default function BottomNav() {
                     const fallback = filename ? `/uploads/avatars/${filename}` : undefined;
                     let src = user.avatarUrl;
                     try {
-                      const vb = localStorage.getItem(`avatar_v_${user.id}`);
-                      if (vb) src = `${src}${src.includes('?') ? '&' : '?'}v=${vb}`;
+                      if (avatarVersion) src = `${src}${src.includes('?') ? '&' : '?'}v=${avatarVersion}`;
                     } catch {}
                     return (
                       <ImageWithPlaceholder

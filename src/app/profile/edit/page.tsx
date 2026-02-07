@@ -100,6 +100,10 @@ export default function EditProfilePage() {
         // 自分のアバター更新を反映するためのキャッシュバスターを保存
         if (user?.id) {
           localStorage.setItem(`avatar_v_${user.id}`, String(Date.now()));
+          try {
+            // notify other components in same tab
+            window.dispatchEvent(new CustomEvent('avatar-updated', { detail: { userId: user.id } }));
+          } catch {}
         }
       } catch {
         // noop
