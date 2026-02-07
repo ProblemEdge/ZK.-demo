@@ -56,6 +56,7 @@ export default function ImageWithPlaceholder({
 
   return (
     // 親コンテキストで背景色を制御できるように、デフォルトの黒背景を除去
+    // `className` はコンテナと img の両方に適用して、呼び出し側で `object-cover` 等を指定できるようにする
     <div className={`relative flex items-center justify-center ${className}`} style={style}>
       {!loaded && !showInitials && showRandomText && (
         <div className="w-full h-full flex items-center justify-center text-white text-lg">
@@ -76,7 +77,8 @@ export default function ImageWithPlaceholder({
           alt={alt || ''}
           onLoad={() => setLoaded(true)}
           onError={handleError}
-          className={`max-w-full max-h-full object-contain transition-opacity duration-200 ${loaded ? 'opacity-100' : 'opacity-0'}`}
+          // apply caller's className also to the img so object-fit utilities work as expected
+          className={`max-w-full max-h-full transition-opacity duration-200 ${loaded ? 'opacity-100' : 'opacity-0'} ${className}`}
           style={loaded ? undefined : { pointerEvents: 'none' }}
         />
       )}
