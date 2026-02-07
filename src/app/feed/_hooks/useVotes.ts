@@ -7,10 +7,10 @@ import type { Post } from '../_types';
 export const useVotes = () => {
   const handleVote = async (postId: string, type: 'approve' | 'reject', setPosts: React.Dispatch<React.SetStateAction<Post[]>>) => {
     try {
-      const res = await fetch(`/api/posts/${postId}/vote`, {
+      const res = await fetch('/api/votes/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type }),
+        body: JSON.stringify({ postId, voteType: type }),
         credentials: 'include'
       });
 
