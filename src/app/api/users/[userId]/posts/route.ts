@@ -64,6 +64,14 @@ export async function GET(
 
     const now = Date.now();
     const filtered = posts.filter(post => {
+      // 投票期間中の投稿は本人のみ表示（投票終了日時があり、現在が終了前の場合）
+      if (post.votingEndedAt) {
+        const votingEndsAt = new Date(post.votingEndedAt).getTime();
+        if (now < votingEndsAt) {
+          if (viewerId === userId) return true;
+          return false;
+        }
+      }
       const duration: number | null = (post as any).visibilityDurationMinutes;
 
       // 却下済み投稿は表示期間内のみ表示
