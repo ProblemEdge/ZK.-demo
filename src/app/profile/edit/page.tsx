@@ -201,6 +201,7 @@ export default function EditProfilePage() {
                     ref={avatarEditorRef}
                     preview={avatarPreview}
                     fallbackInitial={user.username[0].toUpperCase()}
+                    containerSize={96}
                   />
                 </div>
               </div>
