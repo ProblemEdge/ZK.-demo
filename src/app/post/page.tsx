@@ -14,7 +14,7 @@ import { useLocation } from './_hooks/useLocation';
 import { useTokens } from './_hooks/useTokens';
 import { usePostSubmit } from './_hooks/usePostSubmit';
 import { useSwipeSubmit } from './_hooks/useSwipeSubmit';
-import { useBottomNav } from '../../context/BottomNavContext';
+import { useBottomNav } from '../context/BottomNavContext';
 
 // コンポーネントのインポート
 import CameraView from './_components/CameraView';
