@@ -196,14 +196,17 @@ export default function EditProfilePage() {
             </label>
             <div className="flex items-center space-x-4">
               <div className="w-24 h-24 bg-gray-700 rounded-full overflow-hidden flex items-center justify-center border-2 border-gray-600">
-                <div className="w-full h-full">
-                  <AvatarEditor
-                    ref={avatarEditorRef}
-                    preview={avatarPreview}
-                    fallbackInitial={user.username[0].toUpperCase()}
-                    containerSize={96}
+                {avatarPreview || user.avatarUrl ? (
+                  <img
+                    src={avatarPreview || user.avatarUrl || ''}
+                    alt={user.username}
+                    className="w-full h-full object-cover"
                   />
-                </div>
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-white text-2xl font-bold">
+                    {user.username[0].toUpperCase()}
+                  </div>
+                )}
               </div>
               <label className="cursor-pointer px-4 py-2 bg-gray-700 text-white rounded-md hover:bg-gray-600 border border-gray-600 font-medium">
                 画像を選択
