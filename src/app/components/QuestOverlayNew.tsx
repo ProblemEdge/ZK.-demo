@@ -55,7 +55,7 @@ export default function QuestOverlayNew({
       >
         {/* ヘッダー */}
         <div className="flex items-center gap-[5px] pt-4 mb-2">
-          <img src="/icon/compass_32.svg" alt="コンパス" className="w-8 h-8" />
+          <img src="/icon/Compass_32.svg" alt="コンパス" className="w-8 h-8" />
           <h2 className="text-[#ffc400] text-[32px] font-bold text-center flex-1">
             デイリークエスト
           </h2>
