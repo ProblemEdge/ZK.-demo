@@ -56,9 +56,6 @@ export async function GET(
       });
       grouped.forEach(g => { voteCountsMap[g.postId] = g._count.id; });
     }
-      },
-      take: 50
-    });
 
     // 閲覧者が対象ユーザーのフレンドかどうかを判定（FRIENDS公開の取扱い用）
     let isViewerFriend = false;
@@ -85,7 +82,7 @@ export async function GET(
       const votingEndsAt = (post as any).votingEndedAt ? new Date((post as any).votingEndedAt).getTime() : null;
       const postedAtMs = new Date(post.postedAt).getTime();
       const postedTimeoutExpired = now >= (postedAtMs + 5 * 60 * 1000);
-      const totalVotes = (post as any)._count?.votes || 0;
+      const totalVotes = voteCountsMap[post.id] || 0;
 
       const votingClosed = (totalVotes >= 10) || (votingEndsAt != null && votingEndsAt <= now) || postedTimeoutExpired;
       const isVotingOpen = (!isRejected && !isApproved) && !votingClosed;
