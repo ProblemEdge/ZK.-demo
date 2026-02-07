@@ -65,14 +65,16 @@ export async function GET(
 
     const now = Date.now();
     const filtered = posts.filter(post => {
-      // 投票期間中の投稿は本人のみ表示（投票終了日時があり、現在が終了前の場合）
-      if (post.votingEndedAt) {
-        const votingEndsAt = new Date(post.votingEndedAt).getTime();
-        if (now < votingEndsAt) {
-          if (viewerId === userId) return true;
-          return false;
-        }
+      // 投票中の投稿は投稿者本人のみ表示（votingEndedAt が未設定 または 未来、かつ未承認/未却下）
+      const isRejected = !!post.rejectedAt;
+      const isApproved = !!post.isApproved;
+      const votingEndsAt = (post as any).votingEndedAt ? new Date((post as any).votingEndedAt).getTime() : null;
+      const isVotingOpen = (!isRejected && !isApproved) && (votingEndsAt == null || now < votingEndsAt);
+      if (isVotingOpen) {
+        if (viewerId === userId) return true;
+        return false;
       }
+
       const duration: number | null = (post as any).visibilityDurationMinutes;
 
       // 却下済み投稿は表示期間内のみ表示
