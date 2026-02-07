@@ -21,7 +21,25 @@ const AvatarEditor = React.forwardRef<AvatarEditorHandle, { preview: string; fal
       async getCroppedBlob() {
         const img = imgRef.current;
         const container = containerRef.current;
-        if (!img || !container || !naturalRef.current.w) return null;
+        if (!img || !container) return null;
+
+        // ensure image natural size is available
+        if (!naturalRef.current.w) {
+          await new Promise<void>((resolve) => {
+            const onLoad = () => {
+              try { img.removeEventListener('load', onLoad); } catch {};
+              // naturalRef should be set by onImgLoad, but set defensively
+              naturalRef.current = { w: img.naturalWidth || naturalRef.current.w, h: img.naturalHeight || naturalRef.current.h };
+              resolve();
+            };
+            img.addEventListener('load', onLoad);
+            // fallback: resolve after short timeout
+            setTimeout(() => {
+              resolve();
+            }, 1500);
+          });
+        }
+        if (!naturalRef.current.w) return null;
 
         // Measure actual displayed sizes/positions to avoid transform ordering issues
         const imgRect = img.getBoundingClientRect();
@@ -45,10 +63,13 @@ const AvatarEditor = React.forwardRef<AvatarEditorHandle, { preview: string; fal
         const imageDisplayLeft = imgRect.left - containerRect.left;
         const imageDisplayTop = imgRect.top - containerRect.top;
 
+        // viewport size (square) inside container
+        const viewportSize = Math.min(containerRect.width, containerRect.height);
+
         // source rect in image pixels corresponding to viewport
         const srcX = Math.max(0, (-imageDisplayLeft) / displayW * nw);
         const srcY = Math.max(0, (-imageDisplayTop) / displayH * nh);
-        const srcSize = Math.min(nw, nh, (containerRect.width / displayW) * nw, (containerRect.height / displayH) * nh);
+        const srcSize = Math.min(nw, nh, (viewportSize / displayW) * nw, (viewportSize / displayH) * nh);
 
         // clip to circle
         ctx.save();
