@@ -39,7 +39,7 @@ export default function CameraView({
         autoPlay
         playsInline
         muted
-        className="absolute inset-0 w-full h-full object-cover"
+        className="absolute inset-0 w-full h-full object-contain object-center"
       />
 
       <canvas ref={canvasRef} className="hidden" />
