@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import BottomNav from '../components/BottomNav';
 import RankingsHeader from '../components/RankingsHeader';
 import ImageWithPlaceholder from '@/app/components/ImageWithPlaceholder';
 
@@ -246,7 +245,7 @@ export default function RankingsPage() {
         )}
       </div>
 
-      <BottomNav />
+      {/* BottomNav moved to RootLayout */}
     </div>
   );
 }

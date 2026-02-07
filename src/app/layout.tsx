@@ -4,6 +4,8 @@ import "./globals.css";
 import { RewardProvider } from "./context/RewardContext";
 import { AuthProvider } from "./context/AuthContext";
 import Splash from './components/Splash';
+import BottomNavShell from './components/BottomNavShell';
+import { BottomNavProvider } from './context/BottomNavContext';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -107,8 +109,11 @@ export default function RootLayout({
         <div id="root-wrapper">
           <AuthProvider>
             <RewardProvider>
-              <Splash />
-              {children}
+              <BottomNavProvider>
+                <Splash />
+                {children}
+                <BottomNavShell />
+              </BottomNavProvider>
             </RewardProvider>
           </AuthProvider>
         </div>

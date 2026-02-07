@@ -40,6 +40,19 @@ export default function ImageWithPlaceholder({
     setShowInitials(false);
   }, [src]);
 
+  useEffect(() => {
+    // 画像がブラウザキャッシュに既にある場合、onLoad が発火する前にマウントされることがある。
+    // そのため img.complete をチェックして読み込み済み状態を反映する。
+    try {
+      const img = imgRef.current;
+      if (img && img.complete && img.naturalWidth && !loaded) {
+        setLoaded(true);
+      }
+    } catch {
+      // noop
+    }
+  }, [src, loaded]);
+
   if (!src) return null;
 
   const handleError = () => {

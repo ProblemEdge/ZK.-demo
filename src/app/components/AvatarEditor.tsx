@@ -71,20 +71,32 @@ const AvatarEditor = React.forwardRef<AvatarEditorHandle, { preview: string; fal
         const srcY = Math.max(0, (-imageDisplayTop) / displayH * nh);
         const srcSize = Math.min(nw, nh, (viewportSize / displayW) * nw, (viewportSize / displayH) * nh);
 
-        // clip to circle
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(outputSize / 2, outputSize / 2, outputSize / 2, 0, Math.PI * 2);
-        ctx.closePath();
-        ctx.clip();
+        // clip to circle and draw
+        try {
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(outputSize / 2, outputSize / 2, outputSize / 2, 0, Math.PI * 2);
+          ctx.closePath();
+          ctx.clip();
 
-        ctx.drawImage(img, srcX, srcY, srcSize, srcSize, 0, 0, outputSize, outputSize);
-        ctx.restore();
+          ctx.drawImage(img, srcX, srcY, srcSize, srcSize, 0, 0, outputSize, outputSize);
+          ctx.restore();
+        } catch (err) {
+          // drawing failed (e.g., cross-origin tainting)
+          console.error('AvatarEditor: drawImage failed', err);
+          return null;
+        }
 
         return await new Promise<Blob | null>((resolve) => {
-          canvas.toBlob((b) => {
-            resolve(b);
-          }, 'image/png');
+          try {
+            canvas.toBlob((b) => {
+              if (!b) console.warn('AvatarEditor: toBlob returned null (possibly tainted canvas)');
+              resolve(b);
+            }, 'image/png');
+          } catch (err) {
+            console.error('AvatarEditor: toBlob threw', err);
+            resolve(null);
+          }
         });
       },
       reset() {

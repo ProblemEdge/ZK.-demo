@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import BottomNav from '../../components/BottomNav';
 import ProfileHeader from '../../components/ProfileHeader';
 import ImageWithPlaceholder from '@/app/components/ImageWithPlaceholder';
 import PostViewer from '../../components/PostViewer';
@@ -199,7 +198,7 @@ export default function UserProfilePage() {
             </div>
           </div>
         </div>
-        <BottomNav />
+        {/* BottomNav moved to RootLayout */}
       </div>
     );
   }
@@ -325,7 +324,7 @@ export default function UserProfilePage() {
         </div>
       )}
 
-      <BottomNav />
+        {/* BottomNav moved to RootLayout */}
     </div>
 
   ); // ここを閉じ忘れると構文エラーになります

@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import BottomNav from '../components/BottomNav';
 import VoteHeader from '../components/VoteHeader';
 import { useReward } from '../context/RewardContext';
 import { useAuth } from '../context/AuthContext';
@@ -592,7 +591,7 @@ export default function VotePage() {
         )}
       </div>
 
-      <BottomNav />
+      {/* BottomNav moved to RootLayout */}
     </div>
   );
 }

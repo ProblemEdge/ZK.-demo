@@ -1,4 +1,3 @@
-import BottomNav from '../../components/BottomNav';
 import ProfileHeader from '../../components/ProfileHeader';
 
 export default function Loading() {
@@ -36,7 +35,7 @@ export default function Loading() {
         </div>
       </div>
 
-      <BottomNav />
+      {/* BottomNav moved to RootLayout */}
     </div>
   );
 }

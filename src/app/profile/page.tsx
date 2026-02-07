@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import BottomNav from '../components/BottomNav';
+// BottomNav moved to RootLayout
 import ProfileHeader from '../components/ProfileHeader';
 import ImageWithPlaceholder from '@/app/components/ImageWithPlaceholder';
 import PostViewer from '../components/PostViewer';
@@ -149,7 +149,7 @@ function ProfilePageContent() {
         <div className="flex items-center justify-center py-32">
           <p className="text-gray-500">読み込み中...</p>
         </div>
-        <BottomNav />
+        {/* BottomNav moved to RootLayout */}
       </div>
     );
   }
@@ -356,7 +356,7 @@ function ProfilePageContent() {
       </>
       )}
 
-      <BottomNav />
+      {/* BottomNav moved to RootLayout */}
       {viewerOpen && (
         <PostViewer posts={posts.map(p => ({ ...p, imageUrl: `/api/posts/${p.id}/image` }))} initialIndex={viewerIndex} onClose={() => setViewerOpen(false)} />
       )}

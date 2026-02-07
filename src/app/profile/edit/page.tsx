@@ -22,6 +22,7 @@ export default function EditProfilePage() {
   const [bio, setBio] = useState('');
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState('');
+  const [croppedBlob, setCroppedBlob] = useState<Blob | null>(null);
   const avatarEditorRef = useRef<any>(null);
   const [showFullEditor, setShowFullEditor] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -48,6 +49,7 @@ export default function EditProfilePage() {
     const file = e.target.files?.[0];
     if (file) {
       setAvatarFile(file);
+      setCroppedBlob(null);
       const reader = new FileReader();
       reader.onloadend = () => {
         setAvatarPreview(reader.result as string);
@@ -66,12 +68,17 @@ export default function EditProfilePage() {
 
       // 画像をアップロード（切り抜き済みを送る）
       if (avatarFile) {
-        let blob: Blob | null = null;
-        try {
-          blob = await avatarEditorRef.current?.getCroppedBlob();
-        } catch (err) {
-          blob = null;
+        // prefer an already-captured cropped blob (from 完了), otherwise try getting from editor
+        let blob: Blob | null = croppedBlob ?? null;
+        if (!blob) {
+          try {
+            blob = await avatarEditorRef.current?.getCroppedBlob();
+          } catch (err) {
+            console.error('getCroppedBlob threw', err);
+            blob = null;
+          }
         }
+        console.debug('Avatar upload: haveBlob=', !!blob, 'avatarFile=', avatarFile);
 
         const formData = new FormData();
         if (blob) formData.append('avatar', blob, 'avatar.png');
@@ -166,7 +173,23 @@ export default function EditProfilePage() {
                 </button>
                 <button
                   className="px-3 py-1 bg-green-600 text-white rounded"
-                  onClick={() => setShowFullEditor(false)}
+                  onClick={async () => {
+                    try {
+                      const blob = await avatarEditorRef.current?.getCroppedBlob();
+                      if (blob) {
+                        setCroppedBlob(blob);
+                        // show cropped preview in the small preview
+                        try {
+                          const url = URL.createObjectURL(blob);
+                          setAvatarPreview(url);
+                        } catch {}
+                      }
+                    } catch (err) {
+                      console.error('完了ボタン: getCroppedBlob failed', err);
+                    } finally {
+                      setShowFullEditor(false);
+                    }
+                  }}
                 >
                   完了
                 </button>

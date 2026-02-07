@@ -33,11 +33,11 @@ export default function UserDogtag({
   return (
     <div className="bg-[#14161a] border border-white rounded-[8px] px-[13px] py-[7px] flex items-center gap-[17px] w-full">
       <div className="flex items-center gap-[10px] flex-1 min-w-0">
-        <div className="w-[50px] h-[50px] rounded-full overflow-hidden border border-white/20">
+        <div className="w-[50px] h-[50px] rounded-full overflow-hidden border border-white/20 flex-shrink-0">
           <img
             src={avatarUrl || defaultAvatar}
             alt={name}
-            className="w-full h-full object-cover"
+            className="block w-full h-full object-cover"
           />
         </div>
         <div className="flex flex-col gap-[4px] w-[221px] min-w-0">

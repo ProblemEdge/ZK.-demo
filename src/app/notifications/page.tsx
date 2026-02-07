@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import BottomNav from '../components/BottomNav';
 import NotificationsHeader from '../components/NotificationsHeader';
 import { useAuth } from '../context/AuthContext';
 import { getNotifications, markNotificationsAsRead } from '@/actions/notification';
@@ -147,7 +146,7 @@ export default function NotificationsPage() {
         )}
       </div>
 
-      <BottomNav />
+      {/* BottomNav moved to RootLayout */}
     </div>
   );
 }

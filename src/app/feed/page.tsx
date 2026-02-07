@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
-import BottomNav from '../components/BottomNav';
+import { useBottomNav } from '../context/BottomNavContext';
 import FeedCard from '../components/FeedCard';
 import FeedHeader from '../components/FeedHeader';
 import type { PostStatus } from '../components/PostStatusTag';
@@ -70,12 +70,19 @@ export default function FeedPage() {
   });
   useRewardCheck(status);
 
+  const { setVisible: setBottomNavVisible } = useBottomNav();
+
   useRewardCheck(status);
 
   // コメントテキストのリセット
   useEffect(() => {
     setCommentText('');
   }, [expandedPostId, setCommentText]);
+
+  useEffect(() => {
+    setBottomNavVisible(!expandedPostId);
+    return () => setBottomNavVisible(true);
+  }, [expandedPostId, setBottomNavVisible]);
 
   // ピンチズーム防止
   useEffect(() => {
@@ -286,7 +293,7 @@ export default function FeedPage() {
         hasMore={expandedPostId ? (commentsMeta[expandedPostId]?.hasMore ?? false) : false}
       />
 
-      {!expandedPostId && <BottomNav />}
+      {/* BottomNav is provided in RootLayout; visibility controlled via BottomNavContext */}
     </div>
   );
 }

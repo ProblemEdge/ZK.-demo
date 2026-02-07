@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import BottomNav from '../components/BottomNav';
 import UserDogtag from '../components/UserDogtag';
 import DiscoverHeader from '../components/DiscoverHeader';
 import { RankFirstFrame, RankSecondFrame, RankThirdFrame, RankListFrame } from '../components/RankingFrames';
@@ -448,7 +447,7 @@ export default function DiscoverPage() {
         )}
       </div>
 
-      <BottomNav />
+      {/* BottomNav moved to RootLayout */}
     </div>
   );
 }
