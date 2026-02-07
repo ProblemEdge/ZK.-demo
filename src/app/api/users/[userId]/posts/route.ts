@@ -29,25 +29,33 @@ export async function GET(
 
     // ユーザーの投稿を取得（承認状態に関係なく取得し、表示条件はサーバー側でフィルタリング）
     const posts = await prisma.post.findMany({
-      where: {
-        userId
-      },
+      where: { userId },
       select: {
         id: true,
         imageUrl: true,
         caption: true,
-          postedAt: true,
-          votingEndedAt: true,
+        postedAt: true,
+        votingEndedAt: true,
         visibilityScope: true,
         visibilityDurationMinutes: true,
         isApproved: true,
         rejectedAt: true
       },
-      _count: {
-        select: { votes: true }
-      },
-      orderBy: {
-        postedAt: 'desc'
+      orderBy: { postedAt: 'desc' },
+      take: 50
+    });
+
+    // 各投稿の投票数は別クエリで取得（Prisma の select 型制約を回避）
+    const postIds = posts.map(p => p.id);
+    let voteCountsMap: Record<string, number> = {};
+    if (postIds.length > 0) {
+      const grouped = await prisma.vote.groupBy({
+        by: ['postId'],
+        where: { postId: { in: postIds } },
+        _count: { id: true }
+      });
+      grouped.forEach(g => { voteCountsMap[g.postId] = g._count.id; });
+    }
       },
       take: 50
     });
