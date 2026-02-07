@@ -43,6 +43,9 @@ export async function GET(
         isApproved: true,
         rejectedAt: true
       },
+      _count: {
+        select: { votes: true }
+      },
       orderBy: {
         postedAt: 'desc'
       },
@@ -65,11 +68,19 @@ export async function GET(
 
     const now = Date.now();
     const filtered = posts.filter(post => {
-      // 投票中の投稿は投稿者本人のみ表示（votingEndedAt が未設定 または 未来、かつ未承認/未却下）
+      // 投票中の投稿は投稿者本人のみ表示。
+      // 投票期間の判定条件（投票中である = 非表示対象）:
+      // - 投稿が未承認かつ未却下である
+      // - かつ以下のいずれかが満たされる: votingEndedAt が未設定 or 将来、投稿作成から5分未満、投票数が10未満
       const isRejected = !!post.rejectedAt;
       const isApproved = !!post.isApproved;
       const votingEndsAt = (post as any).votingEndedAt ? new Date((post as any).votingEndedAt).getTime() : null;
-      const isVotingOpen = (!isRejected && !isApproved) && (votingEndsAt == null || now < votingEndsAt);
+      const postedAtMs = new Date(post.postedAt).getTime();
+      const postedTimeoutExpired = now >= (postedAtMs + 5 * 60 * 1000);
+      const totalVotes = (post as any)._count?.votes || 0;
+
+      const votingClosed = (totalVotes >= 10) || (votingEndsAt != null && votingEndsAt <= now) || postedTimeoutExpired;
+      const isVotingOpen = (!isRejected && !isApproved) && !votingClosed;
       if (isVotingOpen) {
         if (viewerId === userId) return true;
         return false;

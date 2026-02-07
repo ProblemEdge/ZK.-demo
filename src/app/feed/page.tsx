@@ -163,7 +163,7 @@ export default function FeedPage() {
             <EmptyState onCreatePost={() => router.push('/post')} />
           ) : (
             allPosts.map((post) => {
-              const votingClosed = isVotingClosed(post.postedAt);
+              const votingClosed = isVotingClosed(post.postedAt) || (post.totalVotes !== undefined && post.totalVotes >= 10);
               const isOwnPost = post.userId === currentUserId;
               const isVotingOpen = !votingClosed && !post.isApproved && !post.rejectedAt;
               const isVotingActive = isVotingOpen && !isOwnPost && !post.hasVoted;
