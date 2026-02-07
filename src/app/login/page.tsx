@@ -1,9 +1,11 @@
 'use client';
 
 import { useState } from 'react';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '../context/AuthContext';
+import { useBottomNav } from '../context/BottomNavContext';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
@@ -12,6 +14,12 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const { refresh } = useAuth();
+  const { setVisible: setBottomNavVisible } = useBottomNav();
+
+  useEffect(() => {
+    setBottomNavVisible(false);
+    return () => setBottomNavVisible(true);
+  }, [setBottomNavVisible]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
