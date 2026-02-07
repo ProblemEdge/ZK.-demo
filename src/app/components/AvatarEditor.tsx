@@ -8,6 +8,7 @@ type AvatarEditorHandle = {
 const AvatarEditor = React.forwardRef<AvatarEditorHandle, { preview: string; fallbackInitial: string; containerSize?: number }>(
   ({ preview, fallbackInitial, containerSize = 200 }, ref) => {
     const imgRef = useRef<HTMLImageElement | null>(null);
+    const containerRef = useRef<HTMLDivElement | null>(null);
     const naturalRef = useRef<{ w: number; h: number }>({ w: 0, h: 0 });
     const baseZoomRef = useRef<number>(1);
     const [scale, setScale] = useState(1);
@@ -19,7 +20,12 @@ const AvatarEditor = React.forwardRef<AvatarEditorHandle, { preview: string; fal
     useImperativeHandle(ref, () => ({
       async getCroppedBlob() {
         const img = imgRef.current;
-        if (!img || !naturalRef.current.w) return null;
+        const container = containerRef.current;
+        if (!img || !container || !naturalRef.current.w) return null;
+
+        // Measure actual displayed sizes/positions to avoid transform ordering issues
+        const imgRect = img.getBoundingClientRect();
+        const containerRect = container.getBoundingClientRect();
 
         const outputSize = 512;
         const canvas = document.createElement('canvas');
@@ -30,17 +36,19 @@ const AvatarEditor = React.forwardRef<AvatarEditorHandle, { preview: string; fal
 
         const nw = naturalRef.current.w;
         const nh = naturalRef.current.h;
-        const displayScale = baseZoomRef.current * scale;
-        const displayW = nw * displayScale;
-        const displayH = nh * displayScale;
 
-        const imageDisplayLeft = (containerSize - displayW) / 2 + offset.x;
-        const imageDisplayTop = (containerSize - displayH) / 2 + offset.y;
+        // displayed sizes
+        const displayW = imgRect.width;
+        const displayH = imgRect.height;
+
+        // image's top-left relative to container
+        const imageDisplayLeft = imgRect.left - containerRect.left;
+        const imageDisplayTop = imgRect.top - containerRect.top;
 
         // source rect in image pixels corresponding to viewport
         const srcX = Math.max(0, (-imageDisplayLeft) / displayW * nw);
         const srcY = Math.max(0, (-imageDisplayTop) / displayH * nh);
-        const srcSize = Math.min(nw, nh, (containerSize / displayW) * nw, (containerSize / displayH) * nh);
+        const srcSize = Math.min(nw, nh, (containerRect.width / displayW) * nw, (containerRect.height / displayH) * nh);
 
         // clip to circle
         ctx.save();
@@ -118,6 +126,7 @@ const AvatarEditor = React.forwardRef<AvatarEditorHandle, { preview: string; fal
     return (
       <div>
         <div
+          ref={containerRef}
           style={{ width: containerSize, height: containerSize }}
           className="relative rounded-full overflow-hidden bg-gray-800 mx-auto"
           onPointerDown={onPointerDown}
