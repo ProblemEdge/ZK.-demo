@@ -37,15 +37,26 @@ export async function GET(request: Request) {
 
     const posts = await prisma.post.findMany({
       where: {
-        isApproved: true,
         latitude: { not: null },
         longitude: { not: null },
-        OR: [
-          { visibilityScope: 'PUBLIC' },
+        AND: [
+          // 承認済み、または自分の投稿は表示する（投稿者が自分の位置を確認できるように）
           {
-            AND: [
-              { visibilityScope: 'FRIENDS' },
-              { userId: { in: allowedIds } }
+            OR: [
+              { isApproved: true },
+              { userId: decoded.userId }
+            ]
+          },
+          // 公開範囲チェック
+          {
+            OR: [
+              { visibilityScope: 'PUBLIC' },
+              {
+                AND: [
+                  { visibilityScope: 'FRIENDS' },
+                  { userId: { in: allowedIds } }
+                ]
+              }
             ]
           }
         ]
