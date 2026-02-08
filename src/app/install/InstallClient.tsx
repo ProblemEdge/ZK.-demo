@@ -19,7 +19,14 @@ export default function InstallClient() {
         method: 'POST',
         credentials: 'same-origin',
       }).finally(() => {
-        window.location.href = returnTo;
+        // append a one-time flag so middleware won't immediately redirect back to /install
+        try {
+          const target = new URL(returnTo, window.location.origin);
+          target.searchParams.set('fromInstall', '1');
+          window.location.href = target.href;
+        } catch (e) {
+          window.location.href = returnTo;
+        }
       });
     }
   }, [returnTo]);
@@ -31,7 +38,13 @@ export default function InstallClient() {
         credentials: 'same-origin',
       });
     } finally {
-      window.location.href = returnTo;
+      try {
+        const target = new URL(returnTo, window.location.origin);
+        target.searchParams.set('fromInstall', '1');
+        window.location.href = target.href;
+      } catch (e) {
+        window.location.href = returnTo;
+      }
     }
   };
 

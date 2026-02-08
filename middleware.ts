@@ -16,7 +16,11 @@ export function middleware(request: NextRequest) {
     // keep assets, SW, manifest accessible for PWA install flow
     pathname === '/favicon.ico' ||
     pathname === '/sw.js' ||
-    pathname === '/manifest.json'
+    pathname === '/manifest.json' ||
+    pathname === '/login' ||
+    pathname === '/register' ||
+    pathname === '/tutorial' ||
+    pathname === '/install'
   ) {
     return NextResponse.next();
   }
@@ -27,7 +31,10 @@ export function middleware(request: NextRequest) {
   const ua = request.headers.get('user-agent') || '';
   const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(ua);
 
-  if (isMobile && !pwaInstalled && pathname !== '/install') {
+  // allow a one-time bypass when returning from the install flow
+  const fromInstallFlag = request.nextUrl.searchParams.get('fromInstall');
+
+  if (isMobile && !pwaInstalled && pathname !== '/install' && fromInstallFlag !== '1') {
     const installUrl = new URL('/install', request.url);
     installUrl.searchParams.set('returnTo', pathname);
     return NextResponse.redirect(installUrl);
