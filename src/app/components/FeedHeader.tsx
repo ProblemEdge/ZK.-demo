@@ -10,7 +10,12 @@ interface FeedHeaderProps {
   onViewTabChange: (viewTab: 'feed' | 'map') => void;
 }
 
-export default function FeedHeader({ tab, viewTab, onTabChange, onViewTabChange }: FeedHeaderProps) {
+export default function FeedHeader({
+  tab,
+  viewTab,
+  onTabChange,
+  onViewTabChange,
+}: FeedHeaderProps) {
   const router = useRouter();
   const pathname = usePathname();
 
@@ -23,53 +28,67 @@ export default function FeedHeader({ tab, viewTab, onTabChange, onViewTabChange 
   };
 
   return (
-    <div className="bg-[#0b0c0f] border-b-4 border-white px-4 h-[65px] flex items-center justify-between">
+    <div className='sticky top-0 z-50 bg-[#0b0c0f] border-b-4 border-white px-4 h-[65px] flex items-center justify-between'>
       {/* ロゴ */}
       <Link
-        href="/feed"
+        href='/feed'
         onClick={handleLogoClick}
-        className="flex items-center h-full cursor-pointer hover:opacity-80 transition"
+        className='flex items-center h-full cursor-pointer hover:opacity-80 transition'
       >
-        <img src="/icon_only_text.svg" alt="ZK Logo" className="h-7 w-auto" style={{ maxWidth: 90 }} />
+        <img
+          src='/icon_only_text.svg'
+          alt='ZK Logo'
+          className='h-7 w-auto'
+          style={{ maxWidth: 90 }}
+        />
       </Link>
-      
+
       {/* 右側のボタン群 */}
-      <div className="flex items-center gap-2">
+      <div className='flex items-center gap-2'>
         {/* 友達/すべて切り替え */}
-        <div className="flex items-center gap-2">
-          <button 
-            onClick={() => { onViewTabChange('feed'); onTabChange('following'); }}
+        <div className='flex items-center gap-2'>
+          <button
+            onClick={() => {
+              onViewTabChange('feed');
+              onTabChange('following');
+            }}
             className={`flex items-center gap-1 px-[6px] py-1 h-7 rounded-[16px] text-white text-[12px] font-bold transition ${
               viewTab === 'feed' && tab === 'following' ? 'bg-[#00e676]' : 'bg-[#475467]'
             }`}
           >
-            <img src="/icon/User check.svg" alt="" className="w-5 h-5" />
+            <img src='/icon/User check.svg' alt='' className='w-5 h-5' />
             <span>友達</span>
           </button>
-          <button 
-            onClick={() => { onViewTabChange('feed'); onTabChange('all'); }}
+          <button
+            onClick={() => {
+              onViewTabChange('feed');
+              onTabChange('all');
+            }}
             className={`flex items-center gap-1.5 px-[7px] py-1 h-7 rounded-[16px] text-white text-[12px] font-bold transition ${
               viewTab === 'feed' && tab === 'all' ? 'bg-[#00e676]' : 'bg-[#475467]'
             }`}
           >
-            <img src="/icon/Globe.svg" alt="" className="w-5 h-5" />
+            <img src='/icon/Globe.svg' alt='' className='w-5 h-5' />
             <span>すべて</span>
           </button>
         </div>
-        
+
         {/* マップトグル */}
-        <button 
+        <button
           onClick={() => onViewTabChange('map')}
           className={`flex items-center justify-center p-1 w-7 h-7 rounded-[8px] transition ${
             viewTab === 'map' ? 'bg-[#00e676]' : 'bg-[#475467]'
           }`}
         >
-          <img src="/icon/Map.svg" alt="マップ" className="w-5 h-5" />
+          <img src='/icon/Map.svg' alt='マップ' className='w-5 h-5' />
         </button>
-        
+
         {/* 通知 */}
-        <Link href="/notifications" className="flex items-center justify-center p-0.5 w-7 h-7 rounded-[32px] bg-[#475467]">
-          <img src="/icon/Bell.svg" alt="通知" className="w-6 h-6" />
+        <Link
+          href='/notifications'
+          className='flex items-center justify-center p-0.5 w-7 h-7 rounded-[32px] bg-[#475467]'
+        >
+          <img src='/icon/Bell.svg' alt='通知' className='w-6 h-6' />
         </Link>
       </div>
     </div>

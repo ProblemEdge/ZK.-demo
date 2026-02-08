@@ -12,24 +12,31 @@ interface RankingsHeaderProps {
   onModeChange: (mode: Mode) => void;
 }
 
-export default function RankingsHeader({ period, mode, onPeriodChange, onModeChange }: RankingsHeaderProps) {
+export default function RankingsHeader({
+  period,
+  mode,
+  onPeriodChange,
+  onModeChange,
+}: RankingsHeaderProps) {
   const router = useRouter();
 
   return (
-    <header className="bg-gray-900 border-b border-gray-800">
-      <div className="relative h-[65px] px-3 flex items-center">
-        <div className="w-6 h-6" />
-        <h1 className="absolute left-1/2 -translate-x-1/2 text-xl font-bold text-white whitespace-nowrap">🏆 ランキング</h1>
+    <header className='sticky top-0 z-50 bg-gray-900 border-b border-gray-800'>
+      <div className='relative h-[65px] px-3 flex items-center'>
+        <div className='w-6 h-6' />
+        <h1 className='absolute left-1/2 -translate-x-1/2 text-xl font-bold text-white whitespace-nowrap'>
+          🏆 ランキング
+        </h1>
         <button
           onClick={() => router.back()}
-          className="ml-auto w-6 h-6 flex items-center justify-center text-gray-400 hover:text-white transition"
+          className='ml-auto w-6 h-6 flex items-center justify-center text-gray-400 hover:text-white transition'
         >
           ✕
         </button>
       </div>
 
       {/* モード切り替え */}
-      <div className="flex gap-2 mb-3 px-3">
+      <div className='flex gap-2 mb-3 px-3'>
         <button
           onClick={() => onModeChange('world')}
           className={`px-3 py-1 rounded-full text-xs font-semibold transition ${
@@ -53,8 +60,8 @@ export default function RankingsHeader({ period, mode, onPeriodChange, onModeCha
       </div>
 
       {/* 期間フィルター */}
-      <div className="flex gap-1 overflow-x-auto pb-1 px-3">
-        {(['today', 'week', 'month', 'year', 'all'] as Period[]).map(p => (
+      <div className='flex gap-1 overflow-x-auto pb-1 px-3'>
+        {(['today', 'week', 'month', 'year', 'all'] as Period[]).map((p) => (
           <button
             key={p}
             onClick={() => onPeriodChange(p)}
