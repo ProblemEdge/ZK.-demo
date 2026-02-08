@@ -119,17 +119,7 @@ export default function InstallClient() {
         </div>
 
         {/* ボタン */}
-        <button
-          onClick={markInstalled}
-          className='w-full px-8 py-4 rounded-xl bg-gradient-to-r from-[#00a63e] to-[#13ac4c] text-white font-bold shadow-lg shadow-green-900/30 hover:shadow-green-900/50 hover:scale-[1.02] transition-all duration-200 active:scale-95'
-        >
-          インストール済み — 開く
-        </button>
-
-        {/* 補足テキスト */}
-        <p className='text-center text-gray-500 text-xs mt-4'>
-          自動で戻らない場合は上のボタンを押してください
-        </p>
+        {/* 補足: インストール後に自動で戻るため、手動ボタンは不要 */}
       </div>
     </div>
   );
