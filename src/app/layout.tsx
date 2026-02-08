@@ -1,28 +1,29 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
-import { RewardProvider } from "./context/RewardContext";
-import { AuthProvider } from "./context/AuthContext";
+import type { Metadata } from 'next';
+import { Geist, Geist_Mono } from 'next/font/google';
+import './globals.css';
+import { RewardProvider } from './context/RewardContext';
+import { AuthProvider } from './context/AuthContext';
 import Splash from './components/Splash';
+import PwaInstallRedirectClient from './components/PwaInstallRedirectClient';
 import BottomNavShell from './components/BottomNavShell';
 import { BottomNavProvider } from './context/BottomNavContext';
 
 const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
+  variable: '--font-geist-sans',
+  subsets: ['latin'],
 });
 
 const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+  variable: '--font-geist-mono',
+  subsets: ['latin'],
 });
 
 export const metadata: Metadata = {
-  title: "ZK.",
-  description: "ZK.",
+  title: 'ZK.',
+  description: 'ZK.',
   icons: {
     icon: '/favicon.ico?v=2',
-  }
+  },
 };
 
 export default function RootLayout({
@@ -31,16 +32,19 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ja" className="bg-gray-900">
+    <html lang='ja' className='bg-gray-900'>
       <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-        <link rel="manifest" href="/manifest.json" crossOrigin="use-credentials" />
-        <meta name="theme-color" content="#0B0C0F" />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="ZK." />
-        <meta name="mobile-web-app-capable" content="yes" />
-        <link rel="icon" href="/favicon.ico?v=2" />
+        <meta
+          name='viewport'
+          content='width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover'
+        />
+        <link rel='manifest' href='/manifest.json' crossOrigin='use-credentials' />
+        <meta name='theme-color' content='#0B0C0F' />
+        <meta name='apple-mobile-web-app-capable' content='yes' />
+        <meta name='apple-mobile-web-app-status-bar-style' content='black-translucent' />
+        <meta name='apple-mobile-web-app-title' content='ZK.' />
+        <meta name='mobile-web-app-capable' content='yes' />
+        <link rel='icon' href='/favicon.ico?v=2' />
         <style>{`
           :root {
             --safe-area-top: env(safe-area-inset-top, 0px);
@@ -91,7 +95,7 @@ export default function RootLayout({
             pointerEvents: 'none',
           }}
         />
-        
+
         {/* Safe Area対応のボトムバー背景（固定配置） */}
         <div
           style={{
@@ -106,10 +110,11 @@ export default function RootLayout({
           }}
         />
 
-        <div id="root-wrapper">
+        <div id='root-wrapper'>
           <AuthProvider>
             <RewardProvider>
               <BottomNavProvider>
+                <PwaInstallRedirectClient />
                 <Splash />
                 {children}
                 <BottomNavShell />
@@ -118,7 +123,6 @@ export default function RootLayout({
           </AuthProvider>
         </div>
       </body>
-
     </html>
   );
 }
