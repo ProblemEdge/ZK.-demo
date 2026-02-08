@@ -9,10 +9,13 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // スキップ対象（公開パス）
+  // - Next.js 内部、API は常にスキップ
+  // - PWA 関連ファイルやログイン/登録ページはスキップ
+  // - public 配下の静的ファイルはURL上に `/public` を含まないため、
+  //   ここでは拡張子を持つリクエストや既知の公開フォルダを個別に許可する
   if (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/api') ||
-    pathname.startsWith('/public') ||
     // keep assets, SW, manifest accessible for PWA install flow
     pathname === '/favicon.ico' ||
     pathname === '/sw.js' ||
@@ -21,6 +24,20 @@ export function middleware(request: NextRequest) {
     pathname === '/register' ||
     pathname === '/tutorial' ||
     pathname === '/install'
+  ) {
+    return NextResponse.next();
+  }
+
+  // 拡張子があるリクエストは静的アセット（画像/アイコン/フォント等）とみなしてスキップ
+  if (/\.[^/]+$/.test(pathname)) {
+    return NextResponse.next();
+  }
+
+  // 公開フォルダのいくつかは明示的に許可（例: /icon, /badge, /uploads）
+  if (
+    pathname.startsWith('/icon') ||
+    pathname.startsWith('/badge') ||
+    pathname.startsWith('/uploads')
   ) {
     return NextResponse.next();
   }
