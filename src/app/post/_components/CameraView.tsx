@@ -42,7 +42,6 @@ export default function CameraView({
         playsInline
         muted
         className='absolute inset-0 w-full h-full object-contain object-center'
-        style={{ transform: facingMode === 'user' ? 'scaleX(-1)' : undefined }}
       />
 
       <canvas ref={canvasRef} className='hidden' />
