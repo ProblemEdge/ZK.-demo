@@ -27,9 +27,15 @@ export function middleware(request: NextRequest) {
 
   // モバイルの場合、PWA インストール済みフラグが無ければ `/install` へ誘導する
   // ここを認証チェックより前に置くことで、`/install` を除く全ページを対象にする
-  const pwaInstalled = request.cookies.get('pwa_installed')?.value;
+  const pwaInstalledValue = request.cookies.get('pwa_installed')?.value;
+  // treat installed only when cookie explicitly set to '1' or 'true'
+  const pwaInstalled = pwaInstalledValue === '1' || pwaInstalledValue === 'true';
   const ua = request.headers.get('user-agent') || '';
-  const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(ua);
+  // broader mobile UA detection to catch various mobile UAs (incl. iOS Chrome/Safari variants)
+  const isMobile =
+    /(android|iphone|ipad|ipod|mobile|windows phone|iemobile|opera mini|blackberry|bb10|crios|fxios)/i.test(
+      ua,
+    );
 
   // allow a one-time bypass when returning from the install flow
   const fromInstallFlag = request.nextUrl.searchParams.get('fromInstall');
@@ -53,7 +59,7 @@ export function middleware(request: NextRequest) {
   // debug headers for troubleshooting in network tab (remove in production)
   try {
     res.headers.set('x-pwa-mobile', String(isMobile));
-    res.headers.set('x-pwa-installed', String(Boolean(pwaInstalled)));
+    res.headers.set('x-pwa-installed', String(pwaInstalled));
     // include truncated UA for debugging (do not expose full UA in prod)
     res.headers.set('x-pwa-ua', ua.slice(0, 120));
   } catch (e) {
