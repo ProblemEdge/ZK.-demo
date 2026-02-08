@@ -11,7 +11,7 @@ import Badges, { BadgeData } from '../components/Badges';
 import MoreButton from '../components/MoreButton';
 import { useAuth } from '../context/AuthContext';
 import { deletePost } from '@/actions/post';
-import { getMyPosts, resetShotTokens, processExpiredPosts } from '@/actions/post';
+import { getMyPosts, processExpiredPosts } from '@/actions/post';
 import { getUserBadges } from '@/actions/user';
 import { getTodayQuests } from '@/actions/quest';
 
@@ -54,7 +54,7 @@ function ProfilePageContent() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
-  const [resetLoading, setResetLoading] = useState(false);
+
   const [showQuestOverlay, setShowQuestOverlay] = useState(false);
   const [quests, setQuests] = useState<any[]>([]);
   const [badges, setBadges] = useState<BadgeData[]>([]);
@@ -111,19 +111,6 @@ function ProfilePageContent() {
     }
   };
 
-
-  const handleResetTokens = async () => {
-    setResetLoading(true);
-    try {
-      await resetShotTokens();
-      window.location.reload();
-    } catch (error) {
-      console.error('Error resetting tokens:', error);
-    } finally {
-      setResetLoading(false);
-    }
-  };
-
   const handleLogout = () => {
     document.cookie = 'auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
     router.push('/login');
@@ -133,234 +120,256 @@ function ProfilePageContent() {
     if (!confirm('この投稿を削除してもよろしいですか？')) return;
     try {
       await deletePost(postId);
-      setPosts(prev => prev.filter(p => p.id !== postId));
+      setPosts((prev) => prev.filter((p) => p.id !== postId));
     } catch (err) {
       console.error('投稿削除エラー:', err);
       alert('削除に失敗しました');
     }
   };
 
-  
-
   if (!user) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-[#0b0c0f] via-[#0b0c0f] to-[#0f0f0f] pb-24" style={{ paddingBottom: 'calc(6rem + var(--safe-area-bottom))' }}>
+      <div
+        className='min-h-screen bg-gradient-to-b from-[#0b0c0f] via-[#0b0c0f] to-[#0f0f0f] pb-24'
+        style={{ paddingBottom: 'calc(6rem + var(--safe-area-bottom))' }}
+      >
         <ProfileHeader />
-        <div className="flex items-center justify-center py-32">
-          <p className="text-gray-500">読み込み中...</p>
+        <div className='flex items-center justify-center py-32'>
+          <p className='text-gray-500'>読み込み中...</p>
         </div>
         {/* BottomNav moved to RootLayout */}
       </div>
     );
   }
 
-  const expPercentage = user.experience ? (user.experience % 100) / 100 * 100 : 0;
+  const expPercentage = user.experience ? ((user.experience % 100) / 100) * 100 : 0;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#0b0c0f] via-[#0b0c0f] to-[#0f0f0f] pb-24" style={{ paddingBottom: 'calc(6rem + var(--safe-area-bottom))' }}>
+    <div
+      className='min-h-screen bg-gradient-to-b from-[#0b0c0f] via-[#0b0c0f] to-[#0f0f0f] pb-24'
+      style={{ paddingBottom: 'calc(6rem + var(--safe-area-bottom))' }}
+    >
       <ProfileHeader />
 
       {loading ? (
         // ローディング中
-        <div className="flex items-center justify-center py-32">
-          <p className="text-gray-500">読み込み中...</p>
+        <div className='flex items-center justify-center py-32'>
+          <p className='text-gray-500'>読み込み中...</p>
         </div>
       ) : (
         <>
           {/* Profile Card */}
-          <div className="mx-3 mt-6 bg-[#14161a] border border-white rounded-2xl p-6 relative">
+          <div className='mx-3 mt-6 bg-[#14161a] border border-white rounded-2xl p-6 relative'>
             {/* Edit Button */}
             <button
               onClick={() => router.push('/profile/edit')}
-          className="absolute top-3 left-3 w-6 h-6 rounded-full bg-transparent hover:bg-white/10 flex items-center justify-center transition"
-        >
-          <img src="/icon/Edit.svg" alt="Edit" className="w-5 h-5" />
-        </button>
+              className='absolute top-3 left-3 w-6 h-6 rounded-full bg-transparent hover:bg-white/10 flex items-center justify-center transition'
+            >
+              <img src='/icon/Edit.svg' alt='Edit' className='w-5 h-5' />
+            </button>
 
-        {/* Bio/Message Box */}
-        <div className="absolute top-3 right-3 bg-black/40 border border-white rounded-full px-3 py-1 text-xs text-white max-w-[140px] truncate">
-          {user.bio || 'プロフィールなし'}
-        </div>
+            {/* Bio/Message Box */}
+            <div className='absolute top-3 right-3 bg-black/40 border border-white rounded-full px-3 py-1 text-xs text-white max-w-[140px] truncate'>
+              {user.bio || 'プロフィールなし'}
+            </div>
 
-        {/* User Info Section */}
-        <div className="flex flex-col items-center gap-1 mb-6 mt-6">
-          <div className="w-[72px] h-[72px] rounded-full bg-white border-2 border-white overflow-hidden flex-shrink-0 flex items-center justify-center">
-            {user.avatarUrl ? (
-              (() => {
-                const filename = user.avatarUrl.split('/').pop()?.split('?')[0];
-                const fallback = filename ? `/uploads/avatars/${filename}` : undefined;
-                // 自分のプロフィールならキャッシュバスターを付与
-                let src = user.avatarUrl;
-                try {
-                  if (authUser && user.id === authUser.id) {
-                    const vb = localStorage.getItem(`avatar_v_${user.id}`);
-                    if (vb) src = `${src}${src.includes('?') ? '&' : '?'}v=${vb}`;
-                  }
-                } catch {}
-                return (
-                  <ImageWithPlaceholder
-                    src={src}
-                    alt={user.username}
-                    className="w-full h-full object-cover rounded-full"
-                    fallbackInitial={user.username[0].toUpperCase()}
-                    fallbackSrc={fallback}
-                  />
-                );
-              })()
-            ) : (
-              <div className="w-full h-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-2xl font-bold">
-                {user.username[0].toUpperCase()}
-              </div>
-            )}
-          </div>
-          <p className="text-xl font-bold text-white text-center">{user.displayName || user.username}</p>
-          <p className="text-xs text-[#bfbdbd] text-center">@{user.username}</p>
-          <p className="text-[10px] text-[#bfbdbd] text-center">
-            登録日 {new Date(user.createdAt).toLocaleDateString('ja-JP')}
-          </p>
-        </div>
-
-        {/* Level and Gems */}
-        <div className="flex justify-between items-end gap-6 mb-4 px-8">
-          <div className="flex flex-col items-center gap-1">
-            <img src="/icon/level_icon_big.svg" alt="Level" className="w-12 h-12" />
-            <p className="text-2xl font-bold text-[#ff6d00]">LV{user.level}</p>
-          </div>
-          <div className="flex flex-col items-center gap-1">
-            <img src="/icon/Gem_Icon_big.svg" alt="Gems" className="w-12 h-12" />
-            <p className="text-2xl font-bold text-[#09ffe2]">{user.gems}</p>
-          </div>
-        </div>
-
-        {/* EXP Bar */}
-        <div className="px-8 mb-6">
-          <div className="bg-[#475467] border border-white h-2 rounded-full overflow-hidden mb-1">
-            <div
-              className="bg-gradient-to-r from-purple-500 to-pink-500 h-full transition-all"
-              style={{ width: `${expPercentage}%` }}
-            />
-          </div>
-          <p className="text-[10px] text-[#bfbdbd] text-center">EXP {user.experience % 100}/100</p>
-        </div>
-
-        {/* Divider */}
-        <div className="h-px bg-white mb-4" />
-
-        {/* Stats */}
-        <div className="grid grid-cols-3 gap-4 text-center">
-          <div>
-            <p className="text-3xl font-bold text-white">{user.postCount}</p>
-            <p className="text-xl font-bold text-white mt-2">投稿</p>
-          </div>
-          <div>
-            <p className="text-3xl font-bold text-white">{user.friendCount}</p>
-            <p className="text-xl font-bold text-white mt-2">友達</p>
-          </div>
-          <div>
-            <p className="text-3xl font-bold text-white">{user.completedQuestsCount}</p>
-            <p className="text-sm font-bold text-white mt-2">完了した<br />クエスト</p>
-          </div>
-        </div>
-
-        {/* Divider */}
-        <div className="h-px bg-white mt-4" />
-
-        {/* Badges */}
-        {badges.length > 0 && (
-          <div className="mt-4">
-            <p className="text-sm font-bold text-white mb-2">バッジ</p>
-            <Badges badges={badges} size="md" />
-          </div>
-        )}
-
-        {/* Debug Button */}
-        <button
-          onClick={handleResetTokens}
-          disabled={resetLoading}
-          className="mt-4 w-full px-3 py-2 bg-[#333] hover:bg-[#444] text-xs text-gray-400 rounded-lg border border-gray-600 transition disabled:opacity-50"
-        >
-          {resetLoading ? '処理中...' : '投稿回数をリセット（デバッグ）'}
-        </button>
-
-        {/* Logout Button */}
-        <button
-          onClick={handleLogout}
-          className="mt-3 w-full px-3 py-2 bg-red-600/20 hover:bg-red-600/30 text-sm text-red-400 font-bold rounded-lg border border-red-600/50 transition"
-        >
-          ログアウト
-        </button>
-      </div>
-
-      {/* Quest and Shop Buttons */}
-      <div className="mx-3 mt-6 grid grid-cols-2 gap-4">
-        <button
-          onClick={() => {
-            getTodayQuests()
-              .then((data: any) => {
-                if (data?.quests) setQuests(data.quests);
-                setShowQuestOverlay(true);
-              })
-              .catch(err => console.error('クエスト取得エラー:', err));
-          }}
-          className="bg-[#14161a] border border-white rounded-2xl p-4 flex items-center gap-3 hover:bg-white/5 transition"
-        >
-          <img src="/icon/Compass_big.svg" alt="Quest" className="w-12 h-12" />
-          <p className="text-2xl font-bold text-white whitespace-nowrap">クエスト</p>
-        </button>
-        <button
-          onClick={() => router.push('/shop')}
-          className="bg-[#14161a] border border-white rounded-2xl p-4 flex items-center gap-3 hover:bg-white/5 transition"
-        >
-          <img src="/icon/Shopping_cart.svg" alt="Shop" className="w-10 h-10" />
-          <p className="text-2xl font-bold text-white whitespace-nowrap">ショップ</p>
-        </button>
-      </div>
-
-      {/* Your Posts Section */}
-      <div className="px-4 mt-8 mb-4">
-        <p className="text-2xl font-bold text-white">あなたの投稿</p>
-      </div>
-
-        {posts.length === 0 ? (
-        <div className="mx-4 bg-[#14161a] rounded-2xl p-8 text-center border border-white">
-          <p className="text-[#bfbdbd]">まだ投稿がありません</p>
-          <button
-            onClick={() => router.push('/post')}
-            className="mt-4 px-4 py-2 bg-[#00e676] hover:bg-[#00d664] text-white rounded-lg text-sm font-bold border border-[#00e676] transition"
-          >
-            最初の一枚を投稿
-          </button>
-        </div>
-      ) : (
-        <div className="px-4 grid grid-cols-3 gap-2 mb-6">
-          {posts.map((post, i) => (
-            <div key={post.id} className="bg-[#14161a] rounded-xl overflow-hidden border border-white relative group">
-              <div style={{ position: 'relative', width: '100%', paddingTop: '140%' }}>
-                {post.imageUrl ? (
-                  <img
-                    src={`/api/posts/${post.id}/signed-image`}
-                    alt={post.caption}
-                    className="absolute inset-0 w-full h-full object-cover"
-                    style={{ top: 0, left: 0 }}
-                    onClick={() => { setViewerIndex(i); setViewerOpen(true); }}
-                  />
+            {/* User Info Section */}
+            <div className='flex flex-col items-center gap-1 mb-6 mt-6'>
+              <div className='w-[72px] h-[72px] rounded-full bg-white border-2 border-white overflow-hidden flex-shrink-0 flex items-center justify-center'>
+                {user.avatarUrl ? (
+                  (() => {
+                    const filename = user.avatarUrl.split('/').pop()?.split('?')[0];
+                    const fallback = filename ? `/uploads/avatars/${filename}` : undefined;
+                    // 自分のプロフィールならキャッシュバスターを付与
+                    let src = user.avatarUrl;
+                    try {
+                      if (authUser && user.id === authUser.id) {
+                        const vb = localStorage.getItem(`avatar_v_${user.id}`);
+                        if (vb) src = `${src}${src.includes('?') ? '&' : '?'}v=${vb}`;
+                      }
+                    } catch {}
+                    return (
+                      <ImageWithPlaceholder
+                        src={src}
+                        alt={user.username}
+                        className='w-full h-full object-cover rounded-full'
+                        fallbackInitial={user.username[0].toUpperCase()}
+                        fallbackSrc={fallback}
+                      />
+                    );
+                  })()
                 ) : (
-                  <div className="absolute inset-0 flex items-center justify-center text-[#bfbdbd] text-2xl">📸</div>
+                  <div className='w-full h-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-2xl font-bold'>
+                    {user.username[0].toUpperCase()}
+                  </div>
                 )}
               </div>
-              <MoreButton authorId={user.id} authUser={authUser} onDelete={() => handleDeletePost(post.id)} />
+              <p className='text-xl font-bold text-white text-center'>
+                {user.displayName || user.username}
+              </p>
+              <p className='text-xs text-[#bfbdbd] text-center'>@{user.username}</p>
+              <p className='text-[10px] text-[#bfbdbd] text-center'>
+                登録日 {new Date(user.createdAt).toLocaleDateString('ja-JP')}
+              </p>
             </div>
-          ))}
-        </div>
-      )}
-      </>
+
+            {/* Level and Gems */}
+            <div className='flex justify-between items-end gap-6 mb-4 px-8'>
+              <div className='flex flex-col items-center gap-1'>
+                <img src='/icon/level_icon_big.svg' alt='Level' className='w-12 h-12' />
+                <p className='text-2xl font-bold text-[#ff6d00]'>LV{user.level}</p>
+              </div>
+              <div className='flex flex-col items-center gap-1'>
+                <img src='/icon/Gem_Icon_big.svg' alt='Gems' className='w-12 h-12' />
+                <p className='text-2xl font-bold text-[#09ffe2]'>{user.gems}</p>
+              </div>
+            </div>
+
+            {/* EXP Bar */}
+            <div className='px-8 mb-6'>
+              <div className='bg-[#475467] border border-white h-2 rounded-full overflow-hidden mb-1'>
+                <div
+                  className='bg-gradient-to-r from-purple-500 to-pink-500 h-full transition-all'
+                  style={{ width: `${expPercentage}%` }}
+                />
+              </div>
+              <p className='text-[10px] text-[#bfbdbd] text-center'>
+                EXP {user.experience % 100}/100
+              </p>
+            </div>
+
+            {/* Divider */}
+            <div className='h-px bg-white mb-4' />
+
+            {/* Stats */}
+            <div className='grid grid-cols-3 gap-4 text-center'>
+              <div>
+                <p className='text-3xl font-bold text-white'>{user.postCount}</p>
+                <p className='text-xl font-bold text-white mt-2'>投稿</p>
+              </div>
+              <div>
+                <p className='text-3xl font-bold text-white'>{user.friendCount}</p>
+                <p className='text-xl font-bold text-white mt-2'>友達</p>
+              </div>
+              <div>
+                <p className='text-3xl font-bold text-white'>{user.completedQuestsCount}</p>
+                <p className='text-sm font-bold text-white mt-2'>
+                  完了した
+                  <br />
+                  クエスト
+                </p>
+              </div>
+            </div>
+
+            {/* Divider */}
+            <div className='h-px bg-white mt-4' />
+
+            {/* Badges */}
+            {badges.length > 0 && (
+              <div className='mt-4'>
+                <p className='text-sm font-bold text-white mb-2'>バッジ</p>
+                <Badges badges={badges} size='md' />
+              </div>
+            )}
+
+            {/* Logout Button */}
+            <button
+              onClick={handleLogout}
+              className='mt-3 w-full px-3 py-2 bg-red-600/20 hover:bg-red-600/30 text-sm text-red-400 font-bold rounded-lg border border-red-600/50 transition'
+            >
+              ログアウト
+            </button>
+          </div>
+
+          {/* Quest and Shop Buttons */}
+          <div className='mx-3 mt-6 grid grid-cols-2 gap-4'>
+            <button
+              onClick={() => {
+                getTodayQuests()
+                  .then((data: any) => {
+                    if (data?.quests) setQuests(data.quests);
+                    setShowQuestOverlay(true);
+                  })
+                  .catch((err) => console.error('クエスト取得エラー:', err));
+              }}
+              className='bg-[#14161a] border border-white rounded-2xl p-4 flex items-center gap-3 hover:bg-white/5 transition'
+            >
+              <img src='/icon/Compass_big.svg' alt='Quest' className='w-12 h-12' />
+              <p className='text-2xl font-bold text-white whitespace-nowrap'>クエスト</p>
+            </button>
+            <button
+              onClick={() => router.push('/shop')}
+              className='bg-[#14161a] border border-white rounded-2xl p-4 flex items-center gap-3 hover:bg-white/5 transition'
+            >
+              <img src='/icon/Shopping_cart.svg' alt='Shop' className='w-10 h-10' />
+              <p className='text-2xl font-bold text-white whitespace-nowrap'>ショップ</p>
+            </button>
+          </div>
+
+          {/* Your Posts Section */}
+          <div className='px-4 mt-8 mb-4'>
+            <p className='text-2xl font-bold text-white'>あなたの投稿</p>
+          </div>
+
+          {posts.length === 0 ? (
+            <div className='mx-4 bg-[#14161a] rounded-2xl p-8 text-center border border-white'>
+              <p className='text-[#bfbdbd]'>まだ投稿がありません</p>
+              <button
+                onClick={() => router.push('/post')}
+                className='mt-4 px-4 py-2 bg-[#00e676] hover:bg-[#00d664] text-white rounded-lg text-sm font-bold border border-[#00e676] transition'
+              >
+                最初の一枚を投稿
+              </button>
+            </div>
+          ) : (
+            <div className='px-4 grid grid-cols-3 gap-2 mb-6'>
+              {posts.map((post, i) => (
+                <div
+                  key={post.id}
+                  className='bg-[#14161a] rounded-xl overflow-hidden border border-white relative group'
+                >
+                  <div style={{ position: 'relative', width: '100%', paddingTop: '140%' }}>
+                    {post.imageUrl ? (
+                      <img
+                        src={`/api/posts/${post.id}/signed-image`}
+                        alt={post.caption}
+                        className='absolute inset-0 w-full h-full object-cover'
+                        style={{ top: 0, left: 0 }}
+                        onClick={() => {
+                          setViewerIndex(i);
+                          setViewerOpen(true);
+                        }}
+                      />
+                    ) : (
+                      <div className='absolute inset-0 flex items-center justify-center text-[#bfbdbd] text-2xl'>
+                        📸
+                      </div>
+                    )}
+                  </div>
+                  <MoreButton
+                    authorId={user.id}
+                    authUser={authUser}
+                    onDelete={() => handleDeletePost(post.id)}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+        </>
       )}
 
+      <div className='mx-3 mt-6 p-4 text-center text-xs text-gray-400'>
+        このバージョンはデモです。仕様や挙動は今後変更される可能性があります。データの取り扱いや機能については予告なく更新されることがあります。
+      </div>
       {/* BottomNav moved to RootLayout */}
       {viewerOpen && (
-        <PostViewer posts={posts.map(p => ({ ...p, imageUrl: `/api/posts/${p.id}/image` }))} initialIndex={viewerIndex} onClose={() => setViewerOpen(false)} />
+        <PostViewer
+          posts={posts.map((p) => ({ ...p, imageUrl: `/api/posts/${p.id}/image` }))}
+          initialIndex={viewerIndex}
+          onClose={() => setViewerOpen(false)}
+        />
       )}
-      
+
       {/* クエストオーバーレイ */}
       <QuestOverlayNew
         open={showQuestOverlay}
@@ -375,4 +384,4 @@ export default function ProfilePage() {
   return <ProfilePageContent />;
 }
 
-  // viewer state for the page (placed after export to avoid moving large component)
+// viewer state for the page (placed after export to avoid moving large component)
