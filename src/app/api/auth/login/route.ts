@@ -13,19 +13,19 @@ export async function POST(request: Request) {
     if (!username || !password) {
       return NextResponse.json(
         { error: 'ユーザー名とパスワードを入力してください' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     // ユーザー検索
     const user = await prisma.user.findUnique({
-      where: { username }
+      where: { username },
     });
 
     if (!user) {
       return NextResponse.json(
         { error: 'ユーザー名またはパスワードが間違っています' },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -35,7 +35,7 @@ export async function POST(request: Request) {
     if (!isValid) {
       return NextResponse.json(
         { error: 'ユーザー名またはパスワードが間違っています' },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -43,7 +43,7 @@ export async function POST(request: Request) {
     const token = jwt.sign(
       { userId: user.id, username: user.username },
       process.env.JWT_SECRET!,
-      { expiresIn: '7d' } // 7日間有効
+      { expiresIn: '7d' }, // 7日間有効
     );
 
     // レスポンスにCookieをセット
@@ -51,25 +51,21 @@ export async function POST(request: Request) {
       message: 'ログイン成功',
       user: {
         id: user.id,
-        username: user.username
-      }
+        username: user.username,
+      },
     });
 
     response.cookies.set('auth-token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       maxAge: 60 * 60 * 24 * 7, // 7日間
-      path: '/'
+      path: '/',
     });
 
     return response;
-
   } catch (error) {
     console.error('Login error:', error);
-    return NextResponse.json(
-      { error: 'サーバーエラーが発生しました' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'サーバーエラーが発生しました' }, { status: 500 });
   }
 }
