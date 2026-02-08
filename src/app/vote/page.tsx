@@ -5,14 +5,17 @@ import { useRouter } from 'next/navigation';
 import VoteHeader from '../components/VoteHeader';
 import { useReward } from '../context/RewardContext';
 import { useAuth } from '../context/AuthContext';
-import { createVote as createVoteAction, processExpiredVotes as processExpiredVotesAction } from '@/actions/vote';
-import { 
-  getPendingPosts, 
-  likePost, 
-  unlikePost, 
-  createComment, 
+import {
+  createVote as createVoteAction,
+  processExpiredVotes as processExpiredVotesAction,
+} from '@/actions/vote';
+import {
+  getPendingPosts,
+  likePost,
+  unlikePost,
+  createComment,
   getComments,
-  deleteComment
+  deleteComment,
 } from '@/actions/post';
 
 interface Post {
@@ -85,7 +88,9 @@ export default function VotePage() {
   const [isDragging, setIsDragging] = useState(false);
   const dragStartXRef = useRef(0);
   const [showResult, setShowResult] = useState(false);
-  const [resultCounts, setResultCounts] = useState<{ approve: number; reject: number } | null>(null);
+  const [resultCounts, setResultCounts] = useState<{ approve: number; reject: number } | null>(
+    null,
+  );
   const [resultMeta, setResultMeta] = useState<{ title: string; subtitle: string } | null>(null);
   const [resultAnimationPhase, setResultAnimationPhase] = useState(0);
   const [isImageExpanded, setIsImageExpanded] = useState(false);
@@ -178,18 +183,20 @@ export default function VotePage() {
     if (showResult) return;
 
     try {
-      const votedPost = posts.find(p => p.id === postId);
+      const votedPost = posts.find((p) => p.id === postId);
       if (votedPost) {
         const approve = votedPost.approveCount + (voteType === 'approve' ? 1 : 0);
         const reject = votedPost.rejectCount + (voteType === 'reject' ? 1 : 0);
         setResultCounts({ approve, reject });
         setResultMeta({
-          title: votedPost.questId ? (votedPost.quest?.title || 'これは松本？') : 'これは松本？',
-          subtitle: votedPost.questId ? (votedPost.quest?.description || '') : '松本に関係あると思う？'
+          title: votedPost.questId ? votedPost.quest?.title || 'これは松本？' : 'これは松本？',
+          subtitle: votedPost.questId
+            ? votedPost.quest?.description || ''
+            : '松本に関係あると思う？',
         });
         setShowResult(true);
         setResultAnimationPhase(0);
-        
+
         if (resultTimeoutRef.current !== null) {
           window.clearTimeout(resultTimeoutRef.current);
         }
@@ -224,23 +231,22 @@ export default function VotePage() {
         votedPostIdsRef.current.delete(postId);
       }, 30000);
 
-      const data = await createVoteAction(postId, voteType) as VoteResponse | null;
+      const data = (await createVoteAction(postId, voteType)) as VoteResponse | null;
 
       // 報酬通知を表示
       if (data?.reward) {
         showReward({
           ...data.reward,
-          message: '投票に参加しました！'
+          message: '投票に参加しました！',
         });
       }
 
       // 投票した投稿を一覧から削除（同じ投稿が表示されないように）
-      setPosts(prev => prev.filter(p => p.id !== postId));
+      setPosts((prev) => prev.filter((p) => p.id !== postId));
 
       if (!data?.isComplete) {
         await fetchPendingPosts();
       }
-
     } catch (err) {
       console.error('Vote error:', err);
     }
@@ -249,8 +255,8 @@ export default function VotePage() {
   const handleSkip = (postId: string) => {
     // アニメーション表示中はスキップを受け付けない
     if (showResult) return;
-    
-    setPosts(prev => prev.filter(p => p.id !== postId));
+
+    setPosts((prev) => prev.filter((p) => p.id !== postId));
     setDragX(0);
     setIsDragging(false);
   };
@@ -258,7 +264,7 @@ export default function VotePage() {
   const handleDragStart = (clientX: number) => {
     // アニメーション表示中はドラッグを受け付けない
     if (showResult) return;
-    
+
     setIsDragging(true);
     dragStartXRef.current = clientX;
   };
@@ -304,25 +310,25 @@ export default function VotePage() {
 
   const handleLike = async (postId: string) => {
     try {
-      const post = posts.find(p => p.id === postId);
+      const post = posts.find((p) => p.id === postId);
       if (!post) return;
 
       if (post.hasLiked) {
         await unlikePost(postId);
 
-        setPosts(posts.map(p =>
-          p.id === postId
-            ? { ...p, hasLiked: false, likeCount: (p.likeCount || 0) - 1 }
-            : p
-        ));
+        setPosts(
+          posts.map((p) =>
+            p.id === postId ? { ...p, hasLiked: false, likeCount: (p.likeCount || 0) - 1 } : p,
+          ),
+        );
       } else {
         await likePost(postId);
 
-        setPosts(posts.map(p =>
-          p.id === postId
-            ? { ...p, hasLiked: true, likeCount: (p.likeCount || 0) + 1 }
-            : p
-        ));
+        setPosts(
+          posts.map((p) =>
+            p.id === postId ? { ...p, hasLiked: true, likeCount: (p.likeCount || 0) + 1 } : p,
+          ),
+        );
       }
     } catch (err) {
       console.error('Like error:', err);
@@ -333,11 +339,9 @@ export default function VotePage() {
     try {
       await createComment(postId, text);
 
-      setPosts(posts.map(p =>
-        p.id === postId
-          ? { ...p, commentCount: (p.commentCount || 0) + 1 }
-          : p
-      ));
+      setPosts(
+        posts.map((p) => (p.id === postId ? { ...p, commentCount: (p.commentCount || 0) + 1 } : p)),
+      );
 
       await fetchComments(postId);
     } catch (err) {
@@ -376,82 +380,93 @@ export default function VotePage() {
 
       setComments({
         ...comments,
-        [postId]: (comments[postId] || []).filter(c => c.id !== commentId)
+        [postId]: (comments[postId] || []).filter((c) => c.id !== commentId),
       });
 
-      setPosts(posts.map(p =>
-        p.id === postId
-          ? { ...p, commentCount: (p.commentCount || 1) - 1 }
-          : p
-      ));
+      setPosts(
+        posts.map((p) => (p.id === postId ? { ...p, commentCount: (p.commentCount || 1) - 1 } : p)),
+      );
     } catch (err) {
       console.error('Delete comment error:', err);
     }
   };
 
   const votablePosts = posts.filter(
-    p => !isVotingClosed(p.postedAt) && !p.hasVoted && p.userId !== currentUserId
+    (p) => !isVotingClosed(p.postedAt) && !p.hasVoted && p.userId !== currentUserId,
   );
   const currentPost = votablePosts[0];
-  
+
   // スワイプ方向に応じてボタンサイズを計算
   // 左方向（承認側）：承認ボタン大きく、否定ボタン小さく
   // 右方向（否定側）：否定ボタン大きく、承認ボタン小さく
-  const approveScale = dragX < 0 
-    ? 1 + Math.min(Math.max(-dragX / 200, 0), 1) * 0.35
-    : Math.max(0.65, 1 - (dragX / 200) * 0.35);
-  const rejectScale = dragX > 0 
-    ? 1 + Math.min(Math.max(dragX / 200, 0), 1) * 0.35
-    : Math.max(0.65, 1 - (-dragX / 200) * 0.35);
+  const approveScale =
+    dragX < 0
+      ? 1 + Math.min(Math.max(-dragX / 200, 0), 1) * 0.35
+      : Math.max(0.65, 1 - (dragX / 200) * 0.35);
+  const rejectScale =
+    dragX > 0
+      ? 1 + Math.min(Math.max(dragX / 200, 0), 1) * 0.35
+      : Math.max(0.65, 1 - (-dragX / 200) * 0.35);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#0b0c0f] to-[#0f0f0f]" style={{ paddingBottom: 'calc(6rem + var(--safe-area-bottom))' }}>
-      <div className="fixed left-0 right-0 top-0 z-40" style={{ paddingTop: 'var(--safe-area-top)' }}>
+    <div className='min-h-screen bg-gradient-to-b from-[#0b0c0f] to-[#0f0f0f]'>
+      <div
+        className='fixed left-0 right-0 top-0 z-40'
+        style={{ paddingTop: 'var(--safe-area-top)' }}
+      >
         <VoteHeader />
       </div>
 
-      <div className="relative" style={{ paddingTop: 'calc(6rem + var(--safe-area-top))' }}>
-        <div className="relative z-10 px-4 pb-24 max-w-2xl mx-auto">
+      <div className='relative' style={{ paddingTop: 'calc(6rem + var(--safe-area-top))' }}>
+        <div className='relative z-10 px-4 pb-24 max-w-2xl mx-auto'>
           {loading ? (
-            <div className="min-h-[50vh] flex items-center justify-center">
-              <p className="text-white">読み込み中...</p>
+            <div className='min-h-[50vh] flex items-center justify-center'>
+              <p className='text-white'>読み込み中...</p>
             </div>
           ) : showResult && resultCounts && resultMeta ? (
-            <div className="fixed inset-0 z-50 flex flex-col items-center justify-center" style={{ paddingTop: 'var(--safe-area-top)', paddingBottom: 'var(--safe-area-bottom)' }}>
+            <div
+              className='fixed inset-0 z-50 flex flex-col items-center justify-center'
+              style={{
+                paddingTop: 'var(--safe-area-top)',
+                paddingBottom: 'var(--safe-area-bottom)',
+              }}
+            >
               {/* 背景分割（割合で色分け） */}
-              <div className="absolute inset-0 flex overflow-hidden">
-                <div 
-                  className="transition-all duration-500"
+              <div className='absolute inset-0 flex overflow-hidden'>
+                <div
+                  className='transition-all duration-500'
                   style={{
                     width: `${(resultCounts.approve / (resultCounts.approve + resultCounts.reject)) * 100}%`,
-                    backgroundColor: '#00e676'
+                    backgroundColor: '#00e676',
                   }}
                 />
-                <div 
-                  className="flex-1 transition-all duration-500"
+                <div
+                  className='flex-1 transition-all duration-500'
                   style={{
-                    backgroundColor: '#FF1744'
+                    backgroundColor: '#FF1744',
                   }}
                 />
               </div>
 
               {/* コンテンツ */}
-              <div className="relative z-10 flex flex-col items-center justify-center h-full text-center">
-                <p className="text-white text-[24px] font-bold mb-4">{resultMeta.title}</p>
-                <p className="text-white text-[14px] font-bold mb-8">{resultMeta.subtitle}</p>
-                
+              <div className='relative z-10 flex flex-col items-center justify-center h-full text-center'>
+                <p className='text-white text-[24px] font-bold mb-4'>{resultMeta.title}</p>
+                <p className='text-white text-[14px] font-bold mb-8'>{resultMeta.subtitle}</p>
+
                 {/* 比率表示 */}
-                <div className={`transition-all duration-300 ${
-                  resultAnimationPhase >= 2 ? 'opacity-100 scale-100' : 'opacity-0 scale-75'
-                }`}>
-                  <div className="flex items-center justify-center gap-2">
-                    <div className="text-[88px] font-bold leading-none text-white drop-shadow-lg">
+                <div
+                  className={`transition-all duration-300 ${
+                    resultAnimationPhase >= 2 ? 'opacity-100 scale-100' : 'opacity-0 scale-75'
+                  }`}
+                >
+                  <div className='flex items-center justify-center gap-2'>
+                    <div className='text-[88px] font-bold leading-none text-white drop-shadow-lg'>
                       {resultCounts.approve}
                     </div>
-                    <div className="text-[64px] font-bold leading-none text-white drop-shadow-lg">
+                    <div className='text-[64px] font-bold leading-none text-white drop-shadow-lg'>
                       -
                     </div>
-                    <div className="text-[88px] font-bold leading-none text-white drop-shadow-lg">
+                    <div className='text-[88px] font-bold leading-none text-white drop-shadow-lg'>
                       {resultCounts.reject}
                     </div>
                   </div>
@@ -459,10 +474,20 @@ export default function VotePage() {
 
                 {/* チェックマーク */}
                 {resultAnimationPhase >= 2 && (
-                  <div className="mt-12 flex justify-center animate-pulse">
-                    <div className="w-16 h-16 rounded-full border-4 border-white flex items-center justify-center">
-                      <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                  <div className='mt-12 flex justify-center animate-pulse'>
+                    <div className='w-16 h-16 rounded-full border-4 border-white flex items-center justify-center'>
+                      <svg
+                        className='w-8 h-8 text-white'
+                        fill='none'
+                        stroke='currentColor'
+                        viewBox='0 0 24 24'
+                      >
+                        <path
+                          strokeLinecap='round'
+                          strokeLinejoin='round'
+                          strokeWidth={3}
+                          d='M5 13l4 4L19 7'
+                        />
                       </svg>
                     </div>
                   </div>
@@ -470,25 +495,31 @@ export default function VotePage() {
               </div>
             </div>
           ) : !currentPost ? (
-            <div className="text-center py-16">
-              <p className="text-white text-[28px] font-bold">投票できる投稿がないよ</p>
+            <div className='text-center py-16'>
+              <p className='text-white text-[28px] font-bold'>投票できる投稿がないよ</p>
               {error && (
-                <div className="bg-red-900/80 text-red-200 p-3 rounded-lg mt-4 border border-red-700">
+                <div className='bg-red-900/80 text-red-200 p-3 rounded-lg mt-4 border border-red-700'>
                   {error}
                 </div>
               )}
             </div>
           ) : (
-            <div className="flex flex-col items-center">
-              <div className="text-center mt-0">
-                <p className="text-white text-[22px] font-bold">{currentPost.questId ? (currentPost.quest?.title || 'これは松本？') : 'これは松本？'}</p>
-                <p className="text-[#00ad59] text-[16px] font-bold mt-1">
-                  {currentPost.questId ? (currentPost.quest?.description || '') : '松本に関係あると思う？'}
+            <div className='flex flex-col items-center'>
+              <div className='text-center mt-0'>
+                <p className='text-white text-[22px] font-bold'>
+                  {currentPost.questId
+                    ? currentPost.quest?.title || 'これは松本？'
+                    : 'これは松本？'}
+                </p>
+                <p className='text-[#00ad59] text-[16px] font-bold mt-1'>
+                  {currentPost.questId
+                    ? currentPost.quest?.description || ''
+                    : '松本に関係あると思う？'}
                 </p>
               </div>
 
               <div
-                className="mt-3 w-full max-w-[280px]"
+                className='mt-3 w-full max-w-[280px]'
                 onTouchStart={(e) => handleDragStart(e.touches[0].clientX)}
                 onTouchMove={(e) => handleDragMove(e.touches[0].clientX)}
                 onTouchEnd={() => handleDragEnd(currentPost.id)}
@@ -498,36 +529,57 @@ export default function VotePage() {
                 onMouseLeave={() => handleDragEnd(currentPost.id)}
               >
                 <div
-                  className="rounded-[20px] overflow-hidden border-4 border-white bg-[#14161a]"
-                  style={{ transform: `translateX(${dragX}px)`, transition: isDragging ? 'none' : 'transform 200ms ease' }}
+                  className='rounded-[20px] overflow-hidden border-4 border-white bg-[#14161a]'
+                  style={{
+                    transform: `translateX(${dragX}px)`,
+                    transition: isDragging ? 'none' : 'transform 200ms ease',
+                  }}
                 >
-                  <div className="h-[240px] w-full overflow-hidden rounded-t-[16px] cursor-pointer" onClick={() => setIsImageExpanded(true)}>
-                    <img src={`/api/posts/${currentPost.id}/signed-image`} alt={currentPost.caption} className="w-full h-full object-cover" />
+                  <div
+                    className='h-[240px] w-full overflow-hidden rounded-t-[16px] cursor-pointer'
+                    onClick={() => setIsImageExpanded(true)}
+                  >
+                    <img
+                      src={`/api/posts/${currentPost.id}/signed-image`}
+                      alt={currentPost.caption}
+                      className='w-full h-full object-cover'
+                    />
                   </div>
-                  <div className="bg-[#1a1d22] border-t-4 border-white px-3 py-2">
-                    <p className="text-white text-[18px] font-bold text-center">{currentPost.title || ''}</p>
-                    <p className="text-white text-[10px] text-center whitespace-pre-wrap mt-1">
+                  <div className='bg-[#1a1d22] border-t-4 border-white px-3 py-2'>
+                    <p className='text-white text-[18px] font-bold text-center'>
+                      {currentPost.title || ''}
+                    </p>
+                    <p className='text-white text-[10px] text-center whitespace-pre-wrap mt-1'>
                       {currentPost.caption || ''}
                     </p>
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {currentPost.tags?.split(',').filter(Boolean).map((tag) => (
-                        <div
-                          key={tag}
-                          className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full border border-[#4144ff] bg-[#87b4ff]"
-                        >
-                          <img src="/icon/hashtag.svg" alt="#" className="w-2 h-2" />
-                          <span className="text-[#4144ff] text-[8px] font-semibold">{tag.trim()}</span>
-                        </div>
-                      ))}
+                    <div className='flex flex-wrap gap-1 mt-1'>
+                      {currentPost.tags
+                        ?.split(',')
+                        .filter(Boolean)
+                        .map((tag) => (
+                          <div
+                            key={tag}
+                            className='flex items-center gap-0.5 px-1.5 py-0.5 rounded-full border border-[#4144ff] bg-[#87b4ff]'
+                          >
+                            <img src='/icon/hashtag.svg' alt='#' className='w-2 h-2' />
+                            <span className='text-[#4144ff] text-[8px] font-semibold'>
+                              {tag.trim()}
+                            </span>
+                          </div>
+                        ))}
                     </div>
-                    <div className="flex gap-1 mt-1">
-                      <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-full border border-[#ff73c7] bg-[#ffcffc]">
-                        <span className="text-white text-xs">❤</span>
-                        <span className="text-[#ff73c7] text-[10px] font-bold">{currentPost.likeCount || 0}</span>
+                    <div className='flex gap-1 mt-1'>
+                      <div className='flex items-center gap-1 px-1.5 py-0.5 rounded-full border border-[#ff73c7] bg-[#ffcffc]'>
+                        <span className='text-white text-xs'>❤</span>
+                        <span className='text-[#ff73c7] text-[10px] font-bold'>
+                          {currentPost.likeCount || 0}
+                        </span>
                       </div>
-                      <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-full border border-[#868686] bg-white">
-                        <img src="/icon/Message square.svg" alt="コメント" className="w-3 h-3" />
-                        <span className="text-[#868686] text-[10px] font-bold">{currentPost.commentCount || 0}</span>
+                      <div className='flex items-center gap-1 px-1.5 py-0.5 rounded-full border border-[#868686] bg-white'>
+                        <img src='/icon/Message square.svg' alt='コメント' className='w-3 h-3' />
+                        <span className='text-[#868686] text-[10px] font-bold'>
+                          {currentPost.commentCount || 0}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -535,33 +587,33 @@ export default function VotePage() {
               </div>
 
               {!showResult && (
-              <div className="fixed left-0 right-0 bottom-0 pb-20">
-                <div className="relative mx-auto max-w-2xl">
-                  <button
-                    type="button"
-                    onClick={() => handleVote(currentPost.id, 'approve')}
-                    className="absolute -left-10 -bottom-4 w-[192px] h-[192px] flex items-center justify-center bg-transparent transition-transform"
-                    style={{ transform: `scale(${approveScale})` }}
-                  >
-                    <img src="/icon/allow_button.svg" alt="承認" className="w-20 h-20" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleVote(currentPost.id, 'reject')}
-                    className="absolute -right-10 -bottom-4 w-[192px] h-[192px] flex items-center justify-center bg-transparent transition-transform"
-                    style={{ transform: `scale(${rejectScale})` }}
-                  >
-                    <img src="/icon/no_allow_button.svg" alt="拒否" className="w-20 h-20" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleSkip(currentPost.id)}
-                    className="absolute left-1/2 -translate-x-1/2 bottom-14 px-6 py-2 rounded-full border-2 border-white text-white font-bold bg-black/40"
-                  >
-                    スキップ
-                  </button>
+                <div className='fixed left-0 right-0 bottom-0 pb-20'>
+                  <div className='relative mx-auto max-w-2xl'>
+                    <button
+                      type='button'
+                      onClick={() => handleVote(currentPost.id, 'approve')}
+                      className='absolute -left-10 -bottom-4 w-[192px] h-[192px] flex items-center justify-center bg-transparent transition-transform'
+                      style={{ transform: `scale(${approveScale})` }}
+                    >
+                      <img src='/icon/allow_button.svg' alt='承認' className='w-20 h-20' />
+                    </button>
+                    <button
+                      type='button'
+                      onClick={() => handleVote(currentPost.id, 'reject')}
+                      className='absolute -right-10 -bottom-4 w-[192px] h-[192px] flex items-center justify-center bg-transparent transition-transform'
+                      style={{ transform: `scale(${rejectScale})` }}
+                    >
+                      <img src='/icon/no_allow_button.svg' alt='拒否' className='w-20 h-20' />
+                    </button>
+                    <button
+                      type='button'
+                      onClick={() => handleSkip(currentPost.id)}
+                      className='absolute left-1/2 -translate-x-1/2 bottom-14 px-6 py-2 rounded-full border-2 border-white text-white font-bold bg-black/40'
+                    >
+                      スキップ
+                    </button>
+                  </div>
                 </div>
-              </div>
               )}
             </div>
           )}
@@ -569,20 +621,20 @@ export default function VotePage() {
 
         {/* 画像拡大モーダル */}
         {isImageExpanded && currentPost && (
-          <div 
-            className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
+          <div
+            className='fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4'
             onClick={() => setIsImageExpanded(false)}
             style={{ paddingTop: 'var(--safe-area-top)', paddingBottom: 'var(--safe-area-bottom)' }}
           >
-            <div className="relative max-w-full max-h-full" onClick={(e) => e.stopPropagation()}>
+            <div className='relative max-w-full max-h-full' onClick={(e) => e.stopPropagation()}>
               <img
                 src={`/api/posts/${currentPost.id}/signed-image`}
-                alt="投稿画像（拡大）"
-                className="max-w-full max-h-[90vh] object-contain"
+                alt='投稿画像（拡大）'
+                className='max-w-full max-h-[90vh] object-contain'
               />
               <button
                 onClick={() => setIsImageExpanded(false)}
-                className="absolute -top-10 right-0 text-white text-2xl hover:text-gray-300 transition"
+                className='absolute -top-10 right-0 text-white text-2xl hover:text-gray-300 transition'
               >
                 ✕
               </button>

@@ -246,7 +246,7 @@ export default function NewPostPage() {
         />
       ) : (
         <div
-          className='min-h-screen bg-gradient-to-b from-[#0b0c0f] to-[#0f0f0f] px-4 pb-10'
+          className='min-h-screen bg-gradient-to-b from-[#0b0c0f] to-[#0f0f0f] px-4'
           style={{ paddingTop: 'calc(1.5rem + var(--safe-area-top))' }}
         >
           {/* 左上の×ボタン */}
@@ -516,7 +516,7 @@ export default function NewPostPage() {
           {!isSending && (isSwiping || swipeProgress > 0) && (
             <div
               className='fixed left-0 right-0 bottom-0 z-30 px-6'
-              style={{ paddingBottom: 'calc(1rem + var(--safe-area-bottom))' }}
+              style={{ paddingBottom: 'var(--safe-area-bottom)' }}
             >
               <div className='h-4 w-full bg-white/20 rounded-full overflow-hidden'>
                 <div
