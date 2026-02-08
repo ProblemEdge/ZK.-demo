@@ -44,13 +44,16 @@ export default function FeedPage() {
   const [mapLoading, setMapLoading] = useState(false);
 
   // カスタムフックの使用
-  const { allPosts, setAllPosts, loading, loadingMore, hasMore, loadMorePosts } = useFeedPosts({ tab, status });
-  const { 
-    expandedPostId, 
-    setExpandedPostId, 
-    comments, 
-    loadingComments, 
-    commentText, 
+  const { allPosts, setAllPosts, loading, loadingMore, hasMore, loadMorePosts } = useFeedPosts({
+    tab,
+    status,
+  });
+  const {
+    expandedPostId,
+    setExpandedPostId,
+    comments,
+    loadingComments,
+    commentText,
     setCommentText,
     handleToggleComments,
     handleComment,
@@ -61,12 +64,12 @@ export default function FeedPage() {
   } = useComments();
   const { handleVote, processExpiredVotes } = useVotes();
   const { handleLike } = useLikes();
-  const { observerTarget } = useInfiniteScroll({ 
-    hasMore, 
-    loading, 
-    loadingMore, 
-    status, 
-    onLoadMore: loadMorePosts 
+  const { observerTarget } = useInfiniteScroll({
+    hasMore,
+    loading,
+    loadingMore,
+    status,
+    onLoadMore: loadMorePosts,
   });
   useRewardCheck(status);
 
@@ -106,7 +109,9 @@ export default function FeedPage() {
         if (mounted) setMapLoading(false);
       });
 
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, [viewTab]);
 
   // コメントテキストのリセット
@@ -146,7 +151,7 @@ export default function FeedPage() {
       if (document.visibilityState !== 'visible') return;
       processExpiredVotes();
     }, 300000); // 5分ごと
-    
+
     return () => clearInterval(interval);
   }, [status, processExpiredVotes]);
 
@@ -156,12 +161,14 @@ export default function FeedPage() {
     if (!expandedPostId) return;
     const text = commentText.trim();
     if (!text) return;
-    
+
     const success = await handleComment(expandedPostId, text);
     if (success) {
-      setAllPosts(prev => prev.map(p => 
-        p.id === expandedPostId ? { ...p, commentCount: (p.commentCount || 0) + 1 } : p
-      ));
+      setAllPosts((prev) =>
+        prev.map((p) =>
+          p.id === expandedPostId ? { ...p, commentCount: (p.commentCount || 0) + 1 } : p,
+        ),
+      );
       setCommentText('');
     }
   };
@@ -171,38 +178,48 @@ export default function FeedPage() {
     if (!expandedPostId) return;
     const success = await handleDeleteComment(expandedPostId, commentId);
     if (success) {
-      setAllPosts(prev => prev.map(p => 
-        p.id === expandedPostId ? { ...p, commentCount: Math.max(0, (p.commentCount || 1) - 1) } : p
-      ));
+      setAllPosts((prev) =>
+        prev.map((p) =>
+          p.id === expandedPostId
+            ? { ...p, commentCount: Math.max(0, (p.commentCount || 1) - 1) }
+            : p,
+        ),
+      );
     }
   };
 
   return (
-    <div className="min-h-screen bg-black" style={{ paddingBottom: 'calc(6rem + var(--safe-area-bottom))' }}>
-      <div className="fixed left-0 right-0 top-0 z-40" style={{ paddingTop: 'var(--safe-area-top)' }}>
-        <FeedHeader 
-          tab={tab}
-          viewTab={viewTab}
-          onTabChange={setTab}
-          onViewTabChange={setViewTab}
-        />
+    <div
+      className='min-h-screen bg-black'
+      style={{ paddingBottom: 'calc(var(--safe-area-bottom, 0px) + 12rem)' }}
+    >
+      <div
+        className='fixed left-0 right-0 top-0 z-40'
+        style={{ paddingTop: 'var(--safe-area-top)' }}
+      >
+        <FeedHeader tab={tab} viewTab={viewTab} onTabChange={setTab} onViewTabChange={setViewTab} />
       </div>
 
-      <div className="px-4 pb-4 space-y-4" style={{ paddingTop: 'calc(5rem + var(--safe-area-top))' }}>
+      <div
+        className='px-4 pb-4 space-y-4'
+        style={{ paddingTop: 'calc(5rem + var(--safe-area-top))' }}
+      >
         {viewTab === 'feed' ? (
           loading ? (
-            <div className="min-h-[50vh] flex items-center justify-center">
-              <p className="text-white">読み込み中...</p>
+            <div className='min-h-[50vh] flex items-center justify-center'>
+              <p className='text-white'>読み込み中...</p>
             </div>
           ) : allPosts.length === 0 ? (
             <EmptyState onCreatePost={() => router.push('/post')} />
           ) : (
             allPosts.map((post) => {
-              const votingClosed = isVotingClosed(post.postedAt) || (post.totalVotes !== undefined && post.totalVotes >= 10);
+              const votingClosed =
+                isVotingClosed(post.postedAt) ||
+                (post.totalVotes !== undefined && post.totalVotes >= 10);
               const isOwnPost = post.userId === currentUserId;
               const isVotingOpen = !votingClosed && !post.isApproved && !post.rejectedAt;
               const isVotingActive = isVotingOpen && !isOwnPost && !post.hasVoted;
-              
+
               // postStatusの計算
               let postStatus: PostStatus;
               if (post.isApproved) {
@@ -220,13 +237,17 @@ export default function FeedPage() {
               } else {
                 postStatus = 'voting';
               }
-              
+
               // voteStatusTypeの計算
               let voteStatusType: 'question' | 'ultimate' | 'perfect' | 'success' = 'question';
               if (post.isApproved) {
                 voteStatusType = 'success';
               } else if (votingClosed || post.rejectedAt) {
-                if (post.totalVotes !== undefined && post.totalVotes > 0 && post.approveCount !== undefined) {
+                if (
+                  post.totalVotes !== undefined &&
+                  post.totalVotes > 0 &&
+                  post.approveCount !== undefined
+                ) {
                   if (post.approveCount === post.totalVotes && post.totalVotes >= 10) {
                     voteStatusType = 'ultimate';
                   } else if (post.approveCount === post.totalVotes && post.totalVotes > 0) {
@@ -247,7 +268,7 @@ export default function FeedPage() {
                 <FeedCard
                   key={post.id}
                   imageUrl={`/api/posts/${post.id}/signed-image`}
-                    postId={post.id}
+                  postId={post.id}
                   userName={post.user.displayName || post.user.username}
                   userId={post.user.username}
                   authorId={post.userId}
@@ -271,17 +292,21 @@ export default function FeedPage() {
                   onComment={() => handleToggleComments(post.id)}
                   onVoteOk={() => handleVote(post.id, 'approve', setAllPosts)}
                   onVoteNg={() => handleVote(post.id, 'reject', setAllPosts)}
-                  onDelete={isOwnPost ? async () => {
-                    if (!confirm('この投稿を削除してもよろしいですか？')) return;
-                    try {
-                      await (await import('@/actions/post')).deletePost(post.id);
-                      // 全投稿リストから削除
-                      setAllPosts(prev => prev.filter(p => p.id !== post.id));
-                    } catch (err) {
-                      console.error('投稿削除エラー:', err);
-                      alert('削除に失敗しました');
-                    }
-                  } : undefined}
+                  onDelete={
+                    isOwnPost
+                      ? async () => {
+                          if (!confirm('この投稿を削除してもよろしいですか？')) return;
+                          try {
+                            await (await import('@/actions/post')).deletePost(post.id);
+                            // 全投稿リストから削除
+                            setAllPosts((prev) => prev.filter((p) => p.id !== post.id));
+                          } catch (err) {
+                            console.error('投稿削除エラー:', err);
+                            alert('削除に失敗しました');
+                          }
+                        }
+                      : undefined
+                  }
                 >
                   {post.caption}
                 </FeedCard>
@@ -289,13 +314,13 @@ export default function FeedPage() {
             })
           )
         ) : (
-          <div className="space-y-3">
-            <FeedMap key="map-feed" posts={mapPosts} />
+          <div className='space-y-3'>
+            <FeedMap key='map-feed' posts={mapPosts} />
           </div>
         )}
-        
+
         {viewTab === 'feed' && (
-          <InfiniteScrollTrigger 
+          <InfiniteScrollTrigger
             loading={loading}
             hasMore={hasMore}
             loadingMore={loadingMore}
@@ -304,17 +329,14 @@ export default function FeedPage() {
         )}
       </div>
 
-      <ImagePreviewModal 
-        imageUrl={selectedImageUrl} 
-        onClose={() => setSelectedImageUrl(null)} 
-      />
+      <ImagePreviewModal imageUrl={selectedImageUrl} onClose={() => setSelectedImageUrl(null)} />
 
       <CommentModal
         isOpen={!!expandedPostId}
         postId={expandedPostId || ''}
         currentUser={currentUser}
-        comments={expandedPostId ? (comments[expandedPostId] || []) : []}
-        loading={expandedPostId ? (loadingComments[expandedPostId] || false) : false}
+        comments={expandedPostId ? comments[expandedPostId] || [] : []}
+        loading={expandedPostId ? loadingComments[expandedPostId] || false : false}
         commentText={commentText}
         currentUserId={currentUserId}
         onClose={() => setExpandedPostId(null)}
