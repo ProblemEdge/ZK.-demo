@@ -54,31 +54,26 @@ export default function RootLayout({
             --safe-area-left: env(safe-area-inset-left, 0px);
             --safe-area-right: env(safe-area-inset-right, 0px);
           }
-          
+
           html {
             height: 100%;
-            overflow: hidden;
           }
-          
+
+          /* Allow body to scroll and accept touch events on mobile; avoid position:fixed which
+             interferes with input focus and virtual keyboard on some devices */
           body {
-            height: 100vh;
-            height: calc(100vh - var(--safe-area-top) - var(--safe-area-bottom));
+            min-height: 100vh;
             min-height: -webkit-fill-available;
-            overflow: hidden;
-            position: fixed;
-            width: 100%;
-            top: 0;
-            left: 0;
+            overflow: auto;
+            -webkit-overflow-scrolling: touch;
           }
-          
+
           #root-wrapper {
-            height: 100vh;
+            min-height: 100vh;
             padding-top: var(--safe-area-top);
             padding-left: var(--safe-area-left);
             padding-right: var(--safe-area-right);
             box-sizing: border-box;
-            overflow: auto;
-            -webkit-overflow-scrolling: touch;
           }
         `}</style>
       </head>
