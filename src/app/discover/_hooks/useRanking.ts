@@ -4,7 +4,12 @@ import type { RankingUser, RankingType, Period, Mode } from '../_types';
 /**
  * ランキングデータを管理するカスタムフック
  */
-export const useRanking = (mainTab: string, rankingType: RankingType, period: Period, mode: Mode) => {
+export const useRanking = (
+  mainTab: string,
+  rankingType: RankingType,
+  period: Period,
+  mode: Mode,
+) => {
   const [ranking, setRanking] = useState<RankingUser[]>([]);
   const [rankingLoading, setRankingLoading] = useState(false);
   const [rankingPage, setRankingPage] = useState(1);
@@ -12,33 +17,36 @@ export const useRanking = (mainTab: string, rankingType: RankingType, period: Pe
 
   const fetchRanking = async (reset: boolean = false) => {
     if (rankingLoading || (!reset && !hasMoreRanking)) return;
-    
+
     try {
       setRankingLoading(true);
+      const limit = 10;
       const currentPage = reset ? 1 : rankingPage;
-      
+
       const res = await fetch(
-        `/api/rankings?type=${rankingType}&period=${period}&mode=${mode}&page=${currentPage}&limit=10`,
-        { cache: 'no-store' }
+        `/api/rankings?type=${rankingType}&period=${period}&mode=${mode}&page=${currentPage}&limit=${limit}`,
+        { cache: 'no-store' },
       );
 
       if (!res.ok) throw new Error('ランキングの取得に失敗しました');
 
       const data = await res.json();
-      
+
       if (reset) {
-        setRanking(data.ranking);
+        setRanking(() => data.ranking);
+        // ページ1を読み込んだので次は2ページ目から
+        setRankingPage(2);
       } else {
-        setRanking([...ranking, ...data.ranking]);
-      }
-      
-      setHasMoreRanking(data.ranking.length === 10 && currentPage < 10);
-      if (!reset) {
+        setRanking((prev) => [...prev, ...data.ranking]);
         setRankingPage(currentPage + 1);
       }
+
+      // 取得件数が limit 未満ならもう追加読み込みは不要
+      setHasMoreRanking(data.ranking.length === limit);
     } catch (err) {
       console.error('Ranking error:', err);
       setRanking([]);
+      setHasMoreRanking(false);
     } finally {
       setRankingLoading(false);
     }
