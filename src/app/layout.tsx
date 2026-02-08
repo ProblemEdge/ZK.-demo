@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
+import React, { Suspense } from 'react';
 import './globals.css';
 import { RewardProvider } from './context/RewardContext';
 import { AuthProvider } from './context/AuthContext';
@@ -114,7 +115,9 @@ export default function RootLayout({
           <AuthProvider>
             <RewardProvider>
               <BottomNavProvider>
-                <PwaInstallRedirectClient />
+                <Suspense fallback={null}>
+                  <PwaInstallRedirectClient />
+                </Suspense>
                 <Splash />
                 {children}
                 <BottomNavShell />
