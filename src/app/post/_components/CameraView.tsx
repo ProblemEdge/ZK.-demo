@@ -27,6 +27,7 @@ export default function CameraView({
   quests,
   isQuestMode,
   selectedQuestId,
+  facingMode,
   onCapture,
   onToggleFacingMode,
   onCancel,
