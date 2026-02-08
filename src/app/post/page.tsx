@@ -73,6 +73,14 @@ export default function NewPostPage() {
     setBottomNavVisible(false);
     return () => setBottomNavVisible(true);
   }, [setBottomNavVisible]);
+
+  // このページではグローバルの下部余白を無効化
+  useEffect(() => {
+    document.body.classList.add('no-bottom-padding');
+    return () => {
+      document.body.classList.remove('no-bottom-padding');
+    };
+  }, []);
   const {
     isSwiping,
     swipeProgress,

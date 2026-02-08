@@ -1,7 +1,7 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 :root {
-  --background: #0B0C0F;
+  --background: #0b0c0f;
   --foreground: #f3f4f6;
   --safe-area-top: env(safe-area-inset-top, 0px);
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
@@ -38,6 +38,11 @@ body {
   min-height: -webkit-fill-available;
   /* 下部に余白を確保（セーフエリアを加味） */
   padding-bottom: calc(var(--safe-area-bottom, 0px) + 4rem);
+}
+
+/* 特定ルートでセーフエリア下部余白を無効化するためのユーティリティ */
+body.no-bottom-padding {
+  padding-bottom: 0 !important;
 }
 
 /* PWA standalone モード時に上下オフセットを調整 */

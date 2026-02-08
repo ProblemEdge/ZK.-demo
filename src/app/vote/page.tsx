@@ -112,6 +112,14 @@ export default function VotePage() {
     return () => clearInterval(timerInterval);
   }, [status]);
 
+  // このページではグローバルの下部余白を無効化
+  useEffect(() => {
+    document.body.classList.add('no-bottom-padding');
+    return () => {
+      document.body.classList.remove('no-bottom-padding');
+    };
+  }, []);
+
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/login');
