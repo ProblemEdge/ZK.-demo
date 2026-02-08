@@ -117,7 +117,7 @@ export default function NewPostPage() {
     ctx.restore();
     const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
     canvas.toBlob(
-      (blob) => {
+      (blob: Blob | null) => {
         if (blob) {
           const file = new File([blob], 'photo.jpg', { type: 'image/jpeg' });
           setImageFile(file);
