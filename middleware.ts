@@ -23,7 +23,8 @@ export function middleware(request: NextRequest) {
     pathname === '/login' ||
     pathname === '/register' ||
     pathname === '/tutorial' ||
-    pathname === '/install'
+    pathname === '/install' ||
+    pathname === '/admin'
   ) {
     return NextResponse.next();
   }
@@ -54,10 +55,24 @@ export function middleware(request: NextRequest) {
       ua,
     );
 
+  // Desktop/PC detection: treat common desktop user agents as desktop to avoid
+  // redirecting desktop/PC users to the install flow.
+  const isDesktopUa =
+    /Windows NT|Macintosh|Linux x86_64|X11;/i.test(ua) &&
+    !/(iphone|ipad|ipod|mobile|android)/i.test(ua);
+  const isDesktop = isDesktopUa;
+
   // allow a one-time bypass when returning from the install flow
   const fromInstallFlag = request.nextUrl.searchParams.get('fromInstall');
 
-  if (isMobile && !pwaInstalled && pathname !== '/install' && fromInstallFlag !== '1') {
+  // Only redirect when we positively detect a mobile device and not a desktop/PC
+  if (
+    isMobile &&
+    !isDesktop &&
+    !pwaInstalled &&
+    pathname !== '/install' &&
+    fromInstallFlag !== '1'
+  ) {
     const installUrl = new URL('/install', request.url);
     installUrl.searchParams.set('returnTo', pathname);
     return NextResponse.redirect(installUrl);

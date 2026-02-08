@@ -38,9 +38,21 @@ export default function PwaInstallRedirectClient() {
         /Macintosh/.test(ua);
       const isMobile = isMobileUa || isIPadOS;
 
+      // Desktop/PC detection: if UA indicates desktop platform and there are no
+      // mobile hints, treat as desktop to avoid redirecting desktop users.
+      const isDesktopUa =
+        /Windows NT|Macintosh|Linux x86_64|X11;/i.test(ua) &&
+        !/(iphone|ipad|ipod|mobile|android)/i.test(ua);
+      const isDesktop =
+        isDesktopUa ||
+        (typeof navigator.maxTouchPoints === 'number' &&
+          navigator.maxTouchPoints === 0 &&
+          /Macintosh|Windows|Linux/i.test(ua));
+
       // avoid redirect loop when already on /install or returning from install
       const fromInstallFlag = searchParams?.get('fromInstall');
-      if (!isMobile) return;
+      // Don't redirect desktop/PC users to the install flow
+      if (!isMobile || isDesktop) return;
       if (pathname === '/install') return;
       if (fromInstallFlag === '1') return;
 
