@@ -6,8 +6,11 @@ export async function POST(request: Request) {
     const returnTo = url.searchParams.get('returnTo') || '/';
 
     const res = NextResponse.json({ ok: true, returnTo }, { status: 200 });
-    // Client-readable cookie so installed status can be checked in middleware/client
-    res.headers.set('Set-Cookie', 'pwa_installed=1; Path=/; Max-Age=31536000; SameSite=Lax');
+    // Set a session-only, client-readable cookie so installed status can be
+    // checked in middleware/client. Avoid persistent caching on the server
+    // side by not using Max-Age and marking the response as non-cacheable.
+    res.headers.set('Set-Cookie', 'pwa_installed=1; Path=/; SameSite=Lax');
+    res.headers.set('Cache-Control', 'no-store');
 
     return res;
   } catch (e) {
