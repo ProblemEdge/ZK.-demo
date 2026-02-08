@@ -38,7 +38,7 @@ export default function RegisterPage() {
         return;
       }
 
-      router.push('/login');
+      router.push('/tutorial');
 
     } catch (err) {
       setError('ネットワークエラーが発生しました');
