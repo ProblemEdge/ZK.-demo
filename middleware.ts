@@ -41,7 +41,18 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  return NextResponse.next();
+  const res = NextResponse.next();
+  // debug headers for troubleshooting in network tab (remove in production)
+  try {
+    res.headers.set('x-pwa-mobile', String(isMobile));
+    res.headers.set('x-pwa-installed', String(Boolean(pwaInstalled)));
+    // include truncated UA for debugging (do not expose full UA in prod)
+    res.headers.set('x-pwa-ua', ua.slice(0, 120));
+  } catch (e) {
+    // ignore header errors
+  }
+
+  return res;
 }
 
 export const config = {
