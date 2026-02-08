@@ -16,6 +16,7 @@ export function middleware(request: NextRequest) {
     pathname === '/login' ||
     pathname === '/register' ||
     pathname === '/tutorial' ||
+    pathname === '/install' ||
     pathname === '/favicon.ico' ||
     pathname === '/sw.js' ||
     pathname === '/manifest.json'
@@ -29,6 +30,17 @@ export function middleware(request: NextRequest) {
     // ログイン後に戻すためのパスを付与
     loginUrl.searchParams.set('returnTo', pathname);
     return NextResponse.redirect(loginUrl);
+  }
+
+  // モバイルの場合、PWA インストール済みフラグが無ければ `/install` へ誘導する
+  const pwaInstalled = request.cookies.get('pwa_installed')?.value;
+  const ua = request.headers.get('user-agent') || '';
+  const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(ua);
+
+  if (isMobile && !pwaInstalled && pathname !== '/install') {
+    const installUrl = new URL('/install', request.url);
+    installUrl.searchParams.set('returnTo', pathname);
+    return NextResponse.redirect(installUrl);
   }
 
   return NextResponse.next();
