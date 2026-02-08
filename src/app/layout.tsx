@@ -6,6 +6,7 @@ import { RewardProvider } from './context/RewardContext';
 import { AuthProvider } from './context/AuthContext';
 import Splash from './components/Splash';
 import PwaInstallRedirectClient from './components/PwaInstallRedirectClient';
+import PostHogClient from './components/PostHogClient';
 import BottomNavShell from './components/BottomNavShell';
 import { BottomNavProvider } from './context/BottomNavContext';
 
@@ -116,6 +117,7 @@ export default function RootLayout({
               <BottomNavProvider>
                 <Suspense fallback={null}>
                   <PwaInstallRedirectClient />
+                  <PostHogClient />
                 </Suspense>
                 <Splash />
                 {children}
