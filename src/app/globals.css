@@ -60,3 +60,18 @@ body.no-bottom-padding {
     padding-top: calc(0.75rem + var(--safe-area-top));
   }
 } */
+
+/* ヘッダーがノッチ／ステータスバー領域の下に隠れないようにする */
+header {
+  padding-top: var(--safe-area-top);
+  height: calc(65px + var(--safe-area-top));
+  box-sizing: border-box;
+  background-clip: padding-box;
+}
+
+/* RankingsHeader のように header 下に直接 inner div を持つ構造にも対応 */
+header > div {
+  padding-top: var(--safe-area-top);
+  height: calc(65px + var(--safe-area-top));
+  box-sizing: border-box;
+}
