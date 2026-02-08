@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 
 const prisma = new PrismaClient();
 
@@ -12,27 +13,21 @@ export async function POST(request: Request) {
     if (!username || !password) {
       return NextResponse.json(
         { error: 'ユーザー名とパスワードを入力してください' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     if (password.length < 6) {
-      return NextResponse.json(
-        { error: 'パスワードは6文字以上にしてください' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'パスワードは6文字以上にしてください' }, { status: 400 });
     }
 
     // 既存ユーザーチェック
     const existingUser = await prisma.user.findUnique({
-      where: { username }
+      where: { username },
     });
 
     if (existingUser) {
-      return NextResponse.json(
-        { error: 'このユーザー名は既に使用されています' },
-        { status: 409 }
-      );
+      return NextResponse.json({ error: 'このユーザー名は既に使用されています' }, { status: 409 });
     }
 
     // パスワードを暗号化
@@ -42,8 +37,8 @@ export async function POST(request: Request) {
     const user = await prisma.user.create({
       data: {
         username,
-        passwordHash
-      }
+        passwordHash,
+      },
     });
 
     // --- 自動バッジ付与: early-access-badge ---
@@ -58,7 +53,7 @@ export async function POST(request: Request) {
         if (registeredAt <= badgeWindowEnd || registeredAt <= cutoff) {
           await prisma.userBadge.createMany({
             data: [{ userId: user.id, badgeId: badge.id }],
-            skipDuplicates: true
+            skipDuplicates: true,
           });
         }
       }
@@ -67,16 +62,27 @@ export async function POST(request: Request) {
       console.error('Auto-award badge error:', err);
     }
 
-    return NextResponse.json({
-      message: '登録成功',
-      userId: user.id
+    // 自動ログイン: JWT を発行して HttpOnly Cookie にセット
+    const token = jwt.sign({ userId: user.id, username: user.username }, process.env.JWT_SECRET!, {
+      expiresIn: '7d',
     });
 
+    const response = NextResponse.json({
+      message: '登録成功',
+      user: { id: user.id, username: user.username },
+    });
+
+    response.cookies.set('auth-token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7,
+      path: '/',
+    });
+
+    return response;
   } catch (error) {
     console.error('Registration error:', error);
-    return NextResponse.json(
-      { error: 'サーバーエラーが発生しました' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'サーバーエラーが発生しました' }, { status: 500 });
   }
 }
