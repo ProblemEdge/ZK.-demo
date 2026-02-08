@@ -37,7 +37,7 @@ body {
   min-height: 100vh;
   min-height: -webkit-fill-available;
   /* 下部に余白を確保（セーフエリアを加味） */
-  /* padding-bottom: calc(var(--safe-area-bottom, 0px) + 4rem); */
+  padding-bottom: calc(var(--safe-area-bottom, 0px) + 4rem);
 }
 
 /* 特定ルートでセーフエリア下部余白を無効化するためのユーティリティ *が
