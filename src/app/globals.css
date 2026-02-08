@@ -75,3 +75,36 @@ header > div {
   height: calc(65px + var(--safe-area-top));
   box-sizing: border-box;
 }
+
+/* Tailwind の h-[65px] / sticky top-0 が優先されるため上書きする */
+header.h-\[65px\],
+header > div.h-\[65px\],
+.h-\[65px\].sticky,
+header.sticky {
+  height: calc(65px + var(--safe-area-top)) !important;
+  padding-top: var(--safe-area-top) !important;
+  box-sizing: border-box !important;
+}
+
+/* sticky 要素がステータスバー領域と被らないように top を安全領域に合わせる */
+.sticky.top-0 {
+  top: 0 !important;
+}
+
+/* ヘッダー上部の safe-area を確実に塗り潰すオーバーレイ */
+header {
+  position: relative;
+  background: var(--background);
+}
+
+header::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--safe-area-top);
+  background: var(--background);
+  pointer-events: none;
+  z-index: 40;
+}
