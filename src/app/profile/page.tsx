@@ -361,6 +361,20 @@ function ProfilePageContent() {
       <div className='mx-3 mt-6 p-4 text-center text-xs text-gray-400'>
         このバージョンはデモです。仕様や挙動は今後変更される可能性があります。データの取り扱いや機能については予告なく更新されることがあります。
       </div>
+
+      <div className='mx-3 mt-4 mb-8 p-4 bg-[#14161a] border border-white rounded-lg text-center'>
+        <p className='text-sm text-white mb-2'>
+          ご意見をお聞かせください — アンケートにご協力ください
+        </p>
+        <a
+          href='https://forms.gle/UifDUXkzcAUQfoLR6'
+          target='_blank'
+          rel='noopener noreferrer'
+          className='inline-block px-4 py-2 bg-[#00e676] text-black font-bold rounded-lg'
+        >
+          アンケートに回答する
+        </a>
+      </div>
       {/* BottomNav moved to RootLayout */}
       {viewerOpen && (
         <PostViewer
