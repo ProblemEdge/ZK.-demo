@@ -14,14 +14,25 @@ export default function InstallClient() {
     const isStandalone =
       window.matchMedia('(display-mode: standalone)').matches || nav.standalone === true;
     if (isStandalone) {
-      document.cookie = 'pwa_installed=1; path=/; max-age=31536000';
-      window.location.href = returnTo;
+      // ensure server-side cookie is set before navigating
+      fetch(`/api/pwa/installed?returnTo=${encodeURIComponent(returnTo)}`, {
+        method: 'POST',
+        credentials: 'same-origin',
+      }).finally(() => {
+        window.location.href = returnTo;
+      });
     }
   }, [returnTo]);
 
-  const markInstalled = () => {
-    document.cookie = 'pwa_installed=1; path=/; max-age=31536000';
-    window.location.href = returnTo;
+  const markInstalled = async () => {
+    try {
+      await fetch(`/api/pwa/installed?returnTo=${encodeURIComponent(returnTo)}`, {
+        method: 'POST',
+        credentials: 'same-origin',
+      });
+    } finally {
+      window.location.href = returnTo;
+    }
   };
 
   return (
