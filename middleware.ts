@@ -34,7 +34,8 @@ export function middleware(request: NextRequest) {
   }
 
   const token = request.cookies.get('auth-token')?.value;
-  if (!token) {
+  // Prevent redirect loop: allow the /login page itself to be reachable
+  if (!token && pathname !== '/login') {
     const loginUrl = new URL('/login', request.url);
     // ログイン後に戻すためのパスを付与
     loginUrl.searchParams.set('returnTo', pathname);
