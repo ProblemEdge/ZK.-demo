@@ -131,7 +131,7 @@ function ProfilePageContent() {
     return (
       <div
         className='min-h-screen bg-gradient-to-b from-[#0b0c0f] via-[#0b0c0f] to-[#0f0f0f] pb-24'
-        style={{ paddingBottom: 'calc(6rem + var(--safe-area-bottom))' }}
+        style={{ paddingBottom: 'calc(var(--safe-area-bottom, 0px) + 12rem)' }}
       >
         <ProfileHeader />
         <div className='flex items-center justify-center py-32'>
@@ -147,7 +147,7 @@ function ProfilePageContent() {
   return (
     <div
       className='min-h-screen bg-gradient-to-b from-[#0b0c0f] via-[#0b0c0f] to-[#0f0f0f] pb-24'
-      style={{ paddingBottom: 'calc(6rem + var(--safe-area-bottom))' }}
+      style={{ paddingBottom: 'calc(var(--safe-area-bottom, 0px) + 12rem)' }}
     >
       <ProfileHeader />
 
