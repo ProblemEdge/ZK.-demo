@@ -20,6 +20,8 @@ self.addEventListener('install', function (event) {
         console.error('Cache install failed:', err);
       }),
   );
+  // Activate new service worker immediately
+  self.skipWaiting();
 });
 
 self.addEventListener('activate', function (event) {
@@ -34,6 +36,10 @@ self.addEventListener('activate', function (event) {
       );
     }),
   );
+  // Take control of clients immediately after activation
+  if (self.clients && self.clients.claim) {
+    self.clients.claim();
+  }
 });
 
 self.addEventListener('fetch', function (event) {
@@ -71,7 +77,39 @@ self.addEventListener('fetch', function (event) {
       return;
     }
 
-    // For non-API requests, serve from cache first
+    // For non-API requests, prefer network for navigations (HTML) to avoid stale pages,
+    // and use cache-first for other static resources.
+    if (
+      event.request.mode === 'navigate' ||
+      event.request.headers.get('accept')?.includes('text/html')
+    ) {
+      // Network-first for navigations
+      event.respondWith(
+        fetch(event.request)
+          .then(function (networkResponse) {
+            if (
+              !networkResponse ||
+              networkResponse.status !== 200 ||
+              networkResponse.type === 'opaque'
+            ) {
+              return caches.match(event.request);
+            }
+            const responseClone = networkResponse.clone();
+            caches.open(CACHE_NAME).then(function (cache) {
+              cache.put(event.request, responseClone);
+            });
+            return networkResponse;
+          })
+          .catch(function () {
+            return caches.match(event.request).then(function (response) {
+              return response || caches.match('/');
+            });
+          }),
+      );
+      return;
+    }
+
+    // For other non-API requests, serve from cache first
     event.respondWith(
       caches.match(event.request).then(function (response) {
         if (response) {
@@ -144,4 +182,22 @@ self.addEventListener('push', function (event) {
 self.addEventListener('notificationclick', function (event) {
   event.notification.close();
   event.waitUntil(clients.openWindow(event.notification.data.url));
+});
+
+// Listen for messages from clients to perform actions like clearing caches or skipWaiting
+self.addEventListener('message', function (event) {
+  const data = event.data || {};
+  if (data && data.type === 'CLEAR_CACHE') {
+    caches.keys().then(function (keys) {
+      return Promise.all(
+        keys.map(function (key) {
+          if (key !== CACHE_NAME) return caches.delete(key);
+        }),
+      );
+    });
+  }
+
+  if (data && data.type === 'SKIP_WAITING') {
+    if (self.skipWaiting) self.skipWaiting();
+  }
 });
