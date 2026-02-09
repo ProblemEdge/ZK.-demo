@@ -18,6 +18,8 @@ model User {
   level         Int      @default(1)  // ユーザーレベル
   gems          Int      @default(0)  // ジェム（通貨）
   experience    Int      @default(0)  // 経験値
+  currentStreak Int      @default(0)
+  maxStreak     Int      @default(0)
   completedQuestsCount Int @default(0) // 完了したクエスト数
   createdAt     DateTime @default(now())
   
