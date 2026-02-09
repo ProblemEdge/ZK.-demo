@@ -10,10 +10,7 @@ export async function GET(request: Request) {
     const token = cookieStore.get('auth-token')?.value;
 
     if (!token) {
-      return NextResponse.json(
-        { error: '認証が必要です' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
     }
 
     // トークン検証
@@ -35,22 +32,21 @@ export async function GET(request: Request) {
         level: true,
         gems: true,
         experience: true,
+        currentStreak: true,
+        maxStreak: true,
         completedQuestsCount: true,
         _count: {
           select: {
             posts: { where: { isApproved: true } },
             friendsAsUser: true,
-            friendsAsFriend: true
-          }
-        }
-      }
+            friendsAsFriend: true,
+          },
+        },
+      },
     });
 
     if (!user) {
-      return NextResponse.json(
-        { error: 'ユーザーが見つかりません' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'ユーザーが見つかりません' }, { status: 404 });
     }
 
     const friendCount = user._count.friendsAsUser;
@@ -65,16 +61,14 @@ export async function GET(request: Request) {
       level: user.level,
       gems: user.gems,
       experience: user.experience,
+      currentStreak: user.currentStreak,
+      maxStreak: user.maxStreak,
       completedQuestsCount: user.completedQuestsCount,
       postCount: user._count.posts,
-      friendCount
+      friendCount,
     });
-
   } catch (error) {
     console.error('Get user error:', error);
-    return NextResponse.json(
-      { error: '認証エラー' },
-      { status: 401 }
-    );
+    return NextResponse.json({ error: '認証エラー' }, { status: 401 });
   }
 }

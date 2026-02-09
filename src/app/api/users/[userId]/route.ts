@@ -2,10 +2,7 @@ import { NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 import { prisma } from '@/lib/prisma';
 
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ userId: string }> }
-) {
+export async function GET(request: Request, { params }: { params: Promise<{ userId: string }> }) {
   try {
     const { userId } = await params;
 
@@ -13,7 +10,7 @@ export async function GET(
     const cookieHeader = request.headers.get('cookie');
     const token = cookieHeader
       ?.split('; ')
-      .find(row => row.startsWith('auth-token='))
+      .find((row) => row.startsWith('auth-token='))
       ?.split('=')[1];
 
     let currentUserId: string | null = null;
@@ -37,6 +34,8 @@ export async function GET(
         displayName: true,
         avatarUrl: true,
         bio: true,
+        currentStreak: true,
+        maxStreak: true,
         createdAt: true,
         level: true,
         gems: true,
@@ -45,17 +44,14 @@ export async function GET(
           select: {
             posts: { where: { isApproved: true } },
             friendsAsUser: true,
-            friendsAsFriend: true
-          }
-        }
-      }
+            friendsAsFriend: true,
+          },
+        },
+      },
     });
 
     if (!user) {
-      return NextResponse.json(
-        { error: 'ユーザーが見つかりません' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'ユーザーが見つかりません' }, { status: 404 });
     }
 
     // フレンド状態を確認
@@ -69,26 +65,26 @@ export async function GET(
           where: {
             userId_friendId: {
               userId: firstId,
-              friendId: secondId
-            }
-          }
+              friendId: secondId,
+            },
+          },
         }),
         prisma.friendRequest.findUnique({
           where: {
             requesterId_targetId: {
               requesterId: currentUserId,
-              targetId: userId
-            }
-          }
+              targetId: userId,
+            },
+          },
         }),
         prisma.friendRequest.findUnique({
           where: {
             requesterId_targetId: {
               requesterId: userId,
-              targetId: currentUserId
-            }
-          }
-        })
+              targetId: currentUserId,
+            },
+          },
+        }),
       ]);
       isFriend = !!friend;
       isRequestedByMe = outgoingRequest?.status === 'PENDING';
@@ -116,10 +112,10 @@ export async function GET(
             AND: [
               { isApproved: false },
               { rejectedAt: null },
-              { votingEndedAt: { not: null, lte: now } }
-            ]
-          }
-        ]
+              { votingEndedAt: { not: null, lte: now } },
+            ],
+          },
+        ],
       };
 
       // visibilityScope: FRIENDS は viewer がフレンドでなければ除外
@@ -130,8 +126,8 @@ export async function GET(
 
       visiblePostsCount = await prisma.post.count({
         where: {
-          AND: [visibilityCondition, votingClosedCondition]
-        }
+          AND: [visibilityCondition, votingClosedCondition],
+        },
       });
     }
 
@@ -141,19 +137,15 @@ export async function GET(
         _Count: undefined,
         _count: {
           posts: visiblePostsCount,
-          friends: friendCount
-        }
+          friends: friendCount,
+        },
       },
       isFriend,
       isRequestedByMe,
-      isRequestingMe
+      isRequestingMe,
     });
-
   } catch (error) {
     console.error('Get user profile error:', error);
-    return NextResponse.json(
-      { error: 'ユーザー情報の取得に失敗しました' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'ユーザー情報の取得に失敗しました' }, { status: 500 });
   }
 }
