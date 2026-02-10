@@ -27,6 +27,8 @@ interface UserProfile {
   level: number;
   gems: number;
   experience: number;
+  currentStreak?: number;
+  maxStreak?: number;
   _count: {
     posts: number;
     friends: number;
@@ -105,7 +107,11 @@ export default function UserProfilePage() {
           const isApproved = !!p.isApproved;
           const votingEndsAt = p.votingEndedAt ? new Date(p.votingEndedAt).getTime() : null;
           const postedAtMs = p.postedAt ? new Date(p.postedAt).getTime() : 0;
+<<<<<<< HEAD
           const postedTimeoutExpired = now >= postedAtMs + 60 * 60 * 1000;
+=======
+          const postedTimeoutExpired = now >= postedAtMs + 5 * 60 * 1000;
+>>>>>>> fd775af5b100758223ea421a3493968fea95019d
           const isVotingOpen =
             !isRejected &&
             !isApproved &&
@@ -287,6 +293,13 @@ export default function UserProfilePage() {
               <button className='underline' onClick={fetchFriends}>
                 {user._count.friends} friends
               </button>
+<<<<<<< HEAD
+=======
+              {typeof user.currentStreak !== 'undefined' && (
+                <div>現在の連続: {user.currentStreak}</div>
+              )}
+              {typeof user.maxStreak !== 'undefined' && <div>最大連続: {user.maxStreak}</div>}
+>>>>>>> fd775af5b100758223ea421a3493968fea95019d
             </div>
 
             <div className='mt-4'>

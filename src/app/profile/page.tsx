@@ -27,6 +27,8 @@ interface User {
   level: number;
   gems: number;
   experience: number;
+  currentStreak: number;
+  maxStreak: number;
   completedQuestsCount: number;
 }
 
@@ -258,6 +260,18 @@ function ProfilePageContent() {
                   <br />
                   クエスト
                 </p>
+              </div>
+            </div>
+
+            {/* Streaks */}
+            <div className='mt-4 grid grid-cols-2 gap-4 text-center'>
+              <div>
+                <p className='text-2xl font-bold text-white'>{user.currentStreak}</p>
+                <p className='text-sm font-bold text-white mt-1'>現在の連続投稿</p>
+              </div>
+              <div>
+                <p className='text-2xl font-bold text-white'>{user.maxStreak}</p>
+                <p className='text-sm font-bold text-white mt-1'>最大連続投稿</p>
               </div>
             </div>
 

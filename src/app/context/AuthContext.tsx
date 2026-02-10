@@ -14,6 +14,8 @@ export interface AuthUser {
   level: number;
   gems: number;
   experience: number;
+  currentStreak: number;
+  maxStreak: number;
   completedQuestsCount: number;
 }
 
@@ -34,9 +36,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const refresh = useCallback(async () => {
     try {
-      const res = await fetch('/api/auth/me', { 
+      const res = await fetch('/api/auth/me', {
         cache: 'no-store',
-        credentials: 'include'
+        credentials: 'include',
       });
       if (res.ok) {
         const data = await res.json();
@@ -79,10 +81,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // 初回のみ実行
 
-  const value = useMemo(
-    () => ({ user, status, refresh, setUser }),
-    [user, status, refresh]
-  );
+  const value = useMemo(() => ({ user, status, refresh, setUser }), [user, status, refresh]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

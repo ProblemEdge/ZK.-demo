@@ -77,6 +77,44 @@ export default function FeedPage() {
 
   useRewardCheck(status);
 
+  // Ensure feed updates when user focuses/returns to the tab and handle SW updates
+  useEffect(() => {
+    const handleVisible = async () => {
+      if (document.visibilityState === 'visible') {
+        try {
+          // refresh data-bound client routes
+          router.refresh();
+        } catch (e) {
+          console.warn('Router refresh failed', e);
+        }
+
+        // If a waiting service worker exists, ask it to skipWaiting and reload to pick up new assets
+        try {
+          if ('serviceWorker' in navigator) {
+            const reg = await navigator.serviceWorker.getRegistration();
+            if (reg && reg.waiting) {
+              reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+              // when controller changes, reload page to use new SW
+              navigator.serviceWorker.addEventListener('controllerchange', () => {
+                window.location.reload();
+              });
+            }
+          }
+        } catch (e) {
+          console.warn('Service worker update check failed', e);
+        }
+      }
+    };
+
+    window.addEventListener('focus', handleVisible);
+    document.addEventListener('visibilitychange', handleVisible);
+
+    return () => {
+      window.removeEventListener('focus', handleVisible);
+      document.removeEventListener('visibilitychange', handleVisible);
+    };
+  }, [router]);
+
   // Map タブ用の投稿を取得
   useEffect(() => {
     let mounted = true;
