@@ -8,7 +8,7 @@ export async function GET(request: Request) {
     const cookieHeader = request.headers.get('cookie');
     const token = cookieHeader
       ?.split('; ')
-      .find(row => row.startsWith('auth-token='))
+      .find((row) => row.startsWith('auth-token='))
       ?.split('=')[1];
 
     let currentUserId: string | null = null;
@@ -32,8 +32,8 @@ export async function GET(request: Request) {
         rejectedAt: null, // 却下されていない
         OR: [
           { votingEndedAt: null }, // 投票受付中
-          { votingEndedAt: { gt: now } } // 投票受付時間が未来
-        ]
+          { votingEndedAt: { gt: now } }, // 投票受付時間が未来
+        ],
       },
       select: {
         id: true,
@@ -54,28 +54,28 @@ export async function GET(request: Request) {
             id: true,
             username: true,
             displayName: true,
-            avatarUrl: true
-          }
+            avatarUrl: true,
+          },
         },
         votes: {
           select: {
             voteType: true,
-            voterId: true
-          }
+            voterId: true,
+          },
         },
         likes: {
-          select: { userId: true }
+          select: { userId: true },
         },
         _count: {
           select: {
-            comments: true
-          }
-        }
+            comments: true,
+          },
+        },
       },
       orderBy: {
-        postedAt: 'desc'
+        postedAt: 'desc',
       },
-      take: 10
+      take: 10,
     });
 
     // 投票の割合を計算（5票未満のみ表示）
@@ -84,16 +84,11 @@ export async function GET(request: Request) {
     if (currentUserId) {
       const friendsList = await prisma.friend.findMany({
         where: {
-          OR: [
-            { userId: currentUserId },
-            { friendId: currentUserId }
-          ]
+          OR: [{ userId: currentUserId }, { friendId: currentUserId }],
         },
-        select: { userId: true, friendId: true }
+        select: { userId: true, friendId: true },
       });
-      allowedIds = friendsList.map(f => 
-        f.userId === currentUserId ? f.friendId : f.userId
-      );
+      allowedIds = friendsList.map((f) => (f.userId === currentUserId ? f.friendId : f.userId));
       allowedIds.push(currentUserId);
     }
 
@@ -108,18 +103,27 @@ export async function GET(request: Request) {
         }
         return true;
       })
-      .map(post => {
-        const approveCount = post.votes.filter((v: { voteType: string }) => v.voteType === 'approve').length;
-        const rejectCount = post.votes.filter((v: { voteType: string }) => v.voteType === 'reject').length;
+      .map((post) => {
+        const approveCount = post.votes.filter(
+          (v: { voteType: string }) => v.voteType === 'approve',
+        ).length;
+        const rejectCount = post.votes.filter(
+          (v: { voteType: string }) => v.voteType === 'reject',
+        ).length;
         const totalVotes = approveCount + rejectCount;
-        
-        // 現在のユーザーが投票済みかチェック
-        const hasVoted = currentUserId ? post.votes.some((v: { voterId: string }) => v.voterId === currentUserId) : false;
-        const hasLiked = currentUserId && post.likes ? post.likes.some((l: { userId: string }) => l.userId === currentUserId) : false;
 
-        // 投票期限は一律5分
-        const fiveMinutesAgo = nowTs - 5 * 60 * 1000;
-        const isWithinVotingPeriod = new Date(post.postedAt).getTime() >= fiveMinutesAgo;
+        // 現在のユーザーが投票済みかチェック
+        const hasVoted = currentUserId
+          ? post.votes.some((v: { voterId: string }) => v.voterId === currentUserId)
+          : false;
+        const hasLiked =
+          currentUserId && post.likes
+            ? post.likes.some((l: { userId: string }) => l.userId === currentUserId)
+            : false;
+
+        // 投票期限は一律1時間
+        const oneHourAgo = nowTs - 60 * 60 * 1000;
+        const isWithinVotingPeriod = new Date(post.postedAt).getTime() >= oneHourAgo;
 
         const base = {
           ...post,
@@ -131,12 +135,12 @@ export async function GET(request: Request) {
           hasVoted,
           likeCount: post.likes?.length || 0,
           hasLiked,
-          commentCount: post._count.comments
+          commentCount: post._count.comments,
         };
         return isWithinVotingPeriod ? base : null;
       })
       .filter((post) => post !== null)
-      .filter((post) => (post as any).totalVotes < 5) as any[];  // 5票未満のみ表示
+      .filter((post) => (post as any).totalVotes < 5) as any[]; // 5票未満のみ表示
 
     // 投票中は匿名表示（ユーザー情報を伏せる）
     const anonymized = postsWithVoteCount.map((p) => ({
@@ -145,17 +149,13 @@ export async function GET(request: Request) {
         id: 'anonymous',
         username: 'anonymous',
         displayName: null,
-        avatarUrl: null
-      }
+        avatarUrl: null,
+      },
     }));
 
     return NextResponse.json(anonymized);
-
   } catch (error) {
     console.error('Get pending posts error:', error);
-    return NextResponse.json(
-      { error: '投稿の取得に失敗しました' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: '投稿の取得に失敗しました' }, { status: 500 });
   }
 }

@@ -3,12 +3,12 @@
 /**
  * 投票期限が切れているかどうかをチェック
  * @param postedAt 投稿日時
- * @returns 5分以上経過している場合true
+ * @returns 1時間以上経過している場合true
  */
 export const isVotingClosed = (postedAt: string): boolean => {
   const postDate = new Date(postedAt);
   const now = new Date();
-  return now.getTime() - postDate.getTime() > 5 * 60 * 1000; // 5分
+  return now.getTime() - postDate.getTime() > 60 * 60 * 1000; // 1時間
 };
 
 /**

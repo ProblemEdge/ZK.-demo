@@ -91,19 +91,26 @@ export default function UserProfilePage() {
 
   const fetchUserPosts = async () => {
     try {
-      const res = await fetch(`/api/users/${userId}/posts`, { cache: 'no-store', credentials: 'include' });
+      const res = await fetch(`/api/users/${userId}/posts`, {
+        cache: 'no-store',
+        credentials: 'include',
+      });
       if (!res.ok) return;
       const data = await res.json();
       try {
         const now = Date.now();
         const postsData = (data as Post[]) || [];
-        const visible = postsData.filter(p => {
+        const visible = postsData.filter((p) => {
           const isRejected = !!p.rejectedAt;
           const isApproved = !!p.isApproved;
           const votingEndsAt = p.votingEndedAt ? new Date(p.votingEndedAt).getTime() : null;
           const postedAtMs = p.postedAt ? new Date(p.postedAt).getTime() : 0;
-          const postedTimeoutExpired = now >= (postedAtMs + 5 * 60 * 1000);
-          const isVotingOpen = (!isRejected && !isApproved) && (votingEndsAt == null || now < votingEndsAt) && !postedTimeoutExpired;
+          const postedTimeoutExpired = now >= postedAtMs + 60 * 60 * 1000;
+          const isVotingOpen =
+            !isRejected &&
+            !isApproved &&
+            (votingEndsAt == null || now < votingEndsAt) &&
+            !postedTimeoutExpired;
           if (isVotingOpen && authUser?.id !== userId) return false;
           return true;
         });
@@ -185,7 +192,7 @@ export default function UserProfilePage() {
   const handleFriendRequestFromList = async (targetUserId: string) => {
     try {
       await followUser(targetUserId);
-      setFriends(prev => prev.map(f => f.id === targetUserId ? { ...f, isFriend: true } : f));
+      setFriends((prev) => prev.map((f) => (f.id === targetUserId ? { ...f, isFriend: true } : f)));
     } catch (err) {
       console.error(err);
       alert('フレンド申請に失敗しました');
@@ -195,7 +202,7 @@ export default function UserProfilePage() {
   const handleRemoveFriendFromList = async (targetUserId: string) => {
     try {
       await unfollowUser(targetUserId);
-      setFriends(prev => prev.filter(f => f.id !== targetUserId));
+      setFriends((prev) => prev.filter((f) => f.id !== targetUserId));
     } catch (err) {
       console.error(err);
       alert('フレンド解除に失敗しました');
@@ -205,15 +212,17 @@ export default function UserProfilePage() {
   if (!user) {
     // simple loading skeleton
     return (
-      <div className="min-h-screen bg-[#0b0c0f] pb-24">
-        <div className="sticky top-0 z-40 bg-[#0b0c0f]"><ProfileHeader /></div>
-        <div className="mx-3 mt-4 bg-[#14161a] border border-white rounded-2xl p-4">
-          <div className="flex items-start gap-3">
-            <div className="w-[64px] h-[64px] bg-gray-700 rounded-full animate-pulse flex-shrink-0"></div>
-            <div className="flex-1 min-w-0">
-              <div className="h-7 w-32 bg-gray-700 animate-pulse rounded mb-2"></div>
-              <div className="h-5 w-24 bg-gray-700 animate-pulse rounded mb-3"></div>
-              <div className="h-9 w-32 bg-gray-700 animate-pulse rounded"></div>
+      <div className='min-h-screen bg-[#0b0c0f] pb-24'>
+        <div className='sticky top-0 z-40 bg-[#0b0c0f]'>
+          <ProfileHeader />
+        </div>
+        <div className='mx-3 mt-4 bg-[#14161a] border border-white rounded-2xl p-4'>
+          <div className='flex items-start gap-3'>
+            <div className='w-[64px] h-[64px] bg-gray-700 rounded-full animate-pulse flex-shrink-0'></div>
+            <div className='flex-1 min-w-0'>
+              <div className='h-7 w-32 bg-gray-700 animate-pulse rounded mb-2'></div>
+              <div className='h-5 w-24 bg-gray-700 animate-pulse rounded mb-3'></div>
+              <div className='h-9 w-32 bg-gray-700 animate-pulse rounded'></div>
             </div>
           </div>
         </div>
@@ -223,14 +232,17 @@ export default function UserProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0b0c0f] pb-24" style={{ paddingBottom: 'calc(6rem + var(--safe-area-bottom))' }}>
-      <div className="sticky top-0 z-40 bg-[#0b0c0f]">
+    <div
+      className='min-h-screen bg-[#0b0c0f] pb-24'
+      style={{ paddingBottom: 'calc(6rem + var(--safe-area-bottom))' }}
+    >
+      <div className='sticky top-0 z-40 bg-[#0b0c0f]'>
         <ProfileHeader />
       </div>
 
-      <div className="mx-3 mt-4 bg-[#14161a] border border-white rounded-2xl p-4">
-        <div className="flex items-start gap-3">
-          <div className="w-[64px] h-[64px] bg-[#bfbdbd] rounded-full overflow-hidden flex-shrink-0 border-2 border-white">
+      <div className='mx-3 mt-4 bg-[#14161a] border border-white rounded-2xl p-4'>
+        <div className='flex items-start gap-3'>
+          <div className='w-[64px] h-[64px] bg-[#bfbdbd] rounded-full overflow-hidden flex-shrink-0 border-2 border-white'>
             {user.avatarUrl ? (
               (() => {
                 const filename = user.avatarUrl.split('/').pop()?.split('?')[0];
@@ -247,48 +259,79 @@ export default function UserProfilePage() {
                     src={src}
                     alt={user.username}
                     showRandomText={false}
-                    className="w-full h-full object-cover"
+                    className='w-full h-full object-cover'
                     fallbackInitial={user.username[0].toUpperCase()}
                     fallbackSrc={fallback}
                   />
                 );
               })()
             ) : (
-              <span className="flex items-center justify-center w-full h-full text-2xl font-bold text-[#14161a]">{user.username[0].toUpperCase()}</span>
+              <span className='flex items-center justify-center w-full h-full text-2xl font-bold text-[#14161a]'>
+                {user.username[0].toUpperCase()}
+              </span>
             )}
           </div>
 
-          <div className="ml-3 flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <h1 className="text-white text-lg font-semibold truncate">{user.displayName || user.username}</h1>
-              <div className="text-sm text-gray-400">@{user.username}</div>
+          <div className='ml-3 flex-1 min-w-0'>
+            <div className='flex items-center gap-2'>
+              <h1 className='text-white text-lg font-semibold truncate'>
+                {user.displayName || user.username}
+              </h1>
+              <div className='text-sm text-gray-400'>@{user.username}</div>
             </div>
 
-            {user.bio && <p className="mt-2 text-sm text-gray-300">{user.bio}</p>}
+            {user.bio && <p className='mt-2 text-sm text-gray-300'>{user.bio}</p>}
 
-            <div className="mt-3 flex items-center gap-4 text-sm text-gray-300">
+            <div className='mt-3 flex items-center gap-4 text-sm text-gray-300'>
               <div>{user._count.posts} posts</div>
-              <button className="underline" onClick={fetchFriends}>{user._count.friends} friends</button>
+              <button className='underline' onClick={fetchFriends}>
+                {user._count.friends} friends
+              </button>
             </div>
 
-            <div className="mt-4">
+            <div className='mt-4'>
               {authUser?.id === user.id ? (
-                <button className="px-3 py-1 bg-white text-black rounded" onClick={() => router.push('/profile/edit')}>Edit profile</button>
+                <button
+                  className='px-3 py-1 bg-white text-black rounded'
+                  onClick={() => router.push('/profile/edit')}
+                >
+                  Edit profile
+                </button>
               ) : isFriend ? (
-                <button className="px-3 py-1 bg-gray-700 text-white rounded" onClick={handleRemoveFriend}>Unfriend</button>
+                <button
+                  className='px-3 py-1 bg-gray-700 text-white rounded'
+                  onClick={handleRemoveFriend}
+                >
+                  Unfriend
+                </button>
               ) : isRequestedByMe ? (
-                <button className="px-3 py-1 bg-gray-600 text-white rounded">Requested</button>
+                <button className='px-3 py-1 bg-gray-600 text-white rounded'>Requested</button>
               ) : isRequestingMe ? (
-                <div className="flex gap-2">
-                  <button className="px-3 py-1 bg-green-600 text-white rounded" onClick={handleApproveRequest}>Approve</button>
-                  <button className="px-3 py-1 bg-red-600 text-white rounded" onClick={handleRejectRequest}>Reject</button>
+                <div className='flex gap-2'>
+                  <button
+                    className='px-3 py-1 bg-green-600 text-white rounded'
+                    onClick={handleApproveRequest}
+                  >
+                    Approve
+                  </button>
+                  <button
+                    className='px-3 py-1 bg-red-600 text-white rounded'
+                    onClick={handleRejectRequest}
+                  >
+                    Reject
+                  </button>
                 </div>
               ) : (
-                <button className="px-3 py-1 bg-blue-600 text-white rounded" onClick={handleFriendRequest}>Follow</button>
+                <button
+                  className='px-3 py-1 bg-blue-600 text-white rounded'
+                  onClick={handleFriendRequest}
+                >
+                  Follow
+                </button>
               )}
             </div>
 
-            <div className="mt-4">
+            <div className='mt-4'>
               <Badges badges={badges} />
             </div>
           </div>
@@ -296,11 +339,23 @@ export default function UserProfilePage() {
       </div>
 
       {/* Posts grid */}
-      <div className="mx-3 mt-4 grid grid-cols-3 gap-2">
+      <div className='mx-3 mt-4 grid grid-cols-3 gap-2'>
         {posts.map((p, i) => {
           return (
-            <button key={p.id} className="w-full aspect-square rounded overflow-hidden bg-black" onClick={() => { setViewerIndex(i); setViewerOpen(true); }}>
-              <ImageWithPlaceholder src={p.imageUrl} alt={p.caption || ''} className="w-full h-full object-cover" showRandomText={true} />
+            <button
+              key={p.id}
+              className='w-full aspect-square rounded overflow-hidden bg-black'
+              onClick={() => {
+                setViewerIndex(i);
+                setViewerOpen(true);
+              }}
+            >
+              <ImageWithPlaceholder
+                src={p.imageUrl}
+                alt={p.caption || ''}
+                className='w-full h-full object-cover'
+                showRandomText={true}
+              />
             </button>
           );
         })}
@@ -311,28 +366,52 @@ export default function UserProfilePage() {
       )}
 
       {showFriendsModal && (
-        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center">
-          <div className="bg-[#14161a] rounded-lg p-4 w-[90%] max-w-md">
-            <div className="flex justify-between items-center mb-3">
-              <h3 className="text-white">Friends</h3>
-              <button className="text-white" onClick={() => setShowFriendsModal(false)}>✕</button>
+        <div className='fixed inset-0 z-50 bg-black/70 flex items-center justify-center'>
+          <div className='bg-[#14161a] rounded-lg p-4 w-[90%] max-w-md'>
+            <div className='flex justify-between items-center mb-3'>
+              <h3 className='text-white'>Friends</h3>
+              <button className='text-white' onClick={() => setShowFriendsModal(false)}>
+                ✕
+              </button>
             </div>
-            <div className="space-y-3">
-              {friendsLoading ? <div className="text-gray-400">Loading...</div> : (
-                friends.map(f => (
-                  <div key={f.id} className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-700">
-                      {f.avatarUrl ? <img src={f.avatarUrl} alt={f.username} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-white">{f.username[0].toUpperCase()}</div>}
+            <div className='space-y-3'>
+              {friendsLoading ? (
+                <div className='text-gray-400'>Loading...</div>
+              ) : (
+                friends.map((f) => (
+                  <div key={f.id} className='flex items-center gap-3'>
+                    <div className='w-10 h-10 rounded-full overflow-hidden bg-gray-700'>
+                      {f.avatarUrl ? (
+                        <img
+                          src={f.avatarUrl}
+                          alt={f.username}
+                          className='w-full h-full object-cover'
+                        />
+                      ) : (
+                        <div className='w-full h-full flex items-center justify-center text-white'>
+                          {f.username[0].toUpperCase()}
+                        </div>
+                      )}
                     </div>
-                    <div className="flex-1">
-                      <div className="text-white">{f.displayName || f.username}</div>
-                      <div className="text-sm text-gray-400">@{f.username}</div>
+                    <div className='flex-1'>
+                      <div className='text-white'>{f.displayName || f.username}</div>
+                      <div className='text-sm text-gray-400'>@{f.username}</div>
                     </div>
                     <div>
                       {f.isFriend ? (
-                        <button className="px-2 py-1 bg-gray-700 text-white rounded" onClick={() => handleRemoveFriendFromList(f.id)}>Unfriend</button>
+                        <button
+                          className='px-2 py-1 bg-gray-700 text-white rounded'
+                          onClick={() => handleRemoveFriendFromList(f.id)}
+                        >
+                          Unfriend
+                        </button>
                       ) : (
-                        <button className="px-2 py-1 bg-blue-600 text-white rounded" onClick={() => handleFriendRequestFromList(f.id)}>Follow</button>
+                        <button
+                          className='px-2 py-1 bg-blue-600 text-white rounded'
+                          onClick={() => handleFriendRequestFromList(f.id)}
+                        >
+                          Follow
+                        </button>
                       )}
                     </div>
                   </div>
@@ -343,8 +422,7 @@ export default function UserProfilePage() {
         </div>
       )}
 
-        {/* BottomNav moved to RootLayout */}
+      {/* BottomNav moved to RootLayout */}
     </div>
-
   ); // ここを閉じ忘れると構文エラーになります
 }

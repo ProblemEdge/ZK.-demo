@@ -17,7 +17,7 @@ cloudinary.config({
 export async function GET(request: Request) {
   try {
     const now = Date.now();
-    const fiveMinutesAgo = now - 5 * 60 * 1000;
+    const oneHourAgo = now - 60 * 60 * 1000;
 
     // 承認待ちの投稿を全て取得（まだ投票終了処理されていないもののみ）
     const pendingPosts = await prisma.post.findMany({
@@ -46,12 +46,12 @@ export async function GET(request: Request) {
     let deletedCount = 0;
     let approvedCount = 0;
 
-    // 投票期限切れ処理（5分固定）
+    // 投票期限切れ処理（1時間固定）
     for (const post of pendingPosts) {
       const postTime = new Date(post.postedAt).getTime();
 
-      // 投票期限は5分固定
-      if (postTime >= fiveMinutesAgo) {
+      // 投票期限は1時間固定
+      if (postTime >= oneHourAgo) {
         continue; // まだ投票期限内
       }
 
@@ -256,7 +256,7 @@ export async function GET(request: Request) {
     for (const post of approvedPosts) {
       const duration = (post as any).visibilityDurationMinutes;
       if (duration === null) continue;
-      // 投票の5分が終了した時刻（承認処理が走るタイミング）からカウントするため、
+      // 投票の1時間が終了した時刻（承認処理が走るタイミング）からカウントするため、
       // possible voting end timestamp を優先的に使用し、なければ updatedAt、最終手段で postedAt を使用する
       const approvalTime = (post as any).votingEndedAt
         ? new Date((post as any).votingEndedAt).getTime()
@@ -264,8 +264,8 @@ export async function GET(request: Request) {
           ? new Date((post as any).updatedAt).getTime()
           : new Date(post.postedAt).getTime();
 
-      // ユーザーが設定した公開期間に加えて +5分（投票時間分）の猶予を追加してカウント開始
-      const expiryTime = approvalTime + duration * 60 * 1000 + 5 * 60 * 1000;
+      // ユーザーが設定した公開期間に加えて +1時間（投票時間分）の猶予を追加してカウント開始
+      const expiryTime = approvalTime + duration * 60 * 1000 + 60 * 60 * 1000;
 
       if (now >= expiryTime) {
         // 期間終了 → 完全削除（関連データ＋メディア）

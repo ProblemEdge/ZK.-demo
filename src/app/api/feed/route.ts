@@ -7,14 +7,11 @@ export async function GET(request: Request) {
     const cookieHeader = request.headers.get('cookie');
     const token = cookieHeader
       ?.split('; ')
-      .find(row => row.startsWith('auth-token='))
+      .find((row) => row.startsWith('auth-token='))
       ?.split('=')[1];
 
     if (!token) {
-      return NextResponse.json(
-        { error: '認証が必要です' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET!) as {
@@ -30,28 +27,23 @@ export async function GET(request: Request) {
     // フレンド一覧を取得
     const friendsList = await prisma.friend.findMany({
       where: {
-        OR: [
-          { userId: decoded.userId },
-          { friendId: decoded.userId }
-        ]
+        OR: [{ userId: decoded.userId }, { friendId: decoded.userId }],
       },
-      select: { userId: true, friendId: true }
+      select: { userId: true, friendId: true },
     });
-    const friendIds = friendsList.map(f => 
-      f.userId === decoded.userId ? f.friendId : f.userId
-    );
+    const friendIds = friendsList.map((f) => (f.userId === decoded.userId ? f.friendId : f.userId));
     const allowedIds = [decoded.userId, ...friendIds];
 
     let approvedWhereClause: any = {
       isApproved: true,
       OR: [
         { visibilityScope: 'PUBLIC' },
-        { AND: [ { visibilityScope: 'FRIENDS' }, { userId: { in: allowedIds } } ] }
-      ]
+        { AND: [{ visibilityScope: 'FRIENDS' }, { userId: { in: allowedIds } }] },
+      ],
     };
 
     let votingWhereClause: any = {
-      isApproved: false
+      isApproved: false,
     };
 
     if (tab === 'following') {
@@ -83,38 +75,38 @@ export async function GET(request: Request) {
               id: true,
               username: true,
               displayName: true,
-              avatarUrl: true
-            }
+              avatarUrl: true,
+            },
           },
           quest: {
             select: {
               id: true,
               title: true,
               description: true,
-              date: true
-            }
+              date: true,
+            },
           },
           votes: {
             where: { voterId: decoded.userId },
-            select: { voteType: true }
+            select: { voteType: true },
           },
           likes: {
             where: { userId: decoded.userId },
-            select: { id: true }
+            select: { id: true },
           },
           _count: {
             select: {
               comments: true,
               likes: true,
-              votes: true
-            }
-          }
+              votes: true,
+            },
+          },
         },
         orderBy: {
-          postedAt: 'desc'
+          postedAt: 'desc',
         },
         skip: skip,
-        take: limit
+        take: limit,
       }),
       prisma.post.findMany({
         where: votingWhereClause,
@@ -137,56 +129,60 @@ export async function GET(request: Request) {
               id: true,
               username: true,
               displayName: true,
-              avatarUrl: true
-            }
+              avatarUrl: true,
+            },
           },
           quest: {
             select: {
               id: true,
               title: true,
               description: true,
-              date: true
-            }
+              date: true,
+            },
           },
           votes: {
             where: { voterId: decoded.userId },
-            select: { voteType: true }
+            select: { voteType: true },
           },
           likes: {
             where: { userId: decoded.userId },
-            select: { id: true }
+            select: { id: true },
           },
           _count: {
             select: {
               comments: true,
               likes: true,
-              votes: true
-            }
-          }
+              votes: true,
+            },
+          },
         },
         orderBy: {
-          postedAt: 'desc'
+          postedAt: 'desc',
         },
         skip: 0,
-        take: 5
-      })
+        take: 5,
+      }),
     ]);
 
     // 投票統計を並列取得
-    const votingPostIds = votingPosts.map(p => p.id);
-    const approvedPostIds = approvedPosts.map(p => p.id);
-    
+    const votingPostIds = votingPosts.map((p) => p.id);
+    const approvedPostIds = approvedPosts.map((p) => p.id);
+
     const [voteStats, approvedVoteStats] = await Promise.all([
-      votingPostIds.length > 0 ? prisma.vote.groupBy({
-        by: ['postId', 'voteType'],
-        where: { postId: { in: votingPostIds } },
-        _count: { id: true }
-      }) : Promise.resolve([]),
-      approvedPostIds.length > 0 ? prisma.vote.groupBy({
-        by: ['postId', 'voteType'],
-        where: { postId: { in: approvedPostIds } },
-        _count: { id: true }
-      }) : Promise.resolve([])
+      votingPostIds.length > 0
+        ? prisma.vote.groupBy({
+            by: ['postId', 'voteType'],
+            where: { postId: { in: votingPostIds } },
+            _count: { id: true },
+          })
+        : Promise.resolve([]),
+      approvedPostIds.length > 0
+        ? prisma.vote.groupBy({
+            by: ['postId', 'voteType'],
+            where: { postId: { in: approvedPostIds } },
+            _count: { id: true },
+          })
+        : Promise.resolve([]),
     ]);
 
     // 投票カウントを追加
@@ -198,18 +194,23 @@ export async function GET(request: Request) {
         }
         return true;
       })
-      .map((post: typeof votingPosts[number]) => {
+      .map((post: (typeof votingPosts)[number]) => {
         // voteStatsから承認/却下数を取得
-        const approveCount = voteStats.find(v => v.postId === post.id && v.voteType === 'approve')?._count.id || 0;
-        const rejectCount = voteStats.find(v => v.postId === post.id && v.voteType === 'reject')?._count.id || 0;
+        const approveCount =
+          voteStats.find((v) => v.postId === post.id && v.voteType === 'approve')?._count.id || 0;
+        const rejectCount =
+          voteStats.find((v) => v.postId === post.id && v.voteType === 'reject')?._count.id || 0;
         const hasVoted = post.votes.length > 0;
         const hasLiked = post.likes.length > 0;
         const totalVotes = post._count.votes;
         const duration: any = (post as any).visibilityDurationMinutes;
-        const withinDuration = duration == null || (new Date(post.postedAt).getTime() >= (Date.now() - duration * 60 * 1000));
+        const withinDuration =
+          duration == null ||
+          new Date(post.postedAt).getTime() >= Date.now() - duration * 60 * 1000;
         if (!withinDuration) return null as any;
 
-        const isVotingClosed = totalVotes >= 10 || new Date(post.postedAt).getTime() < (Date.now() - 5 * 60 * 1000);
+        const isVotingClosed =
+          totalVotes >= 10 || new Date(post.postedAt).getTime() < Date.now() - 60 * 60 * 1000;
         const base = {
           ...post,
           approveCount,
@@ -218,12 +219,17 @@ export async function GET(request: Request) {
           hasVoted,
           likeCount: post._count.likes,
           hasLiked,
-          commentCount: post._count.comments
+          commentCount: post._count.comments,
         } as any;
 
         // 投票中は匿名表示にするが、投稿の所有者自身には本来のユーザーを表示する
         if (!isVotingClosed && post.userId !== decoded.userId) {
-          base.user = { id: 'anonymous', username: 'anonymous', displayName: null, avatarUrl: null } as any;
+          base.user = {
+            id: 'anonymous',
+            username: 'anonymous',
+            displayName: null,
+            avatarUrl: null,
+          } as any;
         }
 
         // votesとlikesの生データは削除（不要なデータを送らない）
@@ -235,40 +241,42 @@ export async function GET(request: Request) {
       .filter((p) => p);
 
     const enrichedApprovedPosts = approvedPosts
-      .map((post: typeof approvedPosts[number]) => {
+      .map((post: (typeof approvedPosts)[number]) => {
         const duration: any = (post as any).visibilityDurationMinutes;
-        const withinDuration = duration == null || (new Date(post.postedAt).getTime() >= (Date.now() - duration * 60 * 1000));
+        const withinDuration =
+          duration == null ||
+          new Date(post.postedAt).getTime() >= Date.now() - duration * 60 * 1000;
         if (!withinDuration) return null as any;
 
-      const approveCount = approvedVoteStats.find(v => v.postId === post.id && v.voteType === 'approve')?._count.id || 0;
-      const rejectCount = approvedVoteStats.find(v => v.postId === post.id && v.voteType === 'reject')?._count.id || 0;
-      const hasLiked = post.likes.length > 0;
-      
-      // votesとlikesの生データは削除（不要なデータを送らない）
-      const result = {
-        ...post,
-        approveCount,
-        rejectCount,
-        totalVotes: post._count.votes,
-        hasVoted: false,
-        likeCount: post._count.likes,
-        hasLiked,
-        commentCount: post._count.comments
-      };
-      delete (result as any).votes;
-      delete (result as any).likes;
-      
-      return result;
+        const approveCount =
+          approvedVoteStats.find((v) => v.postId === post.id && v.voteType === 'approve')?._count
+            .id || 0;
+        const rejectCount =
+          approvedVoteStats.find((v) => v.postId === post.id && v.voteType === 'reject')?._count
+            .id || 0;
+        const hasLiked = post.likes.length > 0;
+
+        // votesとlikesの生データは削除（不要なデータを送らない）
+        const result = {
+          ...post,
+          approveCount,
+          rejectCount,
+          totalVotes: post._count.votes,
+          hasVoted: false,
+          likeCount: post._count.likes,
+          hasLiked,
+          commentCount: post._count.comments,
+        };
+        delete (result as any).votes;
+        delete (result as any).likes;
+
+        return result;
       })
       .filter((p) => p);
 
     return NextResponse.json({ approved: enrichedApprovedPosts, voting: enrichedVotingPosts });
-
   } catch (error) {
     console.error('Get feed error:', error);
-    return NextResponse.json(
-      { error: 'フィード取得に失敗しました' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'フィード取得に失敗しました' }, { status: 500 });
   }
 }

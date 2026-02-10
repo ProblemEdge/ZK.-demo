@@ -295,18 +295,18 @@ export default function VotePage() {
     setDragX(0);
   };
 
-  // 投票期限は5分固定
+  // 投票期限は1時間固定
   const isVotingClosed = (postedAt: string): boolean => {
     const postTime = new Date(postedAt).getTime();
-    const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
-    return postTime < fiveMinutesAgo;
+    const oneHourAgo = Date.now() - 60 * 60 * 1000;
+    return postTime < oneHourAgo;
   };
 
-  // 残り投票時間を計算（5分固定）
+  // 残り投票時間を計算（1時間固定）
   const getTimeRemaining = (postedAt: string): string => {
     const postTime = new Date(postedAt).getTime();
-    const fiveMinutesAfter = postTime + 5 * 60 * 1000;
-    const timeLeft = fiveMinutesAfter - now.getTime();
+    const oneHourAfter = postTime + 60 * 60 * 1000;
+    const timeLeft = oneHourAfter - now.getTime();
 
     if (timeLeft <= 0) return '投票終了';
 
