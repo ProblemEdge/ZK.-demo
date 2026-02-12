@@ -22,14 +22,14 @@ export const getPendingPosts = async () => {
 
 export const likePost = async (postId: string) => {
   const res = await authFetch(`/api/posts/${postId}/likes`, {
-    method: 'POST'
+    method: 'POST',
   });
   return parseJsonOrThrow(res);
 };
 
 export const unlikePost = async (postId: string) => {
   const res = await authFetch(`/api/posts/${postId}/likes`, {
-    method: 'DELETE'
+    method: 'DELETE',
   });
   return parseJsonOrThrow(res);
 };
@@ -43,28 +43,28 @@ export const createComment = async (postId: string, text: string) => {
   const res = await authFetch(`/api/posts/${postId}/comments`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text })
+    body: JSON.stringify({ text }),
   });
   return parseJsonOrThrow(res);
 };
 
 export const deleteComment = async (postId: string, commentId: string) => {
   const res = await authFetch(`/api/posts/${postId}/comments/${commentId}`, {
-    method: 'DELETE'
+    method: 'DELETE',
   });
   return parseJsonOrThrow(res);
 };
 
 export const resetShotTokens = async () => {
   const res = await authFetch('/api/posts/shot-tokens/reset', {
-    method: 'POST'
+    method: 'POST',
   });
   return parseJsonOrThrow(res);
 };
 
 export const deletePost = async (postId: string) => {
   const res = await authFetch(`/api/posts/${postId}`, {
-    method: 'DELETE'
+    method: 'DELETE',
   });
   return parseJsonOrThrow(res);
 };
